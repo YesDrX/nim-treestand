@@ -173,9 +173,9 @@ except Exception as e:
   passC = " --passC:\"-I\'" & grammarSrcInclude & "\'\" "
   
   when defined(debug):
-    let compileCmd = "nim r -d:debug --hints:off" & passC & " --path:" & treestandSrc.quoteShell & " " & runnerPath.quoteShell
+    let compileCmd = "nim r -d:debug --hints:off" & passC & " --path:\'" & treestandSrc & "\' \"" & runnerPath.quoteShell & "\""
   else:
-    let compileCmd = "nim r --hints:off" & passC & " --path:" & treestandSrc.quoteShell & " " & runnerPath.quoteShell
+    let compileCmd = "nim r --hints:off" & passC & " --path:\'" & treestandSrc & "\' \"" & runnerPath.quoteShell & "\""
   
   echo "[TEST] Running tests:"
   echo compileCmd

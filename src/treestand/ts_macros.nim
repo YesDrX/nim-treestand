@@ -89,14 +89,14 @@ macro importGrammar*(grammar: static[string]): untyped =
   # Static run implementation
   let libSourceDir = currentSourcePath.parentDir.parentDir
   when defined(debug):
-    let cmd = fmt"""nim r -d:debug --path:{libSourceDir} {libSourceDir / "treestand.nim"} --cmd generate --grammar_path {grammar.expandTilde()} """
+    let cmd = fmt"""nim r -d:debug --path:"{libSourceDir}" "{libSourceDir / "treestand.nim"}" --cmd generate --grammar_path "{grammar.expandTilde()}" """
   else:
     let treestand_cmd = findExeStatic("treestand")
     var cmd: string
     if treestand_cmd.len > 0:
-      cmd = fmt"""{treestand_cmd} --cmd generate --grammar_path {grammar.expandTilde()} """
+      cmd = fmt"""{treestand_cmd} --cmd generate --grammar_path "{grammar.expandTilde()}" """
     else:
-      cmd = fmt"""nim r -d:release --path:{libSourceDir} {libSourceDir / "treestand.nim"} --cmd generate --grammar_path {grammar.expandTilde()} """
+      cmd = fmt"""nim r -d:release --path:"{libSourceDir}" "{libSourceDir / "treestand.nim"}" --cmd generate --grammar_path "{grammar.expandTilde()}" """
   echo "[Treestand] Running: " & cmd
   let (output, exitcode) = gorgeEx(cmd)
   if exitcode != 0:

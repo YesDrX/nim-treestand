@@ -119,7 +119,7 @@ except Exception as e:
     
     echo "6. Running Verification"
     # Compile and run, capturing output
-    let compileCmd = "nim c -r -d:debug --hints:off --path:" & srcDir.quoteShell & " " & runnerPath.quoteShell
+    let compileCmd = "nim c -r -d:debug --hints:off --path:\'" & srcDir.quoteShell & "\' " & runnerPath.quoteShell
     echo "  Running: ", compileCmd
     let exitCode = execCmd(compileCmd)
     
