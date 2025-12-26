@@ -28,13 +28,13 @@
       
 <h1 id="querying">Querying</h1><p>Tree-stand provides a <a class="reference external" href="https://tree-sitter.github.io/tree-sitter/using-parsers#pattern-matching-with-queries">Tree-sitter</a> compatible query engine. This allows you to search for patterns in your syntax tree using a specialized S-expression syntax.</p>
 
-<h2 id="basic-usage">Basic Usage</h2><p>To use the query engine, import <tt class="docutils literal"><span class="pre">treestand/query</span></tt> and <tt class="docutils literal"><span class="pre">treestand/parser_types</span></tt>.</p>
-<p><pre class="listing"><span class="Keyword">import</span> <span class="Identifier">treestand</span><span class="Operator">/</span><span class="Identifier">query</span>
-<span class="Keyword">import</span> <span class="Identifier">treestand</span><span class="Operator">/</span><span class="Identifier">parser_types</span>
+<h2 id="basic-usage">Basic Usage</h2><p>To use the query engine, import <tt class="docutils literal"><span class="pre">treestand</span></tt> (check 03_query example)</p>
+<p><pre class="listing"><span class="Keyword">import</span> <span class="Identifier">treestand</span>
 
 <span class="Comment"># 1. Parse your source code</span>
-<span class="Keyword">let</span> <span class="Identifier">parser</span> <span class="Operator">=</span> <span class="Identifier">newParser</span><span class="Punctuation">(</span><span class="StringLit">&quot;YOUR_LANGUAGE&quot;</span><span class="Punctuation">)</span>
-<span class="Keyword">let</span> <span class="Identifier">tree</span> <span class="Operator">=</span> <span class="Identifier">parser</span><span class="Operator">.</span><span class="Identifier">parse</span><span class="Punctuation">(</span><span class="StringLit">&quot;source code...&quot;</span><span class="Punctuation">)</span>
+<span class="Keyword">import</span> <span class="Identifier">parser</span> <span class="Keyword">as</span> <span class="Identifier">myParser</span>
+<span class="Keyword">let</span> <span class="Identifier">parser</span> <span class="Operator">=</span> <span class="Identifier">myParser</span><span class="Operator">.</span><span class="Identifier">newParser</span><span class="Punctuation">(</span><span class="StringLit">&quot;YOUR_SOURCE_CODE&quot;</span><span class="Punctuation">)</span>
+<span class="Keyword">let</span> <span class="Identifier">tree</span> <span class="Operator">=</span> <span class="Identifier">parser</span><span class="Operator">.</span><span class="Identifier">parse</span><span class="Punctuation">(</span><span class="Punctuation">)</span>
 
 <span class="Comment"># 2. Create a Query</span>
 <span class="Keyword">let</span> <span class="Identifier">q</span> <span class="Operator">=</span> <span class="Identifier">newQuery</span><span class="Punctuation">(</span><span class="LongStringLit">&quot;&quot;&quot;
@@ -93,7 +93,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 00:43:31 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 04:11:55 UTC</small>
       </div>
     </div>
   </div>

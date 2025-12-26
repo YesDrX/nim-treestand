@@ -7,6 +7,7 @@ suite "Compile Examples":
             if example_dir.kind == pcFile: continue
             let genNim = example_dir.path / "gen.nim"
             let mainNim = example_dir.path / "main.nim"
+            let parserNim = example_dir.path / "parser.nim"
             if fileExists(genNim):
                 let cmd = "nim r -f --hints:off " & $genNim
                 echo "Running: " & cmd
@@ -21,3 +22,10 @@ suite "Compile Examples":
                 check exitCode == 0
             else:
                 echo "No main.nim found in " & $example_dir
+            if fileExists(parserNim):
+                let cmd = "nim c -f --hints:off " & $parserNim
+                echo "Running: " & cmd
+                let exitCode = execCmd(cmd)
+                check exitCode == 0
+            else:
+                echo "No parser.nim found in " & $example_dir

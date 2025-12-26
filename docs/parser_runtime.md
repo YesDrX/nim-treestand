@@ -1,3 +1,4 @@
+```nim
 ##
 ##  This file is included in generated parsers to provide common utilities
 ## 
@@ -509,3 +510,4 @@ proc writeCorpus*(filename: string, testName: string, input: string, tree: Parse
       f.write("\n")
   else:
     f.writeLine("")
+```

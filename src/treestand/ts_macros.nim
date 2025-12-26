@@ -102,7 +102,6 @@ macro importGrammar*(grammar: static[string]): untyped =
     raise newException(Exception, "Failed to generate parser from " & grammar)
   return output[output.find("# GENERATED PARSER.NIM") ..< output.len].parseStmt()
 
-
 macro buildGrammar*(createGrammarFunction: untyped): untyped =
   ## Compile-time macro that builds a parser from a pure Nim grammar definition.
   ## 
@@ -215,13 +214,6 @@ macro buildGrammarImpl(): untyped =
 buildGrammarImpl()
 """.parseStmt()
   # echo result.repr
-
-# Helper to identify nodes
-proc isInfix(n: NimNode, op: string): bool =
-  n.kind == nnkInfix and n[0].kind == nnkIdent and n[0].strVal == op
-
-proc isPrefix(n: NimNode, op: string): bool =
-  n.kind == nnkPrefix and n[0].kind == nnkIdent and n[0].strVal == op
 
 proc transformRule(n: NimNode): NimNode =
   ## Transforms Nim AST expressions into DSL function calls.
@@ -340,7 +332,44 @@ proc transformRule(n: NimNode): NimNode =
   
   # echo result.repr
 
-macro ts_grammar*(name: static string, body: untyped): untyped =
+macro tsGrammar*(name: static string, body: untyped): untyped =
+  ## Define a function, `proc name(): InputGrammar` based on Npeg like syntax.
+  ## After the function is defined, buildGrammar(name) is called to build the grammar.
+  ## 
+  ## Example:
+  ## ```nim
+  ## import treestand
+  ##
+  ## tsGrammar "my_lang":
+  ##   # Rule Assignment
+  ##   program     <- +stmt
+  ##
+  ##   # Sequence (*) and Choice (|)
+  ##   stmt        <- assign * semi
+  ##  
+  ##   # Repetition
+  ##   # +rule  -> One or more
+  ##   # *rule  -> Zero or more
+  ##   # ?rule  -> Optional
+  ##   assign      <- (variable: identifier) * eq * (value: expr) # Named fields by (fld : rule) format
+  ##   expr        <- identifier | number | external_token # external_token is a token handled by an external scanner (C function), but not implemented in tsGrammar yet
+  ##
+  ##   # Lexical Tokens
+  ##   # Use token() wrapper for lexical rules
+  ##   # String literals and regex patterns are auto-wrapped with str() or patt()
+  ##   identifier  <- token(re"\w+")
+  ##   number      <- token(re"\\d+")
+  ##   eq          <- token("=")
+  ##   semi        <- token(";")
+  ##
+  ##   # Configuration·
+  ##   extras      = token(re"\s+")
+  ##   # word        = "identifier"
+  ##
+  ## when isMainModule:
+  ##   echo parseMyLang("a = 1; b=a;")
+  ## ```
+  
   var variables = newNimNode(nnkBracket) # @[...]
   var extraSymbols = newNimNode(nnkBracket)
   var externalTokens = newNimNode(nnkBracket)
@@ -434,7 +463,11 @@ macro ts_grammar*(name: static string, body: untyped): untyped =
       # Let's stick to standard handling and rely on separate lines/indentation working correctly 
       # or user fixing the syntax (e.g. parens).
       discard
-
+  
+  if externalTokens.len > 0:
+    echo "[Treestand] Found external tokens for grammar `" & name & "`: " & externalTokens.repr
+    echo "[Treestand] Make sure to define scanner functions for these tokens in the scanner.c file."
+  
   let grammarProcName = ident(name)
   result = quote do:
     proc `grammarProcName`*(): InputGrammar =
@@ -448,7 +481,10 @@ macro ts_grammar*(name: static string, body: untyped): untyped =
         supertypeSymbols: @`supertypeSymbols`,
         wordToken: `wordToken`
       )
+    buildGrammar(`grammarProcName`)
   
+  echo "[Treestand] Generated InputGrammar constructor: " & grammarProcName.repr
+
   when defined(debug):
     echo "Generated InputGrammar:"
     echo result.repr

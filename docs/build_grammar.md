@@ -206,13 +206,18 @@ program
         expression
           binary_op
             expression
-              number "1"
-            op "+"
+              number
+                number "1" [0-1]
+            op
+              op "+" [2-3]
             expression
-              number "2"
-        op "*"
+              number
+                number "2" [4-5]
+        op
+          op "*" [6-7]
         expression
-          number "3"
+          number
+            number "3" [8-9]
 ```
 
 ## Grammar Structure
@@ -220,23 +225,98 @@ program
 ### InputGrammar Type
 
 ```nim
-type InputGrammar* = object
-  name*: string                      # Grammar name (used for function naming)
-  variables*: seq[Variable]          # Grammar rules
-  extraSymbols*: seq[Rule]          # Tokens to skip (typically whitespace)
-  externalTokens*: seq[string]      # External scanner tokens (if any)
-  conflicts*: seq[seq[string]]      # Expected conflicts (optional)
-  precedences*: seq[seq[string]]    # Precedence declarations (optional)
-  wordToken*: Option[string]        # Word token for keywords (optional)
-```
+  InputGrammar* = object
+    ## The raw grammar definition provided by the user (or DSL).
+    ## This is the input to the `prepareGrammar` phase.
+    name*: string                                ## Examples: "json", "python".
+    variables*: seq[Variable]                    ## List of all defined rules.
+    extraSymbols*: seq[Rule]                     ## Whitespace, comments to be skipped.
+    expectedConflicts*: seq[seq[string]]         ## Documented LR conflicts to suppress warnings.
+    precedenceOrderings*: seq[seq[PrecedenceEntry]]
+    externalTokens*: seq[Rule]                   ## Tokens handled by external scanner.
+    variablesToInline*: seq[string]              ## Rules to inline into their callers.
+    supertypeSymbols*: seq[string]               ## Rules grouped as supertypes (for query API).
+    wordToken*: Option[string]                   ## Keyword tokenizer optimization.
+    reservedWords*: seq[ReservedWordContext[Rule]]
 
-### Variable Type
+  VariableType* = enum
+    ## Classifies the role of a grammar variable (Rule).
+    vtHidden     ## Internal rule, not exposed in the CST (prefixed with `_`).
+    vtAuxiliary  ## Generated helper rule (e.g. for repetition or sequences).
+    vtAnonymous  ## String literal or pattern (e.g. "if", "\d+").
+    vtNamed      ## Standard named rule defined in the grammar.
 
-```nim
-type Variable* = object
-  name*: string        # Rule name
-  kind*: VariableType  # vtNamed, vtAnonymous, vtHidden, or vtAuxiliary
-  rule*: Rule          # The rule definition
+  Variable* = object
+    ## Represents a high-level rule definition from the user's input grammar.
+    name*: string
+    kind*: VariableType
+    rule*: Rule
+
+  RuleKind* = enum
+    ## Enumeration of all possible AST node types for the grammar DSL.
+    rkBlank        ## Empty rule.
+    rkString       ## Literal string match (e.g. "if").
+    rkPattern      ## Regex pattern (e.g. "\d+").
+    rkNamedSymbol  ## Reference to another named rule (variable).
+    rkSymbol       ## Resolved symbol reference (internal use).
+    rkChoice       ## Alternative options (OR / |).
+    rkMetadata     ## Wraps another rule with metadata (prec, assoc, token).
+    rkRepeat       ## Repetition (zero-or-more, one-or-more).
+    rkSeq          ## Sequence of rules (concatenation).
+    rkReserved     ## Reserved word handling.
+
+  Rule* = object
+    ## The core recursive data structure representing a grammar rule expression.
+    ## This AST is built via the DSL and processed to generate the parser.
+    case kind*: RuleKind
+    of rkBlank:
+      discard
+    of rkString:
+      stringValue*: string
+    of rkPattern:
+      patternValue*: string
+      patternFlags*: string
+    of rkNamedSymbol:
+      symbolName*: string
+    of rkSymbol:
+      symbol*: GrammarSymbol
+    of rkChoice:
+      choiceMembers*: seq[Rule]
+    of rkMetadata:
+      metadataParams*: MetadataParams
+      metadataRule*: ref Rule
+    of rkRepeat:
+      repeatContent*: ref Rule
+    of rkSeq:
+      seqMembers*: seq[Rule]
+    of rkReserved:
+      reservedRule*: ref Rule
+      reservedContextName*: string
+
+  MetadataParams* = object
+    ## Stores metadata associated with a rule, affecting parsing behavior.
+    precedence*: Precedence              ## Static precedence.
+    dynamicPrecedence*: int32            ## Dynamic precedence (runtime conflict resolution).
+    associativity*: Option[GrammarAssociativity] ## Left or Right associativity.
+    isToken*: bool                       ## Marks a rule as a lexical token (atomic).
+    isMainToken*: bool                   ## Internal flag for main lexer tokens.
+    alias*: Option[Alias]                ## Alias for the resulting node.
+    fieldName*: Option[string]           ## Field name for structure access (e.g. `left:`).
+
+  GrammarSymbolType* {.size: 2.} = enum
+    ## Distinguishes between different kinds of symbols in the grammar.
+    stExternal              ## Symbol managed by an external scanner (C/C++).
+    stEnd                   ## End of input (EOF) or end of sequence.
+    stEndOfNonTerminalExtra ## Special internal symbol for GLR processing.
+    stTerminal              ## A lexical token (leaf node e.g., string literal, regex).
+    stNonTerminal           ## A syntactic rule composed of other symbols.
+
+  GrammarSymbol* = object
+    ## Represents a unique symbol in the grammar, identified by type and index.
+    ## This is the build-time representation, distinct from `parser_types.Symbol`.
+    kind*: GrammarSymbolType
+    index*: uint16  ## Index into the respective symbol list (terminals, non-terminals, etc.).
+
 ```
 
 **Variable Kinds:**
@@ -499,7 +579,6 @@ Use precedence directives to resolve them.
 For maximum flexibility with external scanners, use `importGrammar`. For pure Nim development, `buildGrammar` is ideal.
 
 ## See Also
-
-- [Import Grammar](import_grammar.md) - Importing Tree-sitter grammars
+- [TS Macros](ts_macros.html) - Tree-sitter macros: importGrammar, tsGrammar, buildGrammar
 - [Using DSL](using_dsl.md) - Detailed DSL function reference
 - [Advanced Usage](advanced_usage.md) - Conflict resolution and debugging

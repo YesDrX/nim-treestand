@@ -31,7 +31,7 @@ proc generateParser*(grammarPath: string, outputDir: string, dslPath: string = "
   ##
   ## **Example:**
   ## ```nim
-  ## import treestand/cli/generate
+  ## import treestand
   ##
   ## # Generate parser from grammar.js
   ## generateParser(

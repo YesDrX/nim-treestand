@@ -1,14 +1,9 @@
 ## Fast symbol set using packed int32 representation with IntSet
 ## GrammarSymbol is packed into 32 bits: kind (int16) + index (uint16)
 ## This allows using Nim's ultra-fast IntSet instead of hashing or sorting
-import rules, std/intsets
 
-# Old sorted-array implementation (commented out for reference)
-# type
-#   SymbolSet* = object
-#     symbols: seq[GrammarSymbol]
-#     count: int
-# ... (rest of old implementation)
+import grammar
+import std/[intsets, sets]
 
 type
   SymbolSet* = object
@@ -70,7 +65,6 @@ proc `$`*(s: SymbolSet): string =
   result.add("}")
 
 # Conversion helpers for compatibility
-import std/sets
 
 proc toHashSet*(s: SymbolSet): HashSet[GrammarSymbol] =
   ## Convert to HashSet for compatibility with existing code

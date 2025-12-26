@@ -23,8 +23,7 @@ API documentation generated from the source code.
 - [Macros (treestand/ts_macros)](./treestand/ts_macros.html)
 - [Grammar (treestand/grammar)](./treestand/grammar.html)
 - [Parse Grammar (treestand/parse_grammar)](./treestand/parse_grammar.html)
-- [Rules (treestand/rules)](./treestand/rules.html)
 - [Parser Types (treestand/parser_types)](./treestand/parser_types.html)
-- [Parser Runtime (treestand/parser_runtime)](./treestand/parser_runtime.html)
+- [Parser Runtime (treestand/parser_runtime)](./parser_runtime.html)
 - [Query (treestand/query)](./treestand/query.html)
 - [Symbol Index](theindex.html) - Index of all exported symbols.

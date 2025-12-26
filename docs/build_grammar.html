@@ -171,28 +171,112 @@
         expression
           binary_op
             expression
-              number &quot;1&quot;
-            op &quot;+&quot;
+              number
+                number &quot;1&quot; [0-1]
+            op
+              op &quot;+&quot; [2-3]
             expression
-              number &quot;2&quot;
-        op &quot;*&quot;
+              number
+                number &quot;2&quot; [4-5]
+        op
+          op &quot;*&quot; [6-7]
         expression
-          number &quot;3&quot;</pre></p>
+          number
+            number &quot;3&quot; [8-9]</pre></p>
 
 <h2 id="grammar-structure">Grammar Structure</h2>
-<h3 id="inputgrammar-type">InputGrammar Type</h3><p><pre class="listing"><span class="Keyword">type</span> <span class="Identifier">InputGrammar</span><span class="Operator">*</span> <span class="Operator">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">name</span><span class="Operator">*:</span> <span class="Identifier">string</span>                      <span class="Comment"># Grammar name (used for function naming)</span>
-  <span class="Identifier">variables</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">Variable</span><span class="Punctuation">]</span>          <span class="Comment"># Grammar rules</span>
-  <span class="Identifier">extraSymbols</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">Rule</span><span class="Punctuation">]</span>          <span class="Comment"># Tokens to skip (typically whitespace)</span>
-  <span class="Identifier">externalTokens</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">string</span><span class="Punctuation">]</span>      <span class="Comment"># External scanner tokens (if any)</span>
-  <span class="Identifier">conflicts</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">string</span><span class="Punctuation">]</span><span class="Punctuation">]</span>      <span class="Comment"># Expected conflicts (optional)</span>
-  <span class="Identifier">precedences</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">string</span><span class="Punctuation">]</span><span class="Punctuation">]</span>    <span class="Comment"># Precedence declarations (optional)</span>
-  <span class="Identifier">wordToken</span><span class="Operator">*:</span> <span class="Identifier">Option</span><span class="Punctuation">[</span><span class="Identifier">string</span><span class="Punctuation">]</span>        <span class="Comment"># Word token for keywords (optional)</span></pre></p>
-
-<h3 id="variable-type">Variable Type</h3><p><pre class="listing"><span class="Keyword">type</span> <span class="Identifier">Variable</span><span class="Operator">*</span> <span class="Operator">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">name</span><span class="Operator">*:</span> <span class="Identifier">string</span>        <span class="Comment"># Rule name</span>
-  <span class="Identifier">kind</span><span class="Operator">*:</span> <span class="Identifier">VariableType</span>  <span class="Comment"># vtNamed, vtAnonymous, vtHidden, or vtAuxiliary</span>
-  <span class="Identifier">rule</span><span class="Operator">*:</span> <span class="Identifier">Rule</span>          <span class="Comment"># The rule definition</span></pre></p>
+<h3 id="inputgrammar-type">InputGrammar Type</h3><p><pre class="listing">  <span class="Identifier">InputGrammar</span><span class="Operator">*</span> <span class="Operator">=</span> <span class="Keyword">object</span>
+    <span class="Comment">## The raw grammar definition provided by the user (or DSL).</span>
+    <span class="Comment">## This is the input to the `prepareGrammar` phase.</span>
+    <span class="Identifier">name</span><span class="Operator">*:</span> <span class="Identifier">string</span>                                <span class="Comment">## Examples: &quot;json&quot;, &quot;python&quot;.</span>
+    <span class="Identifier">variables</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">Variable</span><span class="Punctuation">]</span>                    <span class="Comment">## List of all defined rules.</span>
+    <span class="Identifier">extraSymbols</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">Rule</span><span class="Punctuation">]</span>                     <span class="Comment">## Whitespace, comments to be skipped.</span>
+    <span class="Identifier">expectedConflicts</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">string</span><span class="Punctuation">]</span><span class="Punctuation">]</span>         <span class="Comment">## Documented LR conflicts to suppress warnings.</span>
+    <span class="Identifier">precedenceOrderings</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">PrecedenceEntry</span><span class="Punctuation">]</span><span class="Punctuation">]</span>
+    <span class="Identifier">externalTokens</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">Rule</span><span class="Punctuation">]</span>                   <span class="Comment">## Tokens handled by external scanner.</span>
+    <span class="Identifier">variablesToInline</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">string</span><span class="Punctuation">]</span>              <span class="Comment">## Rules to inline into their callers.</span>
+    <span class="Identifier">supertypeSymbols</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">string</span><span class="Punctuation">]</span>               <span class="Comment">## Rules grouped as supertypes (for query API).</span>
+    <span class="Identifier">wordToken</span><span class="Operator">*:</span> <span class="Identifier">Option</span><span class="Punctuation">[</span><span class="Identifier">string</span><span class="Punctuation">]</span>                   <span class="Comment">## Keyword tokenizer optimization.</span>
+    <span class="Identifier">reservedWords</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">ReservedWordContext</span><span class="Punctuation">[</span><span class="Identifier">Rule</span><span class="Punctuation">]</span><span class="Punctuation">]</span>
+  
+  <span class="Identifier">VariableType</span><span class="Operator">*</span> <span class="Operator">=</span> <span class="Keyword">enum</span>
+    <span class="Comment">## Classifies the role of a grammar variable (Rule).</span>
+    <span class="Identifier">vtHidden</span>     <span class="Comment">## Internal rule, not exposed in the CST (prefixed with `_`).</span>
+    <span class="Identifier">vtAuxiliary</span>  <span class="Comment">## Generated helper rule (e.g. for repetition or sequences).</span>
+    <span class="Identifier">vtAnonymous</span>  <span class="Comment">## String literal or pattern (e.g. &quot;if&quot;, &quot;\d+&quot;).</span>
+    <span class="Identifier">vtNamed</span>      <span class="Comment">## Standard named rule defined in the grammar.</span>
+  
+  <span class="Identifier">Variable</span><span class="Operator">*</span> <span class="Operator">=</span> <span class="Keyword">object</span>
+    <span class="Comment">## Represents a high-level rule definition from the user's input grammar.</span>
+    <span class="Identifier">name</span><span class="Operator">*:</span> <span class="Identifier">string</span>
+    <span class="Identifier">kind</span><span class="Operator">*:</span> <span class="Identifier">VariableType</span>
+    <span class="Identifier">rule</span><span class="Operator">*:</span> <span class="Identifier">Rule</span>
+  
+  <span class="Identifier">RuleKind</span><span class="Operator">*</span> <span class="Operator">=</span> <span class="Keyword">enum</span>
+    <span class="Comment">## Enumeration of all possible AST node types for the grammar DSL.</span>
+    <span class="Identifier">rkBlank</span>        <span class="Comment">## Empty rule.</span>
+    <span class="Identifier">rkString</span>       <span class="Comment">## Literal string match (e.g. &quot;if&quot;).</span>
+    <span class="Identifier">rkPattern</span>      <span class="Comment">## Regex pattern (e.g. &quot;\d+&quot;).</span>
+    <span class="Identifier">rkNamedSymbol</span>  <span class="Comment">## Reference to another named rule (variable).</span>
+    <span class="Identifier">rkSymbol</span>       <span class="Comment">## Resolved symbol reference (internal use).</span>
+    <span class="Identifier">rkChoice</span>       <span class="Comment">## Alternative options (OR / |).</span>
+    <span class="Identifier">rkMetadata</span>     <span class="Comment">## Wraps another rule with metadata (prec, assoc, token).</span>
+    <span class="Identifier">rkRepeat</span>       <span class="Comment">## Repetition (zero-or-more, one-or-more).</span>
+    <span class="Identifier">rkSeq</span>          <span class="Comment">## Sequence of rules (concatenation).</span>
+    <span class="Identifier">rkReserved</span>     <span class="Comment">## Reserved word handling.</span>
+  
+  <span class="Identifier">Rule</span><span class="Operator">*</span> <span class="Operator">=</span> <span class="Keyword">object</span>
+    <span class="Comment">## The core recursive data structure representing a grammar rule expression.</span>
+    <span class="Comment">## This AST is built via the DSL and processed to generate the parser.</span>
+    <span class="Keyword">case</span> <span class="Identifier">kind</span><span class="Operator">*:</span> <span class="Identifier">RuleKind</span>
+    <span class="Keyword">of</span> <span class="Identifier">rkBlank</span><span class="Punctuation">:</span>
+      <span class="Keyword">discard</span>
+    <span class="Keyword">of</span> <span class="Identifier">rkString</span><span class="Punctuation">:</span>
+      <span class="Identifier">stringValue</span><span class="Operator">*:</span> <span class="Identifier">string</span>
+    <span class="Keyword">of</span> <span class="Identifier">rkPattern</span><span class="Punctuation">:</span>
+      <span class="Identifier">patternValue</span><span class="Operator">*:</span> <span class="Identifier">string</span>
+      <span class="Identifier">patternFlags</span><span class="Operator">*:</span> <span class="Identifier">string</span>
+    <span class="Keyword">of</span> <span class="Identifier">rkNamedSymbol</span><span class="Punctuation">:</span>
+      <span class="Identifier">symbolName</span><span class="Operator">*:</span> <span class="Identifier">string</span>
+    <span class="Keyword">of</span> <span class="Identifier">rkSymbol</span><span class="Punctuation">:</span>
+      <span class="Identifier">symbol</span><span class="Operator">*:</span> <span class="Identifier">GrammarSymbol</span>
+    <span class="Keyword">of</span> <span class="Identifier">rkChoice</span><span class="Punctuation">:</span>
+      <span class="Identifier">choiceMembers</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">Rule</span><span class="Punctuation">]</span>
+    <span class="Keyword">of</span> <span class="Identifier">rkMetadata</span><span class="Punctuation">:</span>
+      <span class="Identifier">metadataParams</span><span class="Operator">*:</span> <span class="Identifier">MetadataParams</span>
+      <span class="Identifier">metadataRule</span><span class="Operator">*:</span> <span class="Keyword">ref</span> <span class="Identifier">Rule</span>
+    <span class="Keyword">of</span> <span class="Identifier">rkRepeat</span><span class="Punctuation">:</span>
+      <span class="Identifier">repeatContent</span><span class="Operator">*:</span> <span class="Keyword">ref</span> <span class="Identifier">Rule</span>
+    <span class="Keyword">of</span> <span class="Identifier">rkSeq</span><span class="Punctuation">:</span>
+      <span class="Identifier">seqMembers</span><span class="Operator">*:</span> <span class="Identifier">seq</span><span class="Punctuation">[</span><span class="Identifier">Rule</span><span class="Punctuation">]</span>
+    <span class="Keyword">of</span> <span class="Identifier">rkReserved</span><span class="Punctuation">:</span>
+      <span class="Identifier">reservedRule</span><span class="Operator">*:</span> <span class="Keyword">ref</span> <span class="Identifier">Rule</span>
+      <span class="Identifier">reservedContextName</span><span class="Operator">*:</span> <span class="Identifier">string</span>
+  
+  <span class="Identifier">MetadataParams</span><span class="Operator">*</span> <span class="Operator">=</span> <span class="Keyword">object</span>
+    <span class="Comment">## Stores metadata associated with a rule, affecting parsing behavior.</span>
+    <span class="Identifier">precedence</span><span class="Operator">*:</span> <span class="Identifier">Precedence</span>              <span class="Comment">## Static precedence.</span>
+    <span class="Identifier">dynamicPrecedence</span><span class="Operator">*:</span> <span class="Identifier">int32</span>            <span class="Comment">## Dynamic precedence (runtime conflict resolution).</span>
+    <span class="Identifier">associativity</span><span class="Operator">*:</span> <span class="Identifier">Option</span><span class="Punctuation">[</span><span class="Identifier">GrammarAssociativity</span><span class="Punctuation">]</span> <span class="Comment">## Left or Right associativity.</span>
+    <span class="Identifier">isToken</span><span class="Operator">*:</span> <span class="Identifier">bool</span>                       <span class="Comment">## Marks a rule as a lexical token (atomic).</span>
+    <span class="Identifier">isMainToken</span><span class="Operator">*:</span> <span class="Identifier">bool</span>                   <span class="Comment">## Internal flag for main lexer tokens.</span>
+    <span class="Identifier">alias</span><span class="Operator">*:</span> <span class="Identifier">Option</span><span class="Punctuation">[</span><span class="Identifier">Alias</span><span class="Punctuation">]</span>                <span class="Comment">## Alias for the resulting node.</span>
+    <span class="Identifier">fieldName</span><span class="Operator">*:</span> <span class="Identifier">Option</span><span class="Punctuation">[</span><span class="Identifier">string</span><span class="Punctuation">]</span>           <span class="Comment">## Field name for structure access (e.g. `left:`).</span>
+  
+  <span class="Identifier">GrammarSymbolType</span><span class="Operator">*</span> <span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">size</span><span class="Punctuation">:</span> <span class="FloatNumber">2.</span><span class="Punctuation">}</span> <span class="Operator">=</span> <span class="Keyword">enum</span>
+    <span class="Comment">## Distinguishes between different kinds of symbols in the grammar.</span>
+    <span class="Identifier">stExternal</span>              <span class="Comment">## Symbol managed by an external scanner (C/C++).</span>
+    <span class="Identifier">stEnd</span>                   <span class="Comment">## End of input (EOF) or end of sequence.</span>
+    <span class="Identifier">stEndOfNonTerminalExtra</span> <span class="Comment">## Special internal symbol for GLR processing.</span>
+    <span class="Identifier">stTerminal</span>              <span class="Comment">## A lexical token (leaf node e.g., string literal, regex).</span>
+    <span class="Identifier">stNonTerminal</span>           <span class="Comment">## A syntactic rule composed of other symbols.</span>
+  
+  <span class="Identifier">GrammarSymbol</span><span class="Operator">*</span> <span class="Operator">=</span> <span class="Keyword">object</span>
+    <span class="Comment">## Represents a unique symbol in the grammar, identified by type and index.</span>
+    <span class="Comment">## This is the build-time representation, distinct from `parser_types.Symbol`.</span>
+    <span class="Identifier">kind</span><span class="Operator">*:</span> <span class="Identifier">GrammarSymbolType</span>
+    <span class="Identifier">index</span><span class="Operator">*:</span> <span class="Identifier">uint16</span>  <span class="Comment">## Index into the respective symbol list (terminals, non-terminals, etc.).</span>
+</pre></p>
 <p><strong>Variable Kinds:</strong></p>
 <ul class="simple"><li><tt class="docutils literal"><span class="pre">vtNamed</span></tt> - Normal rule, appears in parse tree</li>
 <li><tt class="docutils literal"><span class="pre">vtAnonymous</span></tt> - Hidden from tree but rule appears</li>
@@ -385,7 +469,7 @@
 </ol>
 <p>For maximum flexibility with external scanners, use <tt class="docutils literal"><span class="pre">importGrammar</span></tt>. For pure Nim development, <tt class="docutils literal"><span class="pre">buildGrammar</span></tt> is ideal.</p>
 
-<h2 id="see-also">See Also</h2><ul class="simple"><li><a class="reference external" href="import_grammar.md">Import Grammar</a> - Importing Tree-sitter grammars</li>
+<h2 id="see-also">See Also</h2><ul class="simple"><li><a class="reference external" href="ts_macros.html">TS Macros</a> - Tree-sitter macros: importGrammar, tsGrammar, buildGrammar</li>
 <li><a class="reference external" href="using_dsl.md">Using DSL</a> - Detailed DSL function reference</li>
 <li><a class="reference external" href="advanced_usage.md">Advanced Usage</a> - Conflict resolution and debugging</li>
 </ul>
@@ -395,7 +479,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 00:43:30 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 04:11:54 UTC</small>
       </div>
     </div>
   </div>

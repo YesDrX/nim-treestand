@@ -1,2 +1,2 @@
 nimTitle	minimizer	treestand/minimizer.html	module src/treestand/minimizer		0
-nim	minimizeParseTable	treestand/minimizer.html#minimizeParseTable,BuildParseTable,SyntaxGrammar,LexicalGrammar	proc minimizeParseTable(parseTable: var BuildParseTable;\n                   syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar)		439
+nim	minimizeParseTable	treestand/minimizer.html#minimizeParseTable,BuildParseTable,SyntaxGrammar,LexicalGrammar	proc minimizeParseTable(parseTable: var BuildParseTable;\n                   syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar)		437

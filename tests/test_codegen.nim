@@ -1,6 +1,11 @@
-import unittest, std/strutils, std/options, std/os, std/osproc
+import std/[unittest, strutils, options, os, osproc]
 import treestand
 import treestand/nfa
+
+when defined(windows):
+  const tmpDir = "~/tmp".expandTilde()
+else:
+  const tmpDir = "/tmp"
 
 suite "Code Generation":
   
@@ -22,14 +27,13 @@ suite "Code Generation":
     
     # Just verify it generates some code with enum
     check code.len > 0
-    # check code.contains("Symbol* = object")
     check code.contains("TerminalSymbol")
     check code.contains("tsEOF")
     
   test "generateExternalScannerBindings - with tokens":
-    createDir("/tmp/my_lang")
-    writeFile("/tmp/my_lang/scanner.c", "")
-    let code = generateExternalScannerBindings("my_lang", "/tmp/my_lang", @["indent", "dedent"])
+    createDir(tmpDir / "my_lang")
+    writeFile(tmpDir / "my_lang" / "scanner.c", "")
+    let code = generateExternalScannerBindings("my_lang", tmpDir / "my_lang", @["indent", "dedent"])
     
     # Verify key components
     check code.contains("{.compile:")
@@ -38,11 +42,11 @@ suite "Code Generation":
     check code.contains("scanner_create")
     check code.contains("scanner_scan")
     
-    removeFile("/tmp/my_lang/scanner.c")
-    removeDir("/tmp/my_lang")
+    removeFile(tmpDir / "my_lang" / "scanner.c")
+    removeDir(tmpDir / "my_lang")
     
   test "generateExternalScannerBindings - empty":
-    let code = generateExternalScannerBindings("test", "/tmp", @[])
+    let code = generateExternalScannerBindings("test", tmpDir, @[])
     check code == ""
     
   test "generateParseTableCode - basic":
@@ -113,7 +117,7 @@ suite "Code Generation":
     # Generate complete parser code
     let generatedCode = generateParser(
       "test_parser", 
-      "/tmp/test_parser",
+      tmpDir / "test_parser",
       syntaxGrammar, 
       lexGrammar,
       parseTable, 
@@ -122,8 +126,7 @@ suite "Code Generation":
     )
     
     # Write to temp file
-    let tempDir = getTempDir()
-    let tempFile = tempDir / "test_generated_parser.nim"
+    let tempFile = tmpDir / "test_generated_parser.nim"
     
     writeFile(tempFile, generatedCode)
     
@@ -136,10 +139,14 @@ suite "Code Generation":
     # Clean up
     if fileExists(tempFile):
       removeFile(tempFile)
-    
     let exeFileName = tempFile.replace(".nim", "")
     if fileExists(exeFileName):
       removeFile(exeFileName)
+    
+    if fileExists(tmpDir / "test_parser" / "parser.nim"):
+      removeFile(tmpDir / "test_parser" / "parser.nim")
+    if dirExists(tmpDir / "test_parser"):
+      removeDir(tmpDir / "test_parser")
     
     # Check compilation succeeded
     if exitCode != 0:

@@ -1,7 +1,7 @@
 # prepare_grammar.nim
 ## Grammar preparation - flatten, expand tokens, process inlines, etc.
 
-import grammar, rules, nfa, sets, options
+import grammar, nfa, sets, options
 from std/tables import contains, `[]`, `[]=`
 import std/tables as stdtables
 import std/strutils

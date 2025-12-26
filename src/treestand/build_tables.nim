@@ -2,8 +2,19 @@
 when defined(profiler):
   import nimprof
 
-import grammar, rules, nfa, tables, unicode, parser_types, symbol_set, bitset, minimizer
-import std/sets as stdsets, std/algorithm, std/tables as stdtables, options, std/hashes, std/deques, std/strformat, std/times, std/sequtils, std/strutils
+import grammar, nfa, unicode, parser_types, symbol_set, bitset, minimizer
+import std/[
+      algorithm,
+      options,
+      hashes,
+      deques,
+      strformat,
+      times,
+      sequtils,
+      strutils,
+      sets as stdsets,
+      tables as stdtables
+    ]
 {.warning[UnusedImport]: off.}
 
 type
@@ -1483,17 +1494,17 @@ proc `<`*(a, b: CoreItem): bool =
 
 # Toggle to use fast precomputed closure vs regular worklist closure
 # Set to false to revert to safe, tested implementation
-const USE_FAST_CLOSURE = false  # TESTING: Debug precomputed closure; FAST_CLOSURE is actually slower ^-^
+const USE_FAST_CLOSURE {.used.} = false  # TESTING: Debug precomputed closure; FAST_CLOSURE is actually slower ^-^
 
 # Toggle to use new LALR(1) implementation with kernel-only storage and BitSet
 # Set to true to enable the optimized LALR(1) algorithm
-const USE_LALR_OPTIMIZED = true  # Re-enabled after fixing cache bug
+const USE_LALR_OPTIMIZED {.used.} = true  # Re-enabled after fixing cache bug
 
 # Toggle to use Pager's LALR algorithm (propagation-based)
 # Enabled for systematic debugging
-const USE_PAGER_LALR = true
+const USE_PAGER_LALR {.used.} = true
 
-proc precomputeClosureAdditions(grammar: SyntaxGrammar, firstSets: FirstSets): ClosurePrecomputation =
+proc precomputeClosureAdditions(grammar: SyntaxGrammar, firstSets: FirstSets): ClosurePrecomputation {.used.} =
   ## Precompute which items must be added when expanding each non-terminal.
   ## This is the tree-sitter optimization - compute once, use many times.
   result = ClosurePrecomputation(
@@ -2495,7 +2506,7 @@ proc computeLR0Closure(
   grammar: SyntaxGrammar
 ): HashSet[LR0Item] =
   ## Compute LR(0) closure: expand items until fixed point
-  debugEchoMsg "[Pager] Computing LR(0) closure for ", kernels.len, " kernels"
+  # debugEchoMsg "[Pager] Computing LR(0) closure for ", kernels.len, " kernels"
   
   result = initHashSet[LR0Item]()
   var workList = initDeque[LR0Item]()
@@ -2965,17 +2976,17 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar): B
     # Step 4: Convert to StateKernels format
     let statesLALR = convertPagerToStateKernels(statesWithProp, ctx)
     
-    # DEBUG: Show lookaheads for each state
-    debugEchoMsg "[Pager DEBUG] Lookaheads per state:"
-    for i in 0 ..< min(statesLALR.len, 5):  # Show first 5 states
-      debugEchoMsg "  State ", i, ":"
-      for core, lookaheads in statesLALR[i]:
-        let lookaheadSyms = block:
-          var syms: seq[string] = @[]
-          for bit in lookaheads:
-            syms.add($ctx.bitToSymbol(bit))
-          syms
-        debugEchoMsg "    ", core, " -> lookaheads: ", lookaheadSyms
+    # # DEBUG: Show lookaheads for each state
+    # debugEchoMsg "[Pager] Lookaheads per state:"
+    # for i in 0 ..< min(statesLALR.len, 5):  # Show first 5 states
+    #   debugEchoMsg "  State ", i, ":"
+    #   for core, lookaheads in statesLALR[i]:
+    #     let lookaheadSyms = block:
+    #       var syms: seq[string] = @[]
+    #       for bit in lookaheads:
+    #         syms.add($ctx.bitToSymbol(bit))
+    #       syms
+    #     debugEchoMsg "    ", core, " -> lookaheads: ", lookaheadSyms
     
     # Step 5: Convert to full LR1 items for table building
     let closureCache = precomputeClosureCache(augmentedGrammar, lexicalGrammar, firstSets)
@@ -3083,13 +3094,13 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar): B
           let gotoStateId = transitions[stateId][nextSym]
           
           if nextSym.kind != stNonTerminal:
-            let newAction = BuildParseAction(
-              kind: bpakShift,
-              participants: @[],
-              shiftState: gotoStateId.uint32,
-              shiftPrecedence: shiftPrecVal,
-              shiftDynamicPrecedence: production.dynamicPrecedence
-            )
+            # let newAction = BuildParseAction(
+            #   kind: bpakShift,
+            #   participants: @[],
+            #   shiftState: gotoStateId.uint32,
+            #   shiftPrecedence: shiftPrecVal,
+            #   shiftDynamicPrecedence: production.dynamicPrecedence
+            # )
 
             var alreadyExists = false
             for (sym, action) in entries[stateId].actionMap:

@@ -1,4 +1,4 @@
-import std/[os, macros]
+import std/[os, macros, options]
 import treestand/cli/[generate, test]
 import treestand/[
   js_exec, 
@@ -7,7 +7,6 @@ import treestand/[
   build_tables, 
   codegen,
   grammar,
-  rules,
   dsl,
   parser_types,
   query,
@@ -21,7 +20,6 @@ export
   build_tables, 
   codegen,
   grammar,
-  rules,
   dsl,
   parser_types,
   query,
@@ -29,16 +27,17 @@ export
   generate,
   test,
   macros,
-  ts_macros
+  ts_macros,
+  options
 
-proc main*(
+proc main(
   cmd         : string,
   grammarPath : string = "",
   dslPath     : string = "",
   outputDir   : string = "",
   parserName  : string = "",
   fixtureDir  : string = ""
-) =
+) {.used.} =
   if cmd notin ["generate", "test"]:
     echo "Error: Unknown command '", cmd, "'"
     quit(1)
@@ -88,7 +87,7 @@ proc generateParser*(
   ## ```nim
   ## import treestand
   ##
-  ## # Parse grammar from JSON
+  ## # Parse grammar from grammar.js
   ## let grammar = parseGrammarJs("grammar.js")
   ##
   ## # Generate parser

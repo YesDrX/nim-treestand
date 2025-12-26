@@ -69,9 +69,9 @@ when isMainModule:
   )
 ```
 
-### Using `ts_grammar` Macro (Recommended)
+### Using `tsGrammar` Macro (Recommended)
 
-The easiest way to define grammars is using the `ts_grammar` macro with a concise, PEG/EBNF-like syntax:
+The easiest way to define grammars is using the `tsGrammar` macro with a concise, PEG/EBNF-like syntax:
 
 ```nim
 import treestand/dsl_macros
@@ -79,7 +79,7 @@ import treestand/dsl
 import std/os
 
 # Define grammar using clean DSL syntax
-ts_grammar "math":
+tsGrammar "math":
   # Entry point - one or more statements
   program     <- +statement
   

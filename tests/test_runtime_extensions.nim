@@ -1,7 +1,6 @@
-import treestand/parser_types
-import std/[strutils, options, os]
 import unittest
-import treestand/corpus
+import std/[strutils, options, os]
+import treestand
 
 # Mock constants required by parser_runtime
 const terminalSymbolNames* = ["EOF", "TestTerm"]

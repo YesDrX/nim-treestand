@@ -5,47 +5,48 @@ Treestand provides a powerful Domain Specific Language (DSL) in Nim to define gr
 ## Introduction
 
 Treestand offers two ways to define grammars:
-1.  **Macro DSL (`ts_grammar`)**: A concise, operator-based syntax inspired by PEG/npeg. (Recommended)
+1.  **Macro DSL (`tsGrammar`)**: A concise, operator-based syntax inspired by PEG/npeg. (Recommended)
 2.  **Procedural DSL**: A set of helper functions (`seq`, `choice`, `rep`, etc.) used to build `InputGrammar` objects manually.
 
 This guide covers both, starting with the recommended macro DSL.
 
-## Macro DSL (`ts_grammar`)
+## Macro DSL (`tsGrammar`)
 
-The `ts_grammar` macro allows you to define grammars using a clean, readable syntax.
+The `tsGrammar` macro allows you to define grammars using a clean, readable syntax.
 
 ### Basic Syntax
 
 ```nim
-import treestand/dsl_macros
-import treestand/dsl # for token helpers like re, str
+import treestand
 
-ts_grammar "my_lang":
+tsGrammar "my_lang":
   # Rule Assignment
   program     <- +stmt
-  
+
   # Sequence (*) and Choice (|)
-  stmt        <- (assign | expr) * semi
+  stmt        <- assign * semi
   
   # Repetition
   # +rule  -> One or more
   # *rule  -> Zero or more
   # ?rule  -> Optional
-  assign      <- identifier * eq * expr
-  
-  # Named Fields
-  binary      <- (left: expr) * op * (right: expr)
+  assign      <- (variable: identifier) * eq * (value: expr) # Named fields by (fld : rule) format
+  expr        <- identifier | number | external_token # external_token is a token handled by an external scanner (C function), but not implemented in tsGrammar yet
   
   # Lexical Tokens
   # Use token() wrapper for lexical rules
   # String literals and regex patterns are auto-wrapped with str() or patt()
   identifier  <- token(re"\w+")
+  number      <- token(re"\\d+")
   eq          <- token("=")
   semi        <- token(";")
   
-  # Configuration
-  extras      = token(re"\s+") 
-  word        = "identifier"
+  # Configuration·
+  extras      = token(re"\s+")
+  # word        = "identifier"
+
+when isMainModule:
+  echo parseMyLang("a = 1; b=a;")
 ```
 
 ### Operators & Mapping

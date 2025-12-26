@@ -58,10 +58,68 @@
   <details open>
     <summary><a class="reference reference-toplevel" href="#7" id="57">Types</a></summary>
     <ul class="simple simple-toc-section">
-      <li><a class="reference" href="#ExternalToken" title="ExternalToken = object
+      <li><a class="reference" href="#Alias" title="Alias = object
+  value*: string             ## The alias name.
+  isNamed*: bool             ## Whether the alias appears as a named node in the CST.">Alias</a></li>
+<li><a class="reference" href="#AliasMap" title="AliasMap = Table[GrammarSymbol, Alias]">AliasMap</a></li>
+<li><a class="reference" href="#BuildLexState" title="BuildLexState = object
+  transitions*: seq[BuildLexTransition]
+  accept*: Option[int]">BuildLexState</a></li>
+<li><a class="reference" href="#BuildLexTable" title="BuildLexTable = object
+  states*: seq[BuildLexState]">BuildLexTable</a></li>
+<li><a class="reference" href="#BuildLexTransition" title="BuildLexTransition = object
+  characters*: CharacterSet
+  isSeparator*: bool
+  precedence*: int32
+  state*: uint32">BuildLexTransition</a></li>
+<li><a class="reference" href="#BuildParseAction" title="BuildParseAction = object
+  participants*: seq[GrammarSymbol]
+  case kind*: BuildParseActionKind
+  of bpakShift:
+    shiftState*: uint32
+    shiftPrecedence*: int32
+    shiftDynamicPrecedence*: int32
+  of bpakReduce:
+    reduceSymbol*: GrammarSymbol
+    reduceCount*: uint32
+    reducePrecedence*: int32
+    reduceStaticPrecedence*: int32
+    reduceAssociativity*: Option[GrammarAssociativity]
+  of bpakAccept, bpakError, bpakShiftExtra:
+    nil
+  of bpakSplit:
+    splitActions*: seq[BuildParseAction]">BuildParseAction</a></li>
+<li><a class="reference" href="#BuildParseActionKind" title="BuildParseActionKind = enum
+  bpakShift, bpakReduce, bpakAccept, bpakError, bpakShiftExtra, bpakSplit">BuildParseActionKind</a></li>
+<li><a class="reference" href="#BuildParseTable" title="BuildParseTable = object
+  entries*: seq[BuildParseTableEntry]
+  productionInfos*: seq[BuildProductionInfo]
+  externalSymbols*: seq[GrammarSymbol]">BuildParseTable</a></li>
+<li><a class="reference" href="#BuildParseTableEntry" title="BuildParseTableEntry = object
+  actionMap*: seq[tuple[sym: GrammarSymbol, action: BuildParseAction]]
+  gotoMap*: seq[tuple[sym: GrammarSymbol, state: uint32]]
+  lexState*: uint32">BuildParseTableEntry</a></li>
+<li><a class="reference" href="#BuildProductionInfo" title="BuildProductionInfo = object
+  symbol*: GrammarSymbol
+  fieldCount*: uint32
+  childCount*: uint32
+  fieldNames*: seq[string]">BuildProductionInfo</a></li>
+<li><a class="reference" href="#ExternalToken" title="ExternalToken = object
   name*: string
   kind*: VariableType
   correspondingInternalToken*: Option[GrammarSymbol]">ExternalToken</a></li>
+<li><a class="reference" href="#GrammarAssociativity" title="GrammarAssociativity = enum
+  gaLeft,                   ## Left-associative: a + b + c parsed as (a + b) + c
+  gaRight                    ## Right-associative: a = b = c parsed as a = (b = c)">GrammarAssociativity</a></li>
+<li><a class="reference" href="#GrammarSymbol" title="GrammarSymbol = object
+  kind*: GrammarSymbolType
+  index*: uint16             ## Index into the respective symbol list (terminals, non-terminals, etc.).">GrammarSymbol</a></li>
+<li><a class="reference" href="#GrammarSymbolType" title="GrammarSymbolType {.size: 2.} = enum
+  stExternal,               ## Symbol managed by an external scanner (C/C++).
+  stEnd,                    ## End of input (EOF) or end of sequence.
+  stEndOfNonTerminalExtra,  ## Special internal symbol for GLR processing.
+  stTerminal,               ## A lexical token (leaf node e.g., string literal, regex).
+  stNonTerminal              ## A syntactic rule composed of other symbols.">GrammarSymbolType</a></li>
 <li><a class="reference" href="#InlinedProductionMap" title="InlinedProductionMap = object
   productions*: seq[Production]
   productionMap*: Table[(pointer, uint32), seq[int]]">InlinedProductionMap</a></li>
@@ -85,12 +143,32 @@
   implicitPrecedence*: int32
   startState*: uint32        ## Starting state in the Lexer NFA/DFA.
   rule*: Rule">LexicalVariable</a></li>
+<li><a class="reference" href="#MetadataParams" title="MetadataParams = object
+  precedence*: Precedence    ## Static precedence.
+  dynamicPrecedence*: int32  ## Dynamic precedence (runtime conflict resolution).
+  associativity*: Option[GrammarAssociativity] ## Left or Right associativity.
+  isToken*: bool             ## Marks a rule as a lexical token (atomic).
+  isMainToken*: bool         ## Internal flag for main lexer tokens.
+  alias*: Option[Alias]      ## Alias for the resulting node.
+  fieldName*: Option[string] ## Field name for structure access (e.g. `left:`).">MetadataParams</a></li>
+<li><a class="reference" href="#Precedence" title="Precedence = object
+  case kind*: PrecedenceKind
+  of pkNone:
+    nil
+  of pkInteger:
+    intValue*: int32         ## The numeric precedence value.
+  of pkName:
+    name*: string            ## The unresolved precedence name.">Precedence</a></li>
 <li><a class="reference" href="#PrecedenceEntry" title="PrecedenceEntry = object
   case isName*: bool
   of true:
     name*: string
   of false:
     symbol*: string">PrecedenceEntry</a></li>
+<li><a class="reference" href="#PrecedenceKind" title="PrecedenceKind = enum
+  pkNone,                   ## No precedence specified.
+  pkInteger,                ## Numeric precedence level (higher binds tighter).
+  pkName                     ## Named precedence (unresolved, used during grammar prep).">PrecedenceKind</a></li>
 <li><a class="reference" href="#Production" title="Production = object
   steps*: seq[ProductionStep]
   dynamicPrecedence*: int32
@@ -107,6 +185,42 @@
   name*: string
   reservedWords*: seq[T]">ReservedWordContext</a></li>
 <li><a class="reference" href="#ReservedWordSetId" title="ReservedWordSetId = distinct uint">ReservedWordSetId</a></li>
+<li><a class="reference" href="#Rule" title="Rule = object
+  case kind*: RuleKind
+  of rkBlank:
+    nil
+  of rkString:
+    stringValue*: string
+  of rkPattern:
+    patternValue*: string
+    patternFlags*: string
+  of rkNamedSymbol:
+    symbolName*: string
+  of rkSymbol:
+    symbol*: GrammarSymbol
+  of rkChoice:
+    choiceMembers*: seq[Rule]
+  of rkMetadata:
+    metadataParams*: MetadataParams
+    metadataRule*: ref Rule
+  of rkRepeat:
+    repeatContent*: ref Rule
+  of rkSeq:
+    seqMembers*: seq[Rule]
+  of rkReserved:
+    reservedRule*: ref Rule
+    reservedContextName*: string">Rule</a></li>
+<li><a class="reference" href="#RuleKind" title="RuleKind = enum
+  rkBlank,                  ## Empty rule.
+  rkString,                 ## Literal string match (e.g. &quot;if&quot;).
+  rkPattern,                ## Regex pattern (e.g. &quot;\d+&quot;).
+  rkNamedSymbol,            ## Reference to another named rule (variable).
+  rkSymbol,                 ## Resolved symbol reference (internal use).
+  rkChoice,                 ## Alternative options (OR / |).
+  rkMetadata,               ## Wraps another rule with metadata (prec, assoc, token).
+  rkRepeat,                 ## Repetition (zero-or-more, one-or-more).
+  rkSeq,                    ## Sequence of rules (concatenation).
+  rkReserved                 ## Reserved word handling.">RuleKind</a></li>
 <li><a class="reference" href="#SyntaxGrammar" title="SyntaxGrammar = object
   variables*: seq[SyntaxVariable]
   extraSymbols*: seq[GrammarSymbol]
@@ -122,6 +236,11 @@
   kind*: VariableType
   productions*: seq[Production]
   isNullable*: bool">SyntaxVariable</a></li>
+<li><a class="reference" href="#TokenSet" title="TokenSet = object
+  terminalBits*: seq[bool]
+  externalBits*: seq[bool]
+  eof*: bool
+  endOfNonTerminalExtra*: bool">TokenSet</a></li>
 <li><a class="reference" href="#Variable" title="Variable = object
   name*: string
   kind*: VariableType
@@ -144,6 +263,44 @@
     </ul>
   </details>
 </li>
+<li>
+  <details open>
+    <summary><a class="reference reference-toplevel" href="#12" id="62">Procs</a></summary>
+    <ul class="simple simple-toc-section">
+      <ul class="simple nested-toc-section">$
+  <li><a class="reference" href="#%24%2CGrammarSymbol" title="`$`(s: GrammarSymbol): string">`$`(s: GrammarSymbol): string</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">==
+  <li><a class="reference" href="#%3D%3D%2CBuildParseAction%2CBuildParseAction" title="`==`(a, b: BuildParseAction): bool">`==`(a, b: BuildParseAction): bool</a></li>
+<li><a class="reference" href="#%3D%3D%2CGrammarSymbol%2CGrammarSymbol" title="`==`(a, b: GrammarSymbol): bool">`==`(a, b: GrammarSymbol): bool</a></li>
+<li><a class="reference" href="#%3D%3D%2CPrecedence%2CPrecedence" title="`==`(a, b: Precedence): bool">`==`(a, b: Precedence): bool</a></li>
+<li><a class="reference" href="#%3D%3D%2CRule%2CRule" title="`==`(a, b: Rule): bool">`==`(a, b: Rule): bool</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">hash
+  <li><a class="reference" href="#hash%2CBuildParseAction" title="hash(a: BuildParseAction): Hash">hash(a: BuildParseAction): Hash</a></li>
+<li><a class="reference" href="#hash%2CRule" title="hash(r: Rule): Hash">hash(r: Rule): Hash</a></li>
+<li><a class="reference" href="#hash%2CGrammarSymbol" title="hash(s: GrammarSymbol): Hash">hash(s: GrammarSymbol): Hash</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">newGrammarSymbol
+  <li><a class="reference" href="#newGrammarSymbol%2CGrammarSymbolType%2Cint" title="newGrammarSymbol(kind: GrammarSymbolType; index: int): GrammarSymbol">newGrammarSymbol(kind: GrammarSymbolType; index: int): GrammarSymbol</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">newPrecedence
+  <li><a class="reference" href="#newPrecedence%2Cstring" title="newPrecedence(name: string): Precedence">newPrecedence(name: string): Precedence</a></li>
+<li><a class="reference" href="#newPrecedence%2Cint32" title="newPrecedence(value: int32): Precedence">newPrecedence(value: int32): Precedence</a></li>
+
+</ul>
+<ul class="simple nested-toc-section">nonePrecedence
+  <li><a class="reference" href="#nonePrecedence" title="nonePrecedence(): Precedence">nonePrecedence(): Precedence</a></li>
+
+</ul>
+
+    </ul>
+  </details>
+</li>
 
 </ul>
 
@@ -158,22 +315,197 @@
     <div class="section" id="6">
   <h1><a class="toc-backref" href="#6">Imports</a></h1>
   <dl class="item">
-    <a class="reference external" href="rules.html">rules</a>, <a class="reference external" href="nfa.html">nfa</a>
+    <a class="reference external" href="nfa.html">nfa</a>
   </dl>
 </div>
 <div class="section" id="7">
   <h1><a class="toc-backref" href="#7">Types</a></h1>
   <dl class="item">
-    <div id="ExternalToken">
-  <dt><pre><a href="grammar.html#ExternalToken"><span class="Identifier">ExternalToken</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
-  <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#VariableType"><span class="Identifier">VariableType</span></a>
-  <span class="Identifier">correspondingInternalToken</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="rules.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span></pre></dt>
+    <div id="Alias">
+  <dt><pre><a href="grammar.html#Alias"><span class="Identifier">Alias</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">value</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>             <span class="Comment">## The alias name.</span>
+  <span class="Identifier">isNamed</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>             <span class="Comment">## Whether the alias appears as a named node in the CST.</span></pre></dt>
+  <dd>
+    
+    Represents a renamed symbol in the parse tree (e.g., mapping &quot;unary_minus&quot; to &quot;-&quot;).
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L124" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L124" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="AliasMap">
+  <dt><pre><a href="grammar.html#AliasMap"><span class="Identifier">AliasMap</span></a> <span class="Other">=</span> <span class="Identifier">Table</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">,</span> <a href="grammar.html#Alias"><span class="Identifier">Alias</span></a><span class="Other">]</span></pre></dt>
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L92" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L92" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L208" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L208" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="BuildLexState">
+  <dt><pre><a href="grammar.html#BuildLexState"><span class="Identifier">BuildLexState</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">transitions</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#BuildLexTransition"><span class="Identifier">BuildLexTransition</span></a><span class="Other">]</span>
+  <span class="Identifier">accept</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><span class="Identifier">int</span><span class="Other">]</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L257" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L257" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="BuildLexTable">
+  <dt><pre><a href="grammar.html#BuildLexTable"><span class="Identifier">BuildLexTable</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">states</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#BuildLexState"><span class="Identifier">BuildLexState</span></a><span class="Other">]</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L267" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L267" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="BuildLexTransition">
+  <dt><pre><a href="grammar.html#BuildLexTransition"><span class="Identifier">BuildLexTransition</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">characters</span><span class="Operator">*</span><span class="Other">:</span> <a href="nfa.html#CharacterSet"><span class="Identifier">CharacterSet</span></a>
+  <span class="Identifier">isSeparator</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">precedence</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int32</span>
+  <span class="Identifier">state</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L261" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L261" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="BuildParseAction">
+  <dt><pre><a href="grammar.html#BuildParseAction"><span class="Identifier">BuildParseAction</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">participants</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
+  <span class="Keyword">case</span> <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#BuildParseActionKind"><span class="Identifier">BuildParseActionKind</span></a>
+  <span class="Keyword">of</span> <span class="Identifier">bpakShift</span><span class="Other">:</span>
+    <span class="Identifier">shiftState</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+    <span class="Identifier">shiftPrecedence</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int32</span>
+    <span class="Identifier">shiftDynamicPrecedence</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int32</span>
+  <span class="Keyword">of</span> <span class="Identifier">bpakReduce</span><span class="Other">:</span>
+    <span class="Identifier">reduceSymbol</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a>
+    <span class="Identifier">reduceCount</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+    <span class="Identifier">reducePrecedence</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int32</span>
+    <span class="Identifier">reduceStaticPrecedence</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int32</span>
+    <span class="Identifier">reduceAssociativity</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="grammar.html#GrammarAssociativity"><span class="Identifier">GrammarAssociativity</span></a><span class="Other">]</span>
+  <span class="Keyword">of</span> <span class="Identifier">bpakAccept</span><span class="Other">,</span> <span class="Identifier">bpakError</span><span class="Other">,</span> <span class="Identifier">bpakShiftExtra</span><span class="Other">:</span>
+    <span class="Keyword">nil</span>
+  <span class="Keyword">of</span> <span class="Identifier">bpakSplit</span><span class="Other">:</span>
+    <span class="Identifier">splitActions</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#BuildParseAction"><span class="Identifier">BuildParseAction</span></a><span class="Other">]</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L218" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L218" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="BuildParseActionKind">
+  <dt><pre><a href="grammar.html#BuildParseActionKind"><span class="Identifier">BuildParseActionKind</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">bpakShift</span><span class="Other">,</span> <span class="Identifier">bpakReduce</span><span class="Other">,</span> <span class="Identifier">bpakAccept</span><span class="Other">,</span> <span class="Identifier">bpakError</span><span class="Other">,</span> <span class="Identifier">bpakShiftExtra</span><span class="Other">,</span> <span class="Identifier">bpakSplit</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L210" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L210" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="BuildParseTable">
+  <dt><pre><a href="grammar.html#BuildParseTable"><span class="Identifier">BuildParseTable</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">entries</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#BuildParseTableEntry"><span class="Identifier">BuildParseTableEntry</span></a><span class="Other">]</span>
+  <span class="Identifier">productionInfos</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#BuildProductionInfo"><span class="Identifier">BuildProductionInfo</span></a><span class="Other">]</span>
+  <span class="Identifier">externalSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L251" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L251" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="BuildParseTableEntry">
+  <dt><pre><a href="grammar.html#BuildParseTableEntry"><span class="Identifier">BuildParseTableEntry</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">actionMap</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">sym</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">,</span> <span class="Identifier">action</span><span class="Other">:</span> <a href="grammar.html#BuildParseAction"><span class="Identifier">BuildParseAction</span></a><span class="Other">]</span><span class="Other">]</span>
+  <span class="Identifier">gotoMap</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Keyword">tuple</span><span class="Other">[</span><span class="Identifier">sym</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">,</span> <span class="Identifier">state</span><span class="Other">:</span> <span class="Identifier">uint32</span><span class="Other">]</span><span class="Other">]</span>
+  <span class="Identifier">lexState</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L236" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L236" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="BuildProductionInfo">
+  <dt><pre><a href="grammar.html#BuildProductionInfo"><span class="Identifier">BuildProductionInfo</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">symbol</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a>
+  <span class="Identifier">fieldCount</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+  <span class="Identifier">childCount</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>
+  <span class="Identifier">fieldNames</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L244" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L244" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="ExternalToken">
+  <dt><pre><a href="grammar.html#ExternalToken"><span class="Identifier">ExternalToken</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#VariableType"><span class="Identifier">VariableType</span></a>
+  <span class="Identifier">correspondingInternalToken</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L93" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L93" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="GrammarAssociativity">
+  <dt><pre><a href="grammar.html#GrammarAssociativity"><span class="Identifier">GrammarAssociativity</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">gaLeft</span><span class="Other">,</span>                   <span class="Comment">## Left-associative: a + b + c parsed as (a + b) + c</span>
+  <span class="Identifier">gaRight</span>                    <span class="Comment">## Right-associative: a = b = c parsed as a = (b = c)</span></pre></dt>
+  <dd>
+    
+    Specifies associativity for binary operations.
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L119" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L119" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="GrammarSymbol">
+  <dt><pre><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbolType"><span class="Identifier">GrammarSymbolType</span></a>
+  <span class="Identifier">index</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint16</span>             <span class="Comment">## Index into the respective symbol list (terminals, non-terminals, etc.).</span></pre></dt>
+  <dd>
+    
+    Represents a unique symbol in the grammar, identified by type and index. This is the build-time representation, distinct from <tt class="docutils literal"><span class="pre"><span class="Identifier">parser_types</span><span class="Operator">.</span><span class="Identifier">Symbol</span></span></tt>.
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L154" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L154" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="GrammarSymbolType">
+  <dt><pre><a href="grammar.html#GrammarSymbolType"><span class="Identifier">GrammarSymbolType</span></a> {.<span class="Identifier">size</span><span class="Other">:</span> <span class="DecNumber">2</span>.} <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">stExternal</span><span class="Other">,</span>               <span class="Comment">## Symbol managed by an external scanner (C/C++).</span>
+  <span class="Identifier">stEnd</span><span class="Other">,</span>                    <span class="Comment">## End of input (EOF) or end of sequence.</span>
+  <span class="Identifier">stEndOfNonTerminalExtra</span><span class="Other">,</span>  <span class="Comment">## Special internal symbol for GLR processing.</span>
+  <span class="Identifier">stTerminal</span><span class="Other">,</span>               <span class="Comment">## A lexical token (leaf node e.g., string literal, regex).</span>
+  <span class="Identifier">stNonTerminal</span>              <span class="Comment">## A syntactic rule composed of other symbols.</span></pre></dt>
+  <dd>
+    
+    Distinguishes between different kinds of symbols in the grammar.
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L111" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L111" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -184,8 +516,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L80" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L80" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L81" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L81" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -193,19 +525,19 @@
   <dt><pre><a href="grammar.html#InputGrammar"><span class="Identifier">InputGrammar</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>              <span class="Comment">## Examples: &quot;json&quot;, &quot;python&quot;.</span>
   <span class="Identifier">variables</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#Variable"><span class="Identifier">Variable</span></a><span class="Other">]</span>  <span class="Comment">## List of all defined rules.</span>
-  <span class="Identifier">extraSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span>   <span class="Comment">## Whitespace, comments to be skipped.</span>
+  <span class="Identifier">extraSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span>   <span class="Comment">## Whitespace, comments to be skipped.</span>
   <span class="Identifier">expectedConflicts</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">]</span> <span class="Comment">## Documented LR conflicts to suppress warnings.</span>
   <span class="Identifier">precedenceOrderings</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#PrecedenceEntry"><span class="Identifier">PrecedenceEntry</span></a><span class="Other">]</span><span class="Other">]</span>
-  <span class="Identifier">externalTokens</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span> <span class="Comment">## Tokens handled by external scanner.</span>
+  <span class="Identifier">externalTokens</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span> <span class="Comment">## Tokens handled by external scanner.</span>
   <span class="Identifier">variablesToInline</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span> <span class="Comment">## Rules to inline into their callers.</span>
   <span class="Identifier">supertypeSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span> <span class="Comment">## Rules grouped as supertypes (for query API).</span>
   <span class="Identifier">wordToken</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span> <span class="Comment">## Keyword tokenizer optimization.</span>
-  <span class="Identifier">reservedWords</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#ReservedWordContext"><span class="Identifier">ReservedWordContext</span></a><span class="Other">[</span><a href="rules.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span><span class="Other">]</span></pre></dt>
+  <span class="Identifier">reservedWords</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#ReservedWordContext"><span class="Identifier">ReservedWordContext</span></a><span class="Other">[</span><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span><span class="Other">]</span></pre></dt>
   <dd>
     
     The raw grammar definition provided by the user (or DSL). This is the input to the <tt class="docutils literal"><span class="pre"><span class="Identifier">prepareGrammar</span></span></tt> phase.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L33" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L33" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L34" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L34" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -216,8 +548,8 @@
   <dd>
     
     The portion of the grammar handled by the Lexer. Consists of Regex/String rules converted to NFA.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L56" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L56" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L57" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L57" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -227,12 +559,46 @@
   <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#VariableType"><span class="Identifier">VariableType</span></a>
   <span class="Identifier">implicitPrecedence</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int32</span>
   <span class="Identifier">startState</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">uint32</span>        <span class="Comment">## Starting state in the Lexer NFA/DFA.</span>
-  <span class="Identifier">rule</span><span class="Operator">*</span><span class="Other">:</span> <a href="rules.html#Rule"><span class="Identifier">Rule</span></a></pre></dt>
+  <span class="Identifier">rule</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#Rule"><span class="Identifier">Rule</span></a></pre></dt>
   <dd>
     
     A refined variable for the Lexical Grammar (Lexer). These are typically Terminals (tokens).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L47" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L47" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L48" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L48" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="MetadataParams">
+  <dt><pre><a href="grammar.html#MetadataParams"><span class="Identifier">MetadataParams</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">precedence</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#Precedence"><span class="Identifier">Precedence</span></a>    <span class="Comment">## Static precedence.</span>
+  <span class="Identifier">dynamicPrecedence</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int32</span>  <span class="Comment">## Dynamic precedence (runtime conflict resolution).</span>
+  <span class="Identifier">associativity</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="grammar.html#GrammarAssociativity"><span class="Identifier">GrammarAssociativity</span></a><span class="Other">]</span> <span class="Comment">## Left or Right associativity.</span>
+  <span class="Identifier">isToken</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>             <span class="Comment">## Marks a rule as a lexical token (atomic).</span>
+  <span class="Identifier">isMainToken</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>         <span class="Comment">## Internal flag for main lexer tokens.</span>
+  <span class="Identifier">alias</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="grammar.html#Alias"><span class="Identifier">Alias</span></a><span class="Other">]</span>      <span class="Comment">## Alias for the resulting node.</span>
+  <span class="Identifier">fieldName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span> <span class="Comment">## Field name for structure access (e.g. `left:`).</span></pre></dt>
+  <dd>
+    
+    Stores metadata associated with a rule, affecting parsing behavior.
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L144" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L144" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="Precedence">
+  <dt><pre><a href="grammar.html#Precedence"><span class="Identifier">Precedence</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Keyword">case</span> <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#PrecedenceKind"><span class="Identifier">PrecedenceKind</span></a>
+  <span class="Keyword">of</span> <span class="Identifier">pkNone</span><span class="Other">:</span>
+    <span class="Keyword">nil</span>
+  <span class="Keyword">of</span> <span class="Identifier">pkInteger</span><span class="Other">:</span>
+    <span class="Identifier">intValue</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int32</span>         <span class="Comment">## The numeric precedence value.</span>
+  <span class="Keyword">of</span> <span class="Identifier">pkName</span><span class="Other">:</span>
+    <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>            <span class="Comment">## The unresolved precedence name.</span></pre></dt>
+  <dd>
+    
+    Encapsulates precedence information for a rule or production step.
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L134" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L134" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -246,8 +612,21 @@
   <dd>
     
     Helper structure for defining precedence orderings explicitly.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L14" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L14" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L15" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L15" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="PrecedenceKind">
+  <dt><pre><a href="grammar.html#PrecedenceKind"><span class="Identifier">PrecedenceKind</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">pkNone</span><span class="Other">,</span>                   <span class="Comment">## No precedence specified.</span>
+  <span class="Identifier">pkInteger</span><span class="Other">,</span>                <span class="Comment">## Numeric precedence level (higher binds tighter).</span>
+  <span class="Identifier">pkName</span>                     <span class="Comment">## Named precedence (unresolved, used during grammar prep).</span></pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L129" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L129" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -256,28 +635,28 @@
   <span class="Identifier">steps</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#ProductionStep"><span class="Identifier">ProductionStep</span></a><span class="Other">]</span>
   <span class="Identifier">dynamicPrecedence</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int32</span>
   <span class="Identifier">precedence</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int32</span>
-  <span class="Identifier">associativity</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="rules.html#GrammarAssociativity"><span class="Identifier">GrammarAssociativity</span></a><span class="Other">]</span></pre></dt>
+  <span class="Identifier">associativity</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="grammar.html#GrammarAssociativity"><span class="Identifier">GrammarAssociativity</span></a><span class="Other">]</span></pre></dt>
   <dd>
     
     A single alternative in a Syntax Variable (e.g. one branch of a Choice).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L73" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L73" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L74" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L74" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 <div id="ProductionStep">
   <dt><pre><a href="grammar.html#ProductionStep"><span class="Identifier">ProductionStep</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">symbol</span><span class="Operator">*</span><span class="Other">:</span> <a href="rules.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a>
-  <span class="Identifier">precedence</span><span class="Operator">*</span><span class="Other">:</span> <a href="rules.html#Precedence"><span class="Identifier">Precedence</span></a>
-  <span class="Identifier">associativity</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="rules.html#GrammarAssociativity"><span class="Identifier">GrammarAssociativity</span></a><span class="Other">]</span>
-  <span class="Identifier">alias</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="rules.html#Alias"><span class="Identifier">Alias</span></a><span class="Other">]</span>
+  <span class="Identifier">symbol</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a>
+  <span class="Identifier">precedence</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#Precedence"><span class="Identifier">Precedence</span></a>
+  <span class="Identifier">associativity</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="grammar.html#GrammarAssociativity"><span class="Identifier">GrammarAssociativity</span></a><span class="Other">]</span>
+  <span class="Identifier">alias</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="grammar.html#Alias"><span class="Identifier">Alias</span></a><span class="Other">]</span>
   <span class="Identifier">fieldName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span>
   <span class="Identifier">reservedWordSetId</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#ReservedWordSetId"><span class="Identifier">ReservedWordSetId</span></a></pre></dt>
   <dd>
     
     A single element in a production sequence (RHS).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L64" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L64" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L65" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L65" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -288,8 +667,8 @@
   <dd>
     
     Defines a scope where certain words are reserved.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L22" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L22" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L23" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L23" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -298,27 +677,81 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L62" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L62" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L63" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L63" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="Rule">
+  <dt><pre><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Keyword">case</span> <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#RuleKind"><span class="Identifier">RuleKind</span></a>
+  <span class="Keyword">of</span> <span class="Identifier">rkBlank</span><span class="Other">:</span>
+    <span class="Keyword">nil</span>
+  <span class="Keyword">of</span> <span class="Identifier">rkString</span><span class="Other">:</span>
+    <span class="Identifier">stringValue</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Keyword">of</span> <span class="Identifier">rkPattern</span><span class="Other">:</span>
+    <span class="Identifier">patternValue</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+    <span class="Identifier">patternFlags</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Keyword">of</span> <span class="Identifier">rkNamedSymbol</span><span class="Other">:</span>
+    <span class="Identifier">symbolName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
+  <span class="Keyword">of</span> <span class="Identifier">rkSymbol</span><span class="Other">:</span>
+    <span class="Identifier">symbol</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a>
+  <span class="Keyword">of</span> <span class="Identifier">rkChoice</span><span class="Other">:</span>
+    <span class="Identifier">choiceMembers</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span>
+  <span class="Keyword">of</span> <span class="Identifier">rkMetadata</span><span class="Other">:</span>
+    <span class="Identifier">metadataParams</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#MetadataParams"><span class="Identifier">MetadataParams</span></a>
+    <span class="Identifier">metadataRule</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ref</span> <a href="grammar.html#Rule"><span class="Identifier">Rule</span></a>
+  <span class="Keyword">of</span> <span class="Identifier">rkRepeat</span><span class="Other">:</span>
+    <span class="Identifier">repeatContent</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ref</span> <a href="grammar.html#Rule"><span class="Identifier">Rule</span></a>
+  <span class="Keyword">of</span> <span class="Identifier">rkSeq</span><span class="Other">:</span>
+    <span class="Identifier">seqMembers</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span>
+  <span class="Keyword">of</span> <span class="Identifier">rkReserved</span><span class="Other">:</span>
+    <span class="Identifier">reservedRule</span><span class="Operator">*</span><span class="Other">:</span> <span class="Keyword">ref</span> <a href="grammar.html#Rule"><span class="Identifier">Rule</span></a>
+    <span class="Identifier">reservedContextName</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span></pre></dt>
+  <dd>
+    
+    The core recursive data structure representing a grammar rule expression. This AST is built via the DSL and processed to generate the parser.
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L173" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L173" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="RuleKind">
+  <dt><pre><a href="grammar.html#RuleKind"><span class="Identifier">RuleKind</span></a> <span class="Other">=</span> <span class="Keyword">enum</span>
+  <span class="Identifier">rkBlank</span><span class="Other">,</span>                  <span class="Comment">## Empty rule.</span>
+  <span class="Identifier">rkString</span><span class="Other">,</span>                 <span class="Comment">## Literal string match (e.g. &quot;if&quot;).</span>
+  <span class="Identifier">rkPattern</span><span class="Other">,</span>                <span class="Comment">## Regex pattern (e.g. &quot;\d+&quot;).</span>
+  <span class="Identifier">rkNamedSymbol</span><span class="Other">,</span>            <span class="Comment">## Reference to another named rule (variable).</span>
+  <span class="Identifier">rkSymbol</span><span class="Other">,</span>                 <span class="Comment">## Resolved symbol reference (internal use).</span>
+  <span class="Identifier">rkChoice</span><span class="Other">,</span>                 <span class="Comment">## Alternative options (OR / |).</span>
+  <span class="Identifier">rkMetadata</span><span class="Other">,</span>               <span class="Comment">## Wraps another rule with metadata (prec, assoc, token).</span>
+  <span class="Identifier">rkRepeat</span><span class="Other">,</span>                 <span class="Comment">## Repetition (zero-or-more, one-or-more).</span>
+  <span class="Identifier">rkSeq</span><span class="Other">,</span>                    <span class="Comment">## Sequence of rules (concatenation).</span>
+  <span class="Identifier">rkReserved</span>                 <span class="Comment">## Reserved word handling.</span></pre></dt>
+  <dd>
+    
+    Enumeration of all possible AST node types for the grammar DSL.
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L160" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L160" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 <div id="SyntaxGrammar">
   <dt><pre><a href="grammar.html#SyntaxGrammar"><span class="Identifier">SyntaxGrammar</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">variables</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#SyntaxVariable"><span class="Identifier">SyntaxVariable</span></a><span class="Other">]</span>
-  <span class="Identifier">extraSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
-  <span class="Identifier">expectedConflicts</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span><span class="Other">]</span>
+  <span class="Identifier">extraSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
+  <span class="Identifier">expectedConflicts</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span><span class="Other">]</span>
   <span class="Identifier">externalTokens</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#ExternalToken"><span class="Identifier">ExternalToken</span></a><span class="Other">]</span>
-  <span class="Identifier">variablesToInline</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
-  <span class="Identifier">supertypeSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
-  <span class="Identifier">wordToken</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="rules.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
+  <span class="Identifier">variablesToInline</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
+  <span class="Identifier">supertypeSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
+  <span class="Identifier">wordToken</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
   <span class="Identifier">precedenceOrderings</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#PrecedenceEntry"><span class="Identifier">PrecedenceEntry</span></a><span class="Other">]</span><span class="Other">]</span>
-  <span class="Identifier">reservedWordSets</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#TokenSet"><span class="Identifier">TokenSet</span></a><span class="Other">]</span></pre></dt>
+  <span class="Identifier">reservedWordSets</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#TokenSet"><span class="Identifier">TokenSet</span></a><span class="Other">]</span></pre></dt>
   <dd>
     
     The processed grammar ready for Parse Table generation. Variables here are Non-Terminals composed of other Symbols (Terminals/Non-Terminals).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L97" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L97" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L98" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L98" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -331,8 +764,22 @@
   <dd>
     
     A variable in the Syntax Grammar (Parser). Typically Non-Terminals defined by sequences of ProductionSteps.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L84" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L84" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L85" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L85" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="TokenSet">
+  <dt><pre><a href="grammar.html#TokenSet"><span class="Identifier">TokenSet</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">terminalBits</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">bool</span><span class="Other">]</span>
+  <span class="Identifier">externalBits</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">bool</span><span class="Other">]</span>
+  <span class="Identifier">eof</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">endOfNonTerminalExtra</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
+  <dd>
+    
+    Bitset-like structure to track relevant tokens for Lexer state generation.
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L201" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L201" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -340,12 +787,12 @@
   <dt><pre><a href="grammar.html#Variable"><span class="Identifier">Variable</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#VariableType"><span class="Identifier">VariableType</span></a>
-  <span class="Identifier">rule</span><span class="Operator">*</span><span class="Other">:</span> <a href="rules.html#Rule"><span class="Identifier">Rule</span></a></pre></dt>
+  <span class="Identifier">rule</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#Rule"><span class="Identifier">Rule</span></a></pre></dt>
   <dd>
     
     Represents a high-level rule definition from the user's input grammar.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L27" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L27" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L28" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L28" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -358,8 +805,8 @@
   <dd>
     
     Classifies the role of a grammar variable (Rule).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L7" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L7" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L8" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L8" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -374,10 +821,157 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L111" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L111" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L271" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L271" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
+</div>
+
+  </dl>
+</div>
+<div class="section" id="12">
+  <h1><a class="toc-backref" href="#12">Procs</a></h1>
+  <dl class="item">
+    <div id="$-procs-all">
+  <div id="$,GrammarSymbol">
+  <dt><pre><span class="Keyword">proc</span> <a href="#%24%2CGrammarSymbol"><span class="Identifier">`$`</span></a><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L302" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L302" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="==-procs-all">
+  <div id="==,BuildParseAction,BuildParseAction">
+  <dt><pre><span class="Keyword">proc</span> <a href="#%3D%3D%2CBuildParseAction%2CBuildParseAction"><span class="Identifier">`==`</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <a href="grammar.html#BuildParseAction"><span class="Identifier">BuildParseAction</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span class="Identifier">noSideEffect</span><span class="Other">,</span> <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L368" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L368" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="==,GrammarSymbol,GrammarSymbol">
+  <dt><pre><span class="Keyword">proc</span> <a href="#%3D%3D%2CGrammarSymbol%2CGrammarSymbol"><span class="Identifier">`==`</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L296" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L296" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="==,Precedence,Precedence">
+  <dt><pre><span class="Keyword">proc</span> <a href="#%3D%3D%2CPrecedence%2CPrecedence"><span class="Identifier">`==`</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <a href="grammar.html#Precedence"><span class="Identifier">Precedence</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L284" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L284" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="==,Rule,Rule">
+  <dt><pre><span class="Keyword">proc</span> <a href="#%3D%3D%2CRule%2CRule"><span class="Identifier">`==`</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">,</span> <span class="Identifier">b</span><span class="Other">:</span> <a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">bool</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L342" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L342" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="hash-procs-all">
+  <div id="hash,BuildParseAction">
+  <dt><pre><span class="Keyword">proc</span> <a href="#hash%2CBuildParseAction"><span class="Identifier">hash</span></a><span class="Other">(</span><span class="Identifier">a</span><span class="Other">:</span> <a href="grammar.html#BuildParseAction"><span class="Identifier">BuildParseAction</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Hash</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span>
+                                       <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L390" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L390" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="hash,Rule">
+  <dt><pre><span class="Keyword">proc</span> <a href="#hash%2CRule"><span class="Identifier">hash</span></a><span class="Other">(</span><span class="Identifier">r</span><span class="Other">:</span> <a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Hash</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Structural hash for Rule
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L312" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L312" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="hash,GrammarSymbol">
+  <dt><pre><span class="Keyword">proc</span> <a href="#hash%2CGrammarSymbol"><span class="Identifier">hash</span></a><span class="Other">(</span><span class="Identifier">s</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">Hash</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L299" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L299" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="newGrammarSymbol-procs-all">
+  <div id="newGrammarSymbol,GrammarSymbolType,int">
+  <dt><pre><span class="Keyword">proc</span> <a href="#newGrammarSymbol%2CGrammarSymbolType%2Cint"><span class="Identifier">newGrammarSymbol</span></a><span class="Other">(</span><span class="Identifier">kind</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbolType"><span class="Identifier">GrammarSymbolType</span></a><span class="Other">;</span> <span class="Identifier">index</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L293" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L293" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="newPrecedence-procs-all">
+  <div id="newPrecedence,string">
+  <dt><pre><span class="Keyword">proc</span> <a href="#newPrecedence%2Cstring"><span class="Identifier">newPrecedence</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="grammar.html#Precedence"><span class="Identifier">Precedence</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L278" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L278" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="newPrecedence,int32">
+  <dt><pre><span class="Keyword">proc</span> <a href="#newPrecedence%2Cint32"><span class="Identifier">newPrecedence</span></a><span class="Other">(</span><span class="Identifier">value</span><span class="Other">:</span> <span class="Identifier">int32</span><span class="Other">)</span><span class="Other">:</span> <a href="grammar.html#Precedence"><span class="Identifier">Precedence</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L275" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L275" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
+<div id="nonePrecedence-procs-all">
+  <div id="nonePrecedence">
+  <dt><pre><span class="Keyword">proc</span> <a href="#nonePrecedence"><span class="Identifier">nonePrecedence</span></a><span class="Other">(</span><span class="Other">)</span><span class="Other">:</span> <a href="grammar.html#Precedence"><span class="Identifier">Precedence</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L281" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L281" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
 </div>
 
   </dl>
@@ -389,7 +983,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 00:43:27 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 04:11:52 UTC</small>
       </div>
     </div>
   </div>

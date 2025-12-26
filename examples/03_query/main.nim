@@ -1,6 +1,4 @@
 import treestand
-import treestand/query
-import treestand/parser_types
 import std/strutils
 
 # Include generated parser

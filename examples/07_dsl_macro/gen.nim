@@ -1,9 +1,9 @@
 import std/options
 import treestand
 
-# Define the grammar using the `ts_grammar` macro.
+# Define the grammar using the `tsGrammar` macro.
 # This macro allows defining rules using a concise syntax similar to PEG/EBNF.
-ts_grammar "calc":
+tsGrammar "calc":
   # Main entry point
   program     <- +stmt
   

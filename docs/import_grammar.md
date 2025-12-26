@@ -198,7 +198,7 @@ let tree = parseJson(input)
 
 ## Multiple Grammars
 
-You can import multiple grammars in the same module:
+You cannot import multiple grammars in the same module. The following code will result in a duplicated definition error, as generated code share the same constant names.
 
 ```nim
 import treestand
@@ -210,10 +210,6 @@ importGrammar(currentSourcePath.parentDir / "json" / "grammar.js")
 # Import another grammar (e.g., YAML)
 importGrammar(currentSourcePath.parentDir / "yaml" / "grammar.js")
 
-when isMainModule:
-    # Use both parsers
-    let jsonTree = parseJson("""{"key": "value"}""")
-    let yamlTree = parseYaml("key: value")
 ```
 
 ## Path Resolution
@@ -253,7 +249,7 @@ Some Tree-sitter grammars use external scanners (written in C) for complex token
 importGrammar("grammar.js")
 
 # automatically generate the following
-{.compile: "path/to/scanner.c".}
+# {.compile: "path/to/scanner.c".}
 
 # External scanner functions
 proc scanner_create*(): pointer {.importc: "tree_sitter_simple_scanner_external_scanner_create".}
@@ -291,24 +287,7 @@ const grammarPath = currentSourcePath.parentDir / "grammar.js"
 importGrammar(grammarPath)
 ```
 
-### 2. One Grammar Per Module (Recommended)
-
-While you can import multiple grammars, it's cleaner to create separate modules:
-
-```nim
-# json_parser.nim
-import treestand
-importGrammar("json/grammar.js")
-
-# yaml_parser.nim
-import treestand
-importGrammar("yaml/grammar.js")
-
-# main.nim
-import json_parser, yaml_parser
-```
-
-### 3. Organize Grammar Files
+### 2. Organize Grammar Files
 
 ```
 project/
@@ -322,14 +301,6 @@ project/
 │   ├── yaml_parser.nim
 │   └── main.nim
 ```
-
-### 4. Handle Compilation Time
-
-Parser generation can take a few seconds for complex grammars. For development, consider:
-
-- Using incremental compilation (`nim c --incremental:on`)
-- Separating parser modules from main code
-- Using Nim's incremental compilation cache
 
 ## Debugging
 
@@ -345,14 +316,6 @@ If compilation fails:
 - **Compilation Time**: Complex grammars may increase compile time by a few seconds
 - **Runtime Performance**: Zero impact - the generated parser is as fast as manually generated ones
 - **Binary Size**: Each imported grammar adds to binary size (similar to manual generation)
-
-## Limitations
-
-1. **Static Paths Only**: Grammar path must be known at compile-time
-2. **No Dynamic Loading**: Cannot choose grammars at runtime
-3. **Recompilation Required**: Grammar changes require full recompilation
-
-For dynamic grammar loading, use the traditional `generateParser` approach and load the generated parser at runtime.
 
 ## See Also
 

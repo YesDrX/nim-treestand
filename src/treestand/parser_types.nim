@@ -1,5 +1,9 @@
-## Common types used by both the generator and the runtime
-## This module allows generated parsers to share type definitions with the library.
+##
+##  This file is imported in generated parsers to provide common type definitions
+## 
+##  * When a parser is generated, it will import this file `import treestand/parser_types`
+##
+
 {.push warning[UnusedImport]: off.}
 import std/[options, times, strformat]
 {.pop.}

@@ -1,7 +1,7 @@
 import std/options
 import treestand
 
-ts_grammar "test":
+tsGrammar "test":
   binary <- (left: expr) * op * ?(right: expr)
   expr   <- number
   op     <- token("=")

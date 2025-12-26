@@ -1,5 +1,5 @@
 import std/options
-import rules
+import grammar
 
 
 ## DSL Helpers to build Grammar Rules easily

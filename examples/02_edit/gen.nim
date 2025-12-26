@@ -1,5 +1,4 @@
 import treestand
-import std/options
 import std/os
 
 proc createMathGrammar(): InputGrammar =

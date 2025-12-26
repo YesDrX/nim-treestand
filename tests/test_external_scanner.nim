@@ -1,13 +1,6 @@
 import unittest
-import std/os
-import std/osproc
-import std/strutils
-import treestand/js_exec
-import treestand/parse_grammar
-import treestand/prepare_grammar
-import treestand/build_tables
-import treestand/codegen
-import treestand/grammar
+import std/[os, osproc, strutils]
+import treestand
 
 suite "External Scanner Integration":
   
@@ -134,8 +127,8 @@ except Exception as e:
     check "SUCCESS" in runOut
     
     # Clean up
-    # if fileExists(outputPath):
-    #   removeFile(outputPath)
-    # let exePath = outputPath.replace(".nim", "")
-    # if fileExists(exePath):
-    #   removeFile(exePath)
+    if fileExists(outputPath):
+      removeFile(outputPath)
+    let exePath = outputPath.replace(".nim", "")
+    if fileExists(exePath):
+      removeFile(exePath)

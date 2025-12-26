@@ -113,7 +113,7 @@
     <div class="section" id="6">
   <h1><a class="toc-backref" href="#6">Imports</a></h1>
   <dl class="item">
-    <a class="reference external" href="grammar.html">grammar</a>, <a class="reference external" href="rules.html">rules</a>, <a class="reference external" href="nfa.html">nfa</a>
+    <a class="reference external" href="grammar.html">grammar</a>, <a class="reference external" href="nfa.html">nfa</a>
   </dl>
 </div>
 <div class="section" id="7">
@@ -122,14 +122,14 @@
     <div id="InternedGrammar">
   <dt><pre><a href="prepare_grammar.html#InternedGrammar"><span class="Identifier">InternedGrammar</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">variables</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#Variable"><span class="Identifier">Variable</span></a><span class="Other">]</span>
-  <span class="Identifier">extraSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span>
-  <span class="Identifier">expectedConflicts</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span><span class="Other">]</span>
+  <span class="Identifier">extraSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span>
+  <span class="Identifier">expectedConflicts</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span><span class="Other">]</span>
   <span class="Identifier">precedenceOrderings</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#PrecedenceEntry"><span class="Identifier">PrecedenceEntry</span></a><span class="Other">]</span><span class="Other">]</span>
   <span class="Identifier">externalTokens</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#Variable"><span class="Identifier">Variable</span></a><span class="Other">]</span>
-  <span class="Identifier">variablesToInline</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
-  <span class="Identifier">supertypeSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
-  <span class="Identifier">wordToken</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="rules.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
-  <span class="Identifier">reservedWordSets</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#ReservedWordContext"><span class="Identifier">ReservedWordContext</span></a><span class="Other">[</span><a href="rules.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span><span class="Other">]</span></pre></dt>
+  <span class="Identifier">variablesToInline</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
+  <span class="Identifier">supertypeSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
+  <span class="Identifier">wordToken</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span>
+  <span class="Identifier">reservedWordSets</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#ReservedWordContext"><span class="Identifier">ReservedWordContext</span></a><span class="Other">[</span><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span><span class="Other">]</span></pre></dt>
   <dd>
     
     
@@ -156,7 +156,7 @@
   <dl class="item">
     <div id="extractChoices-procs-all">
   <div id="extractChoices,Rule">
-  <dt><pre><span class="Keyword">proc</span> <a href="#extractChoices%2CRule"><span class="Identifier">extractChoices</span></a><span class="Other">(</span><span class="Identifier">rule</span><span class="Other">:</span> <a href="rules.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="rules.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dt><pre><span class="Keyword">proc</span> <a href="#extractChoices%2CRule"><span class="Identifier">extractChoices</span></a><span class="Other">(</span><span class="Identifier">rule</span><span class="Other">:</span> <a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     Extract all choices from a rule (flatten CHOICE nodes)
@@ -221,7 +221,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 00:43:28 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 04:11:52 UTC</small>
       </div>
     </div>
   </div>

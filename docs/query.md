@@ -4,15 +4,15 @@ Tree-stand provides a [Tree-sitter](https://tree-sitter.github.io/tree-sitter/us
 
 ## Basic Usage
 
-To use the query engine, import `treestand/query` and `treestand/parser_types`.
+To use the query engine, import `treestand` (check 03_query example)
 
 ```nim
-import treestand/query
-import treestand/parser_types
+import treestand
 
 # 1. Parse your source code
-let parser = newParser("YOUR_LANGUAGE")
-let tree = parser.parse("source code...")
+import parser as myParser
+let parser = myParser.newParser("YOUR_SOURCE_CODE")
+let tree = parser.parse()
 
 # 2. Create a Query
 let q = newQuery("""

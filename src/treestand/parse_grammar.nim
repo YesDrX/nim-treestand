@@ -1,6 +1,6 @@
 ## Parse grammar JSON into InputGrammar structure
 
-import json, grammar, rules, sets, options, os
+import json, grammar, sets, options, os
 import js_exec
 
 type

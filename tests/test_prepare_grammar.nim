@@ -1,8 +1,5 @@
 import unittest, options, tables
-import treestand/prepare_grammar
-import treestand/grammar
-import treestand/rules
-import treestand/nfa
+import treestand
 
 suite "Grammar Preparation":
   

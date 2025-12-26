@@ -1,7 +1,7 @@
 nimTitle	ts_macros	treestand/ts_macros.html	module src/treestand/ts_macros		0
 nim	importGrammar	treestand/ts_macros.html#importGrammar.m,static[string]	macro importGrammar(grammar: static[string]): untyped		5
-nim	buildGrammar	treestand/ts_macros.html#buildGrammar.m,untyped	macro buildGrammar(createGrammarFunction: untyped): untyped		106
-nim	ts_grammar	treestand/ts_macros.html#ts_grammar.m,staticstring,untyped	macro ts_grammar(name: static string; body: untyped): untyped		343
+nim	buildGrammar	treestand/ts_macros.html#buildGrammar.m,untyped	macro buildGrammar(createGrammarFunction: untyped): untyped		105
+nim	tsGrammar	treestand/ts_macros.html#tsGrammar.m,staticstring,untyped	macro tsGrammar(name: static string; body: untyped): untyped		335
 heading	How It Works	treestand/ts_macros.html#how-it-works	 How It Works		0
 heading	Parameters	treestand/ts_macros.html#parameters	 Parameters		0
 heading	Generated API	treestand/ts_macros.html#generated-api	 Generated API		0

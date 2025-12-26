@@ -1,3 +1,2 @@
 nimTitle	treestand	treestand.html	module src/treestand		0
-nim	main	treestand.html#main,string,string,string,string,string,string	proc main(cmd: string; grammarPath: string = ""; dslPath: string = "";\n     outputDir: string = ""; parserName: string = ""; fixtureDir: string = "")		34
-nim	generateParser	treestand.html#generateParser,InputGrammar,string,seq[string],string	proc generateParser(grammar: InputGrammar; outputFilename: string;\n               externalTokens: seq[string] = @[]; grammarPath: string = "")		59
+nim	generateParser	treestand.html#generateParser,InputGrammar,string,seq[string],string	proc generateParser(grammar: InputGrammar; outputFilename: string;\n               externalTokens: seq[string] = @[]; grammarPath: string = "")		58

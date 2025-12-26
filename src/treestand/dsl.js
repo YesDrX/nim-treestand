@@ -517,7 +517,7 @@ function checkPrecedence(value) {
 }
 
 function getEnv(name) {
-  if (globalThis.native) return globalThis.__ts_grammar_path;
+  if (globalThis.native) return globalThis.__tsGrammar_path;
   if (globalThis.process) return process.env[name]; // Node/Bun
   if (globalThis.Deno) return Deno.env.get(name); // Deno
   throw Error("Unsupported JS runtime");

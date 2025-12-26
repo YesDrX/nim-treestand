@@ -25,12 +25,12 @@
   <div class="document" id="documentId">
     <div class="container">
       <h1 class="title">Index</h1>
-      Modules: <a href="treestand.html">treestand</a>, <a href="treestand/bitset.html">treestand/bitset</a>, <a href="treestand/build_tables.html">treestand/build_tables</a>, <a href="treestand/cli/common.html">treestand/cli/common</a>, <a href="treestand/cli/generate.html">treestand/cli/generate</a>, <a href="treestand/cli/test.html">treestand/cli/test</a>, <a href="treestand/codegen.html">treestand/codegen</a>, <a href="treestand/corpus.html">treestand/corpus</a>, <a href="treestand/dsl.html">treestand/dsl</a>, <a href="treestand/grammar.html">treestand/grammar</a>, <a href="treestand/js_exec.html">treestand/js_exec</a>, <a href="treestand/minimizer.html">treestand/minimizer</a>, <a href="treestand/nfa.html">treestand/nfa</a>, <a href="treestand/parse_grammar.html">treestand/parse_grammar</a>, <a href="treestand/parser_types.html">treestand/parser_types</a>, <a href="treestand/prepare_grammar.html">treestand/prepare_grammar</a>, <a href="treestand/query.html">treestand/query</a>, <a href="treestand/rules.html">treestand/rules</a>, <a href="treestand/sexp_parser.html">treestand/sexp_parser</a>, <a href="treestand/symbol_set.html">treestand/symbol_set</a>, <a href="treestand/tables.html">treestand/tables</a>, <a href="treestand/ts_macros.html">treestand/ts_macros</a>.<br/><p /><h2>API symbols</h2>
+      Modules: <a href="treestand.html">treestand</a>, <a href="treestand/bitset.html">treestand/bitset</a>, <a href="treestand/build_tables.html">treestand/build_tables</a>, <a href="treestand/cli/common.html">treestand/cli/common</a>, <a href="treestand/cli/generate.html">treestand/cli/generate</a>, <a href="treestand/cli/test.html">treestand/cli/test</a>, <a href="treestand/codegen.html">treestand/codegen</a>, <a href="treestand/corpus.html">treestand/corpus</a>, <a href="treestand/dsl.html">treestand/dsl</a>, <a href="treestand/grammar.html">treestand/grammar</a>, <a href="treestand/js_exec.html">treestand/js_exec</a>, <a href="treestand/minimizer.html">treestand/minimizer</a>, <a href="treestand/nfa.html">treestand/nfa</a>, <a href="treestand/parse_grammar.html">treestand/parse_grammar</a>, <a href="treestand/parser_types.html">treestand/parser_types</a>, <a href="treestand/prepare_grammar.html">treestand/prepare_grammar</a>, <a href="treestand/query.html">treestand/query</a>, <a href="treestand/sexp_parser.html">treestand/sexp_parser</a>, <a href="treestand/symbol_set.html">treestand/symbol_set</a>, <a href="treestand/ts_macros.html">treestand/ts_macros</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="%60%24%60" href="#%60%24%60"><span>`$`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="bitset: proc `$`(bs: BitSet): string" href="treestand/bitset.html#%24%2CBitSet">bitset: proc `$`(bs: BitSet): string</a></li>
           <li><a class="reference external"
-          data-doc-search-tag="rules: proc `$`(s: GrammarSymbol): string" href="treestand/rules.html#%24%2CGrammarSymbol">rules: proc `$`(s: GrammarSymbol): string</a></li>
+          data-doc-search-tag="grammar: proc `$`(s: GrammarSymbol): string" href="treestand/grammar.html#%24%2CGrammarSymbol">grammar: proc `$`(s: GrammarSymbol): string</a></li>
           <li><a class="reference external"
           data-doc-search-tag="sexp_parser: proc `$`(node: ParseNode): string" href="treestand/sexp_parser.html#%24%2CParseNode">sexp_parser: proc `$`(node: ParseNode): string</a></li>
           <li><a class="reference external"
@@ -52,17 +52,17 @@
           <li><a class="reference external"
           data-doc-search-tag="build_tables: proc `==`(a, b: LR1Item): bool" href="treestand/build_tables.html#%3D%3D%2CLR1Item%2CLR1Item">build_tables: proc `==`(a, b: LR1Item): bool</a></li>
           <li><a class="reference external"
+          data-doc-search-tag="grammar: proc `==`(a, b: BuildParseAction): bool" href="treestand/grammar.html#%3D%3D%2CBuildParseAction%2CBuildParseAction">grammar: proc `==`(a, b: BuildParseAction): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="grammar: proc `==`(a, b: GrammarSymbol): bool" href="treestand/grammar.html#%3D%3D%2CGrammarSymbol%2CGrammarSymbol">grammar: proc `==`(a, b: GrammarSymbol): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="grammar: proc `==`(a, b: Precedence): bool" href="treestand/grammar.html#%3D%3D%2CPrecedence%2CPrecedence">grammar: proc `==`(a, b: Precedence): bool</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="grammar: proc `==`(a, b: Rule): bool" href="treestand/grammar.html#%3D%3D%2CRule%2CRule">grammar: proc `==`(a, b: Rule): bool</a></li>
+          <li><a class="reference external"
           data-doc-search-tag="parser_types: proc `==`(a, b: Symbol): bool" href="treestand/parser_types.html#%3D%3D%2CSymbol%2CSymbol">parser_types: proc `==`(a, b: Symbol): bool</a></li>
           <li><a class="reference external"
-          data-doc-search-tag="rules: proc `==`(a, b: GrammarSymbol): bool" href="treestand/rules.html#%3D%3D%2CGrammarSymbol%2CGrammarSymbol">rules: proc `==`(a, b: GrammarSymbol): bool</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="rules: proc `==`(a, b: Precedence): bool" href="treestand/rules.html#%3D%3D%2CPrecedence%2CPrecedence">rules: proc `==`(a, b: Precedence): bool</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="rules: proc `==`(a, b: Rule): bool" href="treestand/rules.html#%3D%3D%2CRule%2CRule">rules: proc `==`(a, b: Rule): bool</a></li>
-          <li><a class="reference external"
           data-doc-search-tag="symbol_set: proc `==`(a, b: SymbolSet): bool" href="treestand/symbol_set.html#%3D%3D%2CSymbolSet%2CSymbolSet">symbol_set: proc `==`(a, b: SymbolSet): bool</a></li>
-          <li><a class="reference external"
-          data-doc-search-tag="tables: proc `==`(a, b: BuildParseAction): bool" href="treestand/tables.html#%3D%3D%2CBuildParseAction%2CBuildParseAction">tables: proc `==`(a, b: BuildParseAction): bool</a></li>
           </ul></dd>
 <dt><a name="%60%3Ddestroy%60" href="#%60%3Ddestroy%60"><span>`=destroy`:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -86,11 +86,11 @@
           </ul></dd>
 <dt><a name="Alias" href="#Alias"><span>Alias:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: object Alias" href="treestand/rules.html#Alias">rules: object Alias</a></li>
+          data-doc-search-tag="grammar: object Alias" href="treestand/grammar.html#Alias">grammar: object Alias</a></li>
           </ul></dd>
 <dt><a name="AliasMap" href="#AliasMap"><span>AliasMap:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: type AliasMap" href="treestand/rules.html#AliasMap">rules: type AliasMap</a></li>
+          data-doc-search-tag="grammar: type AliasMap" href="treestand/grammar.html#AliasMap">grammar: type AliasMap</a></li>
           </ul></dd>
 <dt><a name="Associativity" href="#Associativity"><span>Associativity:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -118,27 +118,27 @@
           </ul></dd>
 <dt><a name="bpakAccept" href="#bpakAccept"><span>bpakAccept:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: BuildParseActionKind.bpakAccept" href="treestand/tables.html#bpakAccept">tables: BuildParseActionKind.bpakAccept</a></li>
+          data-doc-search-tag="grammar: BuildParseActionKind.bpakAccept" href="treestand/grammar.html#bpakAccept">grammar: BuildParseActionKind.bpakAccept</a></li>
           </ul></dd>
 <dt><a name="bpakError" href="#bpakError"><span>bpakError:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: BuildParseActionKind.bpakError" href="treestand/tables.html#bpakError">tables: BuildParseActionKind.bpakError</a></li>
+          data-doc-search-tag="grammar: BuildParseActionKind.bpakError" href="treestand/grammar.html#bpakError">grammar: BuildParseActionKind.bpakError</a></li>
           </ul></dd>
 <dt><a name="bpakReduce" href="#bpakReduce"><span>bpakReduce:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: BuildParseActionKind.bpakReduce" href="treestand/tables.html#bpakReduce">tables: BuildParseActionKind.bpakReduce</a></li>
+          data-doc-search-tag="grammar: BuildParseActionKind.bpakReduce" href="treestand/grammar.html#bpakReduce">grammar: BuildParseActionKind.bpakReduce</a></li>
           </ul></dd>
 <dt><a name="bpakShift" href="#bpakShift"><span>bpakShift:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: BuildParseActionKind.bpakShift" href="treestand/tables.html#bpakShift">tables: BuildParseActionKind.bpakShift</a></li>
+          data-doc-search-tag="grammar: BuildParseActionKind.bpakShift" href="treestand/grammar.html#bpakShift">grammar: BuildParseActionKind.bpakShift</a></li>
           </ul></dd>
 <dt><a name="bpakShiftExtra" href="#bpakShiftExtra"><span>bpakShiftExtra:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: BuildParseActionKind.bpakShiftExtra" href="treestand/tables.html#bpakShiftExtra">tables: BuildParseActionKind.bpakShiftExtra</a></li>
+          data-doc-search-tag="grammar: BuildParseActionKind.bpakShiftExtra" href="treestand/grammar.html#bpakShiftExtra">grammar: BuildParseActionKind.bpakShiftExtra</a></li>
           </ul></dd>
 <dt><a name="bpakSplit" href="#bpakSplit"><span>bpakSplit:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: BuildParseActionKind.bpakSplit" href="treestand/tables.html#bpakSplit">tables: BuildParseActionKind.bpakSplit</a></li>
+          data-doc-search-tag="grammar: BuildParseActionKind.bpakSplit" href="treestand/grammar.html#bpakSplit">grammar: BuildParseActionKind.bpakSplit</a></li>
           </ul></dd>
 <dt><a name="buildCanonicalCollection" href="#buildCanonicalCollection"><span>buildCanonicalCollection:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -168,23 +168,23 @@
           </ul></dd>
 <dt><a name="BuildLexState" href="#BuildLexState"><span>BuildLexState:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: object BuildLexState" href="treestand/tables.html#BuildLexState">tables: object BuildLexState</a></li>
+          data-doc-search-tag="grammar: object BuildLexState" href="treestand/grammar.html#BuildLexState">grammar: object BuildLexState</a></li>
           </ul></dd>
 <dt><a name="BuildLexTable" href="#BuildLexTable"><span>BuildLexTable:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: object BuildLexTable" href="treestand/tables.html#BuildLexTable">tables: object BuildLexTable</a></li>
+          data-doc-search-tag="grammar: object BuildLexTable" href="treestand/grammar.html#BuildLexTable">grammar: object BuildLexTable</a></li>
           </ul></dd>
 <dt><a name="BuildLexTransition" href="#BuildLexTransition"><span>BuildLexTransition:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: object BuildLexTransition" href="treestand/tables.html#BuildLexTransition">tables: object BuildLexTransition</a></li>
+          data-doc-search-tag="grammar: object BuildLexTransition" href="treestand/grammar.html#BuildLexTransition">grammar: object BuildLexTransition</a></li>
           </ul></dd>
 <dt><a name="BuildParseAction" href="#BuildParseAction"><span>BuildParseAction:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: object BuildParseAction" href="treestand/tables.html#BuildParseAction">tables: object BuildParseAction</a></li>
+          data-doc-search-tag="grammar: object BuildParseAction" href="treestand/grammar.html#BuildParseAction">grammar: object BuildParseAction</a></li>
           </ul></dd>
 <dt><a name="BuildParseActionKind" href="#BuildParseActionKind"><span>BuildParseActionKind:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: enum BuildParseActionKind" href="treestand/tables.html#BuildParseActionKind">tables: enum BuildParseActionKind</a></li>
+          data-doc-search-tag="grammar: enum BuildParseActionKind" href="treestand/grammar.html#BuildParseActionKind">grammar: enum BuildParseActionKind</a></li>
           </ul></dd>
 <dt><a name="buildParseTable" href="#buildParseTable"><span>buildParseTable:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -192,15 +192,15 @@
           </ul></dd>
 <dt><a name="BuildParseTable" href="#BuildParseTable"><span>BuildParseTable:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: object BuildParseTable" href="treestand/tables.html#BuildParseTable">tables: object BuildParseTable</a></li>
+          data-doc-search-tag="grammar: object BuildParseTable" href="treestand/grammar.html#BuildParseTable">grammar: object BuildParseTable</a></li>
           </ul></dd>
 <dt><a name="BuildParseTableEntry" href="#BuildParseTableEntry"><span>BuildParseTableEntry:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: object BuildParseTableEntry" href="treestand/tables.html#BuildParseTableEntry">tables: object BuildParseTableEntry</a></li>
+          data-doc-search-tag="grammar: object BuildParseTableEntry" href="treestand/grammar.html#BuildParseTableEntry">grammar: object BuildParseTableEntry</a></li>
           </ul></dd>
 <dt><a name="BuildProductionInfo" href="#BuildProductionInfo"><span>BuildProductionInfo:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="tables: object BuildProductionInfo" href="treestand/tables.html#BuildProductionInfo">tables: object BuildProductionInfo</a></li>
+          data-doc-search-tag="grammar: object BuildProductionInfo" href="treestand/grammar.html#BuildProductionInfo">grammar: object BuildProductionInfo</a></li>
           </ul></dd>
 <dt><a name="buildTables" href="#buildTables"><span>buildTables:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -418,11 +418,11 @@
           </ul></dd>
 <dt><a name="gaLeft" href="#gaLeft"><span>gaLeft:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: GrammarAssociativity.gaLeft" href="treestand/rules.html#gaLeft">rules: GrammarAssociativity.gaLeft</a></li>
+          data-doc-search-tag="grammar: GrammarAssociativity.gaLeft" href="treestand/grammar.html#gaLeft">grammar: GrammarAssociativity.gaLeft</a></li>
           </ul></dd>
 <dt><a name="gaRight" href="#gaRight"><span>gaRight:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: GrammarAssociativity.gaRight" href="treestand/rules.html#gaRight">rules: GrammarAssociativity.gaRight</a></li>
+          data-doc-search-tag="grammar: GrammarAssociativity.gaRight" href="treestand/grammar.html#gaRight">grammar: GrammarAssociativity.gaRight</a></li>
           </ul></dd>
 <dt><a name="generateExternalScannerBindings" href="#generateExternalScannerBindings"><span>generateExternalScannerBindings:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -498,7 +498,7 @@
           </ul></dd>
 <dt><a name="GrammarAssociativity" href="#GrammarAssociativity"><span>GrammarAssociativity:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: enum GrammarAssociativity" href="treestand/rules.html#GrammarAssociativity">rules: enum GrammarAssociativity</a></li>
+          data-doc-search-tag="grammar: enum GrammarAssociativity" href="treestand/grammar.html#GrammarAssociativity">grammar: enum GrammarAssociativity</a></li>
           </ul></dd>
 <dt><a name="GrammarJson" href="#GrammarJson"><span>GrammarJson:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -506,11 +506,11 @@
           </ul></dd>
 <dt><a name="GrammarSymbol" href="#GrammarSymbol"><span>GrammarSymbol:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: object GrammarSymbol" href="treestand/rules.html#GrammarSymbol">rules: object GrammarSymbol</a></li>
+          data-doc-search-tag="grammar: object GrammarSymbol" href="treestand/grammar.html#GrammarSymbol">grammar: object GrammarSymbol</a></li>
           </ul></dd>
 <dt><a name="GrammarSymbolType" href="#GrammarSymbolType"><span>GrammarSymbolType:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: enum GrammarSymbolType" href="treestand/rules.html#GrammarSymbolType">rules: enum GrammarSymbolType</a></li>
+          data-doc-search-tag="grammar: enum GrammarSymbolType" href="treestand/grammar.html#GrammarSymbolType">grammar: enum GrammarSymbolType</a></li>
           </ul></dd>
 <dt><a name="hasError" href="#hasError"><span>hasError:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -526,11 +526,11 @@
           <li><a class="reference external"
           data-doc-search-tag="build_tables: proc hash(item: LR1Item): Hash" href="treestand/build_tables.html#hash%2CLR1Item">build_tables: proc hash(item: LR1Item): Hash</a></li>
           <li><a class="reference external"
-          data-doc-search-tag="rules: proc hash(s: GrammarSymbol): Hash" href="treestand/rules.html#hash%2CGrammarSymbol">rules: proc hash(s: GrammarSymbol): Hash</a></li>
+          data-doc-search-tag="grammar: proc hash(a: BuildParseAction): Hash" href="treestand/grammar.html#hash%2CBuildParseAction">grammar: proc hash(a: BuildParseAction): Hash</a></li>
           <li><a class="reference external"
-          data-doc-search-tag="rules: proc hash(r: Rule): Hash" href="treestand/rules.html#hash%2CRule">rules: proc hash(r: Rule): Hash</a></li>
+          data-doc-search-tag="grammar: proc hash(s: GrammarSymbol): Hash" href="treestand/grammar.html#hash%2CGrammarSymbol">grammar: proc hash(s: GrammarSymbol): Hash</a></li>
           <li><a class="reference external"
-          data-doc-search-tag="tables: proc hash(a: BuildParseAction): Hash" href="treestand/tables.html#hash%2CBuildParseAction">tables: proc hash(a: BuildParseAction): Hash</a></li>
+          data-doc-search-tag="grammar: proc hash(r: Rule): Hash" href="treestand/grammar.html#hash%2CRule">grammar: proc hash(r: Rule): Hash</a></li>
           </ul></dd>
 <dt><a name="importGrammar" href="#importGrammar"><span>importGrammar:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -662,15 +662,9 @@
 <li><a class="reference external"
           data-doc-search-tag="build_tables: object LR1Item" href="treestand/build_tables.html#LR1Item">build_tables: object LR1Item</a></li>
           </ul></dd>
-<dt><a name="main" href="#main"><span>main:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="treestand: proc main(cmd: string; grammarPath: string = &quot;&quot;; dslPath: string = &quot;&quot;;
-     outputDir: string = &quot;&quot;; parserName: string = &quot;&quot;; fixtureDir: string = &quot;&quot;)" href="treestand.html#main%2Cstring%2Cstring%2Cstring%2Cstring%2Cstring%2Cstring">treestand: proc main(cmd: string; grammarPath: string = &quot;&quot;; dslPath: string = &quot;&quot;;
-     outputDir: string = &quot;&quot;; parserName: string = &quot;&quot;; fixtureDir: string = &quot;&quot;)</a></li>
-          </ul></dd>
 <dt><a name="MetadataParams" href="#MetadataParams"><span>MetadataParams:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: object MetadataParams" href="treestand/rules.html#MetadataParams">rules: object MetadataParams</a></li>
+          data-doc-search-tag="grammar: object MetadataParams" href="treestand/grammar.html#MetadataParams">grammar: object MetadataParams</a></li>
           </ul></dd>
 <dt><a name="minimizeParseTable" href="#minimizeParseTable"><span>minimizeParseTable:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -698,6 +692,10 @@
 <li><a class="reference external"
           data-doc-search-tag="bitset: proc newBitSet(capacity: int): BitSet" href="treestand/bitset.html#newBitSet%2Cint">bitset: proc newBitSet(capacity: int): BitSet</a></li>
           </ul></dd>
+<dt><a name="newGrammarSymbol" href="#newGrammarSymbol"><span>newGrammarSymbol:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="grammar: proc newGrammarSymbol(kind: GrammarSymbolType; index: int): GrammarSymbol" href="treestand/grammar.html#newGrammarSymbol%2CGrammarSymbolType%2Cint">grammar: proc newGrammarSymbol(kind: GrammarSymbolType; index: int): GrammarSymbol</a></li>
+          </ul></dd>
 <dt><a name="newLexer" href="#newLexer"><span>newLexer:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="sexp_parser: proc newLexer(input: string): Lexer" href="treestand/sexp_parser.html#newLexer%2Cstring">sexp_parser: proc newLexer(input: string): Lexer</a></li>
@@ -716,17 +714,13 @@
           </ul></dd>
 <dt><a name="newPrecedence" href="#newPrecedence"><span>newPrecedence:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: proc newPrecedence(value: int32): Precedence" href="treestand/rules.html#newPrecedence%2Cint32">rules: proc newPrecedence(value: int32): Precedence</a></li>
+          data-doc-search-tag="grammar: proc newPrecedence(value: int32): Precedence" href="treestand/grammar.html#newPrecedence%2Cint32">grammar: proc newPrecedence(value: int32): Precedence</a></li>
           <li><a class="reference external"
-          data-doc-search-tag="rules: proc newPrecedence(name: string): Precedence" href="treestand/rules.html#newPrecedence%2Cstring">rules: proc newPrecedence(name: string): Precedence</a></li>
+          data-doc-search-tag="grammar: proc newPrecedence(name: string): Precedence" href="treestand/grammar.html#newPrecedence%2Cstring">grammar: proc newPrecedence(name: string): Precedence</a></li>
           </ul></dd>
 <dt><a name="newQuery" href="#newQuery"><span>newQuery:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="query: proc newQuery(source: string): Query" href="treestand/query.html#newQuery%2Cstring">query: proc newQuery(source: string): Query</a></li>
-          </ul></dd>
-<dt><a name="newSymbol" href="#newSymbol"><span>newSymbol:</span></a></dt><dd><ul class="simple">
-<li><a class="reference external"
-          data-doc-search-tag="rules: proc newSymbol(kind: GrammarSymbolType; index: int): GrammarSymbol" href="treestand/rules.html#newSymbol%2CGrammarSymbolType%2Cint">rules: proc newSymbol(kind: GrammarSymbolType; index: int): GrammarSymbol</a></li>
           </ul></dd>
 <dt><a name="newSymbolContext" href="#newSymbolContext"><span>newSymbolContext:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -764,7 +758,7 @@
           </ul></dd>
 <dt><a name="nonePrecedence" href="#nonePrecedence"><span>nonePrecedence:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: proc nonePrecedence(): Precedence" href="treestand/rules.html#nonePrecedence">rules: proc nonePrecedence(): Precedence</a></li>
+          data-doc-search-tag="grammar: proc nonePrecedence(): Precedence" href="treestand/grammar.html#nonePrecedence">grammar: proc nonePrecedence(): Precedence</a></li>
           </ul></dd>
 <dt><a name="nonTerminal" href="#nonTerminal"><span>nonTerminal:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -956,7 +950,7 @@
           </ul></dd>
 <dt><a name="pkInteger" href="#pkInteger"><span>pkInteger:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: PrecedenceKind.pkInteger" href="treestand/rules.html#pkInteger">rules: PrecedenceKind.pkInteger</a></li>
+          data-doc-search-tag="grammar: PrecedenceKind.pkInteger" href="treestand/grammar.html#pkInteger">grammar: PrecedenceKind.pkInteger</a></li>
           </ul></dd>
 <dt><a name="pkLiteral" href="#pkLiteral"><span>pkLiteral:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -964,11 +958,11 @@
           </ul></dd>
 <dt><a name="pkName" href="#pkName"><span>pkName:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: PrecedenceKind.pkName" href="treestand/rules.html#pkName">rules: PrecedenceKind.pkName</a></li>
+          data-doc-search-tag="grammar: PrecedenceKind.pkName" href="treestand/grammar.html#pkName">grammar: PrecedenceKind.pkName</a></li>
           </ul></dd>
 <dt><a name="pkNone" href="#pkNone"><span>pkNone:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: PrecedenceKind.pkNone" href="treestand/rules.html#pkNone">rules: PrecedenceKind.pkNone</a></li>
+          data-doc-search-tag="grammar: PrecedenceKind.pkNone" href="treestand/grammar.html#pkNone">grammar: PrecedenceKind.pkNone</a></li>
           </ul></dd>
 <dt><a name="pkSymbol" href="#pkSymbol"><span>pkSymbol:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -992,7 +986,7 @@
           </ul></dd>
 <dt><a name="Precedence" href="#Precedence"><span>Precedence:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: object Precedence" href="treestand/rules.html#Precedence">rules: object Precedence</a></li>
+          data-doc-search-tag="grammar: object Precedence" href="treestand/grammar.html#Precedence">grammar: object Precedence</a></li>
           </ul></dd>
 <dt><a name="PrecedenceEntry" href="#PrecedenceEntry"><span>PrecedenceEntry:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1000,7 +994,7 @@
           </ul></dd>
 <dt><a name="PrecedenceKind" href="#PrecedenceKind"><span>PrecedenceKind:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: enum PrecedenceKind" href="treestand/rules.html#PrecedenceKind">rules: enum PrecedenceKind</a></li>
+          data-doc-search-tag="grammar: enum PrecedenceKind" href="treestand/grammar.html#PrecedenceKind">grammar: enum PrecedenceKind</a></li>
           </ul></dd>
 <dt><a name="PrecedenceValueJson" href="#PrecedenceValueJson"><span>PrecedenceValueJson:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1160,47 +1154,47 @@
           </ul></dd>
 <dt><a name="rkBlank" href="#rkBlank"><span>rkBlank:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: RuleKind.rkBlank" href="treestand/rules.html#rkBlank">rules: RuleKind.rkBlank</a></li>
+          data-doc-search-tag="grammar: RuleKind.rkBlank" href="treestand/grammar.html#rkBlank">grammar: RuleKind.rkBlank</a></li>
           </ul></dd>
 <dt><a name="rkChoice" href="#rkChoice"><span>rkChoice:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: RuleKind.rkChoice" href="treestand/rules.html#rkChoice">rules: RuleKind.rkChoice</a></li>
+          data-doc-search-tag="grammar: RuleKind.rkChoice" href="treestand/grammar.html#rkChoice">grammar: RuleKind.rkChoice</a></li>
           </ul></dd>
 <dt><a name="rkMetadata" href="#rkMetadata"><span>rkMetadata:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: RuleKind.rkMetadata" href="treestand/rules.html#rkMetadata">rules: RuleKind.rkMetadata</a></li>
+          data-doc-search-tag="grammar: RuleKind.rkMetadata" href="treestand/grammar.html#rkMetadata">grammar: RuleKind.rkMetadata</a></li>
           </ul></dd>
 <dt><a name="rkNamedSymbol" href="#rkNamedSymbol"><span>rkNamedSymbol:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: RuleKind.rkNamedSymbol" href="treestand/rules.html#rkNamedSymbol">rules: RuleKind.rkNamedSymbol</a></li>
+          data-doc-search-tag="grammar: RuleKind.rkNamedSymbol" href="treestand/grammar.html#rkNamedSymbol">grammar: RuleKind.rkNamedSymbol</a></li>
           </ul></dd>
 <dt><a name="rkPattern" href="#rkPattern"><span>rkPattern:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: RuleKind.rkPattern" href="treestand/rules.html#rkPattern">rules: RuleKind.rkPattern</a></li>
+          data-doc-search-tag="grammar: RuleKind.rkPattern" href="treestand/grammar.html#rkPattern">grammar: RuleKind.rkPattern</a></li>
           </ul></dd>
 <dt><a name="rkRepeat" href="#rkRepeat"><span>rkRepeat:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: RuleKind.rkRepeat" href="treestand/rules.html#rkRepeat">rules: RuleKind.rkRepeat</a></li>
+          data-doc-search-tag="grammar: RuleKind.rkRepeat" href="treestand/grammar.html#rkRepeat">grammar: RuleKind.rkRepeat</a></li>
           </ul></dd>
 <dt><a name="rkReserved" href="#rkReserved"><span>rkReserved:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: RuleKind.rkReserved" href="treestand/rules.html#rkReserved">rules: RuleKind.rkReserved</a></li>
+          data-doc-search-tag="grammar: RuleKind.rkReserved" href="treestand/grammar.html#rkReserved">grammar: RuleKind.rkReserved</a></li>
           </ul></dd>
 <dt><a name="rkSeq" href="#rkSeq"><span>rkSeq:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: RuleKind.rkSeq" href="treestand/rules.html#rkSeq">rules: RuleKind.rkSeq</a></li>
+          data-doc-search-tag="grammar: RuleKind.rkSeq" href="treestand/grammar.html#rkSeq">grammar: RuleKind.rkSeq</a></li>
           </ul></dd>
 <dt><a name="rkString" href="#rkString"><span>rkString:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: RuleKind.rkString" href="treestand/rules.html#rkString">rules: RuleKind.rkString</a></li>
+          data-doc-search-tag="grammar: RuleKind.rkString" href="treestand/grammar.html#rkString">grammar: RuleKind.rkString</a></li>
           </ul></dd>
 <dt><a name="rkSymbol" href="#rkSymbol"><span>rkSymbol:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: RuleKind.rkSymbol" href="treestand/rules.html#rkSymbol">rules: RuleKind.rkSymbol</a></li>
+          data-doc-search-tag="grammar: RuleKind.rkSymbol" href="treestand/grammar.html#rkSymbol">grammar: RuleKind.rkSymbol</a></li>
           </ul></dd>
 <dt><a name="Rule" href="#Rule"><span>Rule:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: object Rule" href="treestand/rules.html#Rule">rules: object Rule</a></li>
+          data-doc-search-tag="grammar: object Rule" href="treestand/grammar.html#Rule">grammar: object Rule</a></li>
           </ul></dd>
 <dt><a name="RuleJson" href="#RuleJson"><span>RuleJson:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1212,7 +1206,7 @@
           </ul></dd>
 <dt><a name="RuleKind" href="#RuleKind"><span>RuleKind:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: enum RuleKind" href="treestand/rules.html#RuleKind">rules: enum RuleKind</a></li>
+          data-doc-search-tag="grammar: enum RuleKind" href="treestand/grammar.html#RuleKind">grammar: enum RuleKind</a></li>
           </ul></dd>
 <dt><a name="runGenericGLR" href="#runGenericGLR"><span>runGenericGLR:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1352,7 +1346,7 @@
           </ul></dd>
 <dt><a name="TokenSet" href="#TokenSet"><span>TokenSet:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="rules: object TokenSet" href="treestand/rules.html#TokenSet">rules: object TokenSet</a></li>
+          data-doc-search-tag="grammar: object TokenSet" href="treestand/grammar.html#TokenSet">grammar: object TokenSet</a></li>
           </ul></dd>
 <dt><a name="toSExpr" href="#toSExpr"><span>toSExpr:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1378,9 +1372,9 @@
 <li><a class="reference external"
           data-doc-search-tag="sexp_parser: TerminalSymbol.tsEOF" href="treestand/sexp_parser.html#tsEOF">sexp_parser: TerminalSymbol.tsEOF</a></li>
           </ul></dd>
-<dt><a name="ts_grammar" href="#ts_grammar"><span>ts_grammar:</span></a></dt><dd><ul class="simple">
+<dt><a name="tsGrammar" href="#tsGrammar"><span>tsGrammar:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="ts_macros: macro ts_grammar(name: static string; body: untyped): untyped" href="treestand/ts_macros.html#ts_grammar.m%2Cstaticstring%2Cuntyped">ts_macros: macro ts_grammar(name: static string; body: untyped): untyped</a></li>
+          data-doc-search-tag="ts_macros: macro tsGrammar(name: static string; body: untyped): untyped" href="treestand/ts_macros.html#tsGrammar.m%2Cstaticstring%2Cuntyped">ts_macros: macro tsGrammar(name: static string; body: untyped): untyped</a></li>
           </ul></dd>
 <dt><a name="tsGrammarSymbol" href="#tsGrammarSymbol"><span>tsGrammarSymbol:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1480,7 +1474,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 00:43:29 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 04:11:54 UTC</small>
       </div>
     </div>
   </div>

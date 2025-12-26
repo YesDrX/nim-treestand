@@ -1,13 +1,7 @@
 ## Code generation for parsers
 
-import std/strutils
-import std/strformat
-import std/os
-import std/options
-import grammar, rules, tables as tsttables, nfa
-
-# Re-export for easier imports
-export tsttables
+import std/[strutils, strformat, os, options]
+import grammar, nfa
 
 type
   CodeGenError* = object of CatchableError
@@ -621,7 +615,7 @@ proc generateLexerRuntime*(lexTable: BuildLexTable, lexicalGrammar: LexicalGramm
     lines.add("  ")
 
   lines.add("  # Skip whitespace and extras (preserve start for scanning)")
-  lines.add("  let startPosBeforeSkip = lexer.pos")
+  lines.add("  let startPosBeforeSkip {.used.} = lexer.pos")
   lines.add("  ")
   lines.add("  # Skip whitespace")
   lines.add("  while lexer.pos < lexer.input.len and lexer.input[lexer.pos] in {'\\t', ' ', '\\r', '\\n'}:")

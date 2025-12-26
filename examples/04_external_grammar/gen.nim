@@ -1,6 +1,5 @@
 import treestand
 import std/os
-import std/strutils
 
 when isMainModule:
   generateParser(

@@ -29,42 +29,43 @@
 <h1 id="using-the-treestand-dsl">Using the Treestand DSL</h1><p>Treestand provides a powerful Domain Specific Language (DSL) in Nim to define grammars programmatically. This approach gives you full power of the host language (macros, loops, variables) to construct complex grammars.</p>
 
 <h2 id="introduction">Introduction</h2><p>Treestand offers two ways to define grammars:</p>
-<ol class="simple"><li><strong>Macro DSL (`ts_grammar`)</strong>: A concise, operator-based syntax inspired by PEG/npeg. (Recommended)</li>
+<ol class="simple"><li><strong>Macro DSL (`tsGrammar`)</strong>: A concise, operator-based syntax inspired by PEG/npeg. (Recommended)</li>
 <li><strong>Procedural DSL</strong>: A set of helper functions (<tt class="docutils literal"><span class="pre">seq</span></tt>, <tt class="docutils literal"><span class="pre">choice</span></tt>, <tt class="docutils literal"><span class="pre">rep</span></tt>, etc.) used to build <tt class="docutils literal"><span class="pre">InputGrammar</span></tt> objects manually.</li>
 </ol>
 <p>This guide covers both, starting with the recommended macro DSL.</p>
 
-<h2 id="macro-dsl-ts-grammar">Macro DSL (<tt class="docutils literal"><span class="pre">ts_grammar</span></tt>)</h2><p>The <tt class="docutils literal"><span class="pre">ts_grammar</span></tt> macro allows you to define grammars using a clean, readable syntax.</p>
+<h2 id="macro-dsl-tsgrammar">Macro DSL (<tt class="docutils literal"><span class="pre">tsGrammar</span></tt>)</h2><p>The <tt class="docutils literal"><span class="pre">tsGrammar</span></tt> macro allows you to define grammars using a clean, readable syntax.</p>
 
-<h3 id="basic-syntax">Basic Syntax</h3><p><pre class="listing"><span class="Keyword">import</span> <span class="Identifier">treestand</span><span class="Operator">/</span><span class="Identifier">dsl_macros</span>
-<span class="Keyword">import</span> <span class="Identifier">treestand</span><span class="Operator">/</span><span class="Identifier">dsl</span> <span class="Comment"># for token helpers like re, str</span>
+<h3 id="basic-syntax">Basic Syntax</h3><p><pre class="listing"><span class="Keyword">import</span> <span class="Identifier">treestand</span>
 
-<span class="Identifier">ts_grammar</span> <span class="StringLit">&quot;my_lang&quot;</span><span class="Punctuation">:</span>
+<span class="Identifier">tsGrammar</span> <span class="StringLit">&quot;my_lang&quot;</span><span class="Punctuation">:</span>
   <span class="Comment"># Rule Assignment</span>
   <span class="Identifier">program</span>     <span class="Operator">&lt;-</span> <span class="Operator">+</span><span class="Identifier">stmt</span>
   
   <span class="Comment"># Sequence (*) and Choice (|)</span>
-  <span class="Identifier">stmt</span>        <span class="Operator">&lt;-</span> <span class="Punctuation">(</span><span class="Identifier">assign</span> <span class="Operator">|</span> <span class="Identifier">expr</span><span class="Punctuation">)</span> <span class="Operator">*</span> <span class="Identifier">semi</span>
+  <span class="Identifier">stmt</span>        <span class="Operator">&lt;-</span> <span class="Identifier">assign</span> <span class="Operator">*</span> <span class="Identifier">semi</span>
   
   <span class="Comment"># Repetition</span>
   <span class="Comment"># +rule  -&gt; One or more</span>
   <span class="Comment"># *rule  -&gt; Zero or more</span>
   <span class="Comment"># ?rule  -&gt; Optional</span>
-  <span class="Identifier">assign</span>      <span class="Operator">&lt;-</span> <span class="Identifier">identifier</span> <span class="Operator">*</span> <span class="Identifier">eq</span> <span class="Operator">*</span> <span class="Identifier">expr</span>
-  
-  <span class="Comment"># Named Fields</span>
-  <span class="Identifier">binary</span>      <span class="Operator">&lt;-</span> <span class="Punctuation">(</span><span class="Identifier">left</span><span class="Punctuation">:</span> <span class="Identifier">expr</span><span class="Punctuation">)</span> <span class="Operator">*</span> <span class="Identifier">op</span> <span class="Operator">*</span> <span class="Punctuation">(</span><span class="Identifier">right</span><span class="Punctuation">:</span> <span class="Identifier">expr</span><span class="Punctuation">)</span>
+  <span class="Identifier">assign</span>      <span class="Operator">&lt;-</span> <span class="Punctuation">(</span><span class="Identifier">variable</span><span class="Punctuation">:</span> <span class="Identifier">identifier</span><span class="Punctuation">)</span> <span class="Operator">*</span> <span class="Identifier">eq</span> <span class="Operator">*</span> <span class="Punctuation">(</span><span class="Identifier">value</span><span class="Punctuation">:</span> <span class="Identifier">expr</span><span class="Punctuation">)</span> <span class="Comment"># Named fields by (fld : rule) format</span>
+  <span class="Identifier">expr</span>        <span class="Operator">&lt;-</span> <span class="Identifier">identifier</span> <span class="Operator">|</span> <span class="Identifier">number</span> <span class="Operator">|</span> <span class="Identifier">external_token</span> <span class="Comment"># external_token is a token handled by an external scanner (C function), but not implemented in tsGrammar yet</span>
   
   <span class="Comment"># Lexical Tokens</span>
   <span class="Comment"># Use token() wrapper for lexical rules</span>
   <span class="Comment"># String literals and regex patterns are auto-wrapped with str() or patt()</span>
   <span class="Identifier">identifier</span>  <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="RawData">re&quot;\w+&quot;</span><span class="Punctuation">)</span>
+  <span class="Identifier">number</span>      <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="RawData">re&quot;\\d+&quot;</span><span class="Punctuation">)</span>
   <span class="Identifier">eq</span>          <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="StringLit">&quot;=&quot;</span><span class="Punctuation">)</span>
   <span class="Identifier">semi</span>        <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="StringLit">&quot;;&quot;</span><span class="Punctuation">)</span>
   
-  <span class="Comment"># Configuration</span>
+  <span class="Comment"># Configuration·</span>
   <span class="Identifier">extras</span>      <span class="Operator">=</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="RawData">re&quot;\s+&quot;</span><span class="Punctuation">)</span>
-  <span class="Identifier">word</span>        <span class="Operator">=</span> <span class="StringLit">&quot;identifier&quot;</span></pre></p>
+  <span class="Comment"># word        = &quot;identifier&quot;</span>
+
+<span class="Keyword">when</span> <span class="Identifier">isMainModule</span><span class="Punctuation">:</span>
+  <span class="Identifier">echo</span> <span class="Identifier">parseMyLang</span><span class="Punctuation">(</span><span class="StringLit">&quot;a = 1; b=a;&quot;</span><span class="Punctuation">)</span></pre></p>
 
 <h3 id="operators-amp-mapping">Operators &amp; Mapping</h3><p>The macro translates operators into procedural DSL calls:</p>
 <table border="1" class="docutils"><tr><th>Operator</th><th>Syntax</th><th>Equivalent Function</th><th>Description</th></tr>
@@ -194,7 +195,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 00:43:31 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 04:11:55 UTC</small>
       </div>
     </div>
   </div>

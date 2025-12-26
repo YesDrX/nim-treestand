@@ -1,8 +1,5 @@
 import unittest, options
-import treestand/build_tables
-import treestand/grammar
-import treestand/rules
-import treestand/nfa
+import treestand
 
 suite "Table Building":
   

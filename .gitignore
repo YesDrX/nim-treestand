@@ -6,6 +6,7 @@ nimcache/
 *.exe
 tmp
 gen
+main
 runner
 runner.nim
 parser

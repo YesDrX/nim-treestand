@@ -79,8 +79,8 @@
   <li><a class="reference" href="#importGrammar.m%2Cstatic%5Bstring%5D" title="importGrammar(grammar: static[string]): untyped">importGrammar(grammar: static[string]): untyped</a></li>
 
 </ul>
-<ul class="simple nested-toc-section">ts_grammar
-  <li><a class="reference" href="#ts_grammar.m%2Cstaticstring%2Cuntyped" title="ts_grammar(name: static string; body: untyped): untyped">ts_grammar(name: static string; body: untyped): untyped</a></li>
+<ul class="simple nested-toc-section">tsGrammar
+  <li><a class="reference" href="#tsGrammar.m%2Cstaticstring%2Cuntyped" title="tsGrammar(name: static string; body: untyped): untyped">tsGrammar(name: static string; body: untyped): untyped</a></li>
 
 </ul>
 
@@ -187,8 +187,8 @@
 <li>The generated macro output is shown during compilation for debugging</li>
 </ul>
 
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/ts_macros.nim#L106" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/ts_macros.nim#L106" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/ts_macros.nim#L105" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/ts_macros.nim#L105" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -247,14 +247,46 @@
 </div>
 
 </div>
-<div id="ts_grammar-macros-all">
-  <div id="ts_grammar.m,staticstring,untyped">
-  <dt><pre><span class="Keyword">macro</span> <a href="#ts_grammar.m%2Cstaticstring%2Cuntyped"><span class="Identifier">ts_grammar</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">body</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">untyped</span></pre></dt>
+<div id="tsGrammar-macros-all">
+  <div id="tsGrammar.m,staticstring,untyped">
+  <dt><pre><span class="Keyword">macro</span> <a href="#tsGrammar.m%2Cstaticstring%2Cuntyped"><span class="Identifier">tsGrammar</span></a><span class="Other">(</span><span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">static</span> <span class="Identifier">string</span><span class="Other">;</span> <span class="Identifier">body</span><span class="Other">:</span> <span class="Identifier">untyped</span><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">untyped</span></pre></dt>
   <dd>
     
-    
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/ts_macros.nim#L343" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/ts_macros.nim#L343" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <p>Define a function, <tt class="docutils literal"><span class="pre"><span class="Keyword">proc</span> <span class="Identifier">name</span><span class="Punctuation">(</span><span class="Punctuation">)</span><span class="Punctuation">:</span> <span class="Identifier">InputGrammar</span></span></tt> based on Npeg like syntax. After the function is defined, buildGrammar(name) is called to build the grammar.</p>
+<p>Example:</p>
+<p><pre class="listing"><span class="Keyword">import</span> <span class="Identifier">treestand</span>
+
+<span class="Identifier">tsGrammar</span> <span class="StringLit">&quot;my_lang&quot;</span><span class="Punctuation">:</span>
+  <span class="Comment"># Rule Assignment</span>
+  <span class="Identifier">program</span>     <span class="Operator">&lt;-</span> <span class="Operator">+</span><span class="Identifier">stmt</span>
+  
+  <span class="Comment"># Sequence (*) and Choice (|)</span>
+  <span class="Identifier">stmt</span>        <span class="Operator">&lt;-</span> <span class="Identifier">assign</span> <span class="Operator">*</span> <span class="Identifier">semi</span>
+  
+  <span class="Comment"># Repetition</span>
+  <span class="Comment"># +rule  -&gt; One or more</span>
+  <span class="Comment"># *rule  -&gt; Zero or more</span>
+  <span class="Comment"># ?rule  -&gt; Optional</span>
+  <span class="Identifier">assign</span>      <span class="Operator">&lt;-</span> <span class="Punctuation">(</span><span class="Identifier">variable</span><span class="Punctuation">:</span> <span class="Identifier">identifier</span><span class="Punctuation">)</span> <span class="Operator">*</span> <span class="Identifier">eq</span> <span class="Operator">*</span> <span class="Punctuation">(</span><span class="Identifier">value</span><span class="Punctuation">:</span> <span class="Identifier">expr</span><span class="Punctuation">)</span> <span class="Comment"># Named fields by (fld : rule) format</span>
+  <span class="Identifier">expr</span>        <span class="Operator">&lt;-</span> <span class="Identifier">identifier</span> <span class="Operator">|</span> <span class="Identifier">number</span> <span class="Operator">|</span> <span class="Identifier">external_token</span> <span class="Comment"># external_token is a token handled by an external scanner (C function), but not implemented in tsGrammar yet</span>
+  
+  <span class="Comment"># Lexical Tokens</span>
+  <span class="Comment"># Use token() wrapper for lexical rules</span>
+  <span class="Comment"># String literals and regex patterns are auto-wrapped with str() or patt()</span>
+  <span class="Identifier">identifier</span>  <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="RawData">re&quot;\w+&quot;</span><span class="Punctuation">)</span>
+  <span class="Identifier">number</span>      <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="RawData">re&quot;\\d+&quot;</span><span class="Punctuation">)</span>
+  <span class="Identifier">eq</span>          <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="StringLit">&quot;=&quot;</span><span class="Punctuation">)</span>
+  <span class="Identifier">semi</span>        <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="StringLit">&quot;;&quot;</span><span class="Punctuation">)</span>
+  
+  <span class="Comment"># Configuration·</span>
+  <span class="Identifier">extras</span>      <span class="Operator">=</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="RawData">re&quot;\s+&quot;</span><span class="Punctuation">)</span>
+  <span class="Comment"># word        = &quot;identifier&quot;</span>
+
+<span class="Keyword">when</span> <span class="Identifier">isMainModule</span><span class="Punctuation">:</span>
+  <span class="Identifier">echo</span> <span class="Identifier">parseMyLang</span><span class="Punctuation">(</span><span class="StringLit">&quot;a = 1; b=a;&quot;</span><span class="Punctuation">)</span></pre></p>
+
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/ts_macros.nim#L335" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/ts_macros.nim#L335" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -270,7 +302,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 00:43:29 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 04:11:53 UTC</small>
       </div>
     </div>
   </div>

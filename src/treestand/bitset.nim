@@ -1,7 +1,7 @@
 ## Efficient BitSet implementation for lookahead sets in LALR(1) parser generation.
 ## Provides O(1) set operations using bitwise operations on uint64 words.
 
-import rules, hashes
+import grammar, hashes
 import std/bitops
 
 type

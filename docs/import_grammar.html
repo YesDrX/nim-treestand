@@ -165,7 +165,7 @@
 
 <span class="Keyword">let</span> <span class="Identifier">tree</span> <span class="Operator">=</span> <span class="Identifier">parseJson</span><span class="Punctuation">(</span><span class="Identifier">input</span><span class="Punctuation">)</span></pre></p>
 
-<h2 id="multiple-grammars">Multiple Grammars</h2><p>You can import multiple grammars in the same module:</p>
+<h2 id="multiple-grammars">Multiple Grammars</h2><p>You cannot import multiple grammars in the same module. The following code will result in a duplicated definition error, as generated code share the same constant names.</p>
 <p><pre class="listing"><span class="Keyword">import</span> <span class="Identifier">treestand</span>
 <span class="Keyword">import</span> <span class="Identifier">std</span><span class="Operator">/</span><span class="Identifier">os</span>
 
@@ -174,11 +174,7 @@
 
 <span class="Comment"># Import another grammar (e.g., YAML)</span>
 <span class="Identifier">importGrammar</span><span class="Punctuation">(</span><span class="Identifier">currentSourcePath</span><span class="Operator">.</span><span class="Identifier">parentDir</span> <span class="Operator">/</span> <span class="StringLit">&quot;yaml&quot;</span> <span class="Operator">/</span> <span class="StringLit">&quot;grammar.js&quot;</span><span class="Punctuation">)</span>
-
-<span class="Keyword">when</span> <span class="Identifier">isMainModule</span><span class="Punctuation">:</span>
-    <span class="Comment"># Use both parsers</span>
-    <span class="Keyword">let</span> <span class="Identifier">jsonTree</span> <span class="Operator">=</span> <span class="Identifier">parseJson</span><span class="Punctuation">(</span><span class="LongStringLit">&quot;&quot;&quot;{&quot;key&quot;: &quot;value&quot;}&quot;&quot;&quot;</span><span class="Punctuation">)</span>
-    <span class="Keyword">let</span> <span class="Identifier">yamlTree</span> <span class="Operator">=</span> <span class="Identifier">parseYaml</span><span class="Punctuation">(</span><span class="StringLit">&quot;key: value&quot;</span><span class="Punctuation">)</span></pre></p>
+</pre></p>
 
 <h2 id="path-resolution">Path Resolution</h2><p>The <tt class="docutils literal"><span class="pre">importGrammar</span></tt> macro supports several path formats:</p>
 
@@ -199,7 +195,7 @@
 <span class="Identifier">importGrammar</span><span class="Punctuation">(</span><span class="StringLit">&quot;grammar.js&quot;</span><span class="Punctuation">)</span>
 
 <span class="Comment"># automatically generate the following</span>
-<span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">compile</span><span class="Punctuation">:</span> <span class="StringLit">&quot;path/to/scanner.c&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
+<span class="Comment"># {.compile: &quot;path/to/scanner.c&quot;.}</span>
 
 <span class="Comment"># External scanner functions</span>
 <span class="Keyword">proc</span> <span class="Identifier">scanner_create</span><span class="Operator">*</span><span class="Punctuation">(</span><span class="Punctuation">)</span><span class="Punctuation">:</span> <span class="Identifier">pointer</span> <span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">importc</span><span class="Punctuation">:</span> <span class="StringLit">&quot;tree_sitter_simple_scanner_external_scanner_create&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
@@ -223,19 +219,7 @@
 <span class="Keyword">const</span> <span class="Identifier">grammarPath</span> <span class="Operator">=</span> <span class="Identifier">currentSourcePath</span><span class="Operator">.</span><span class="Identifier">parentDir</span> <span class="Operator">/</span> <span class="StringLit">&quot;grammar.js&quot;</span>
 <span class="Identifier">importGrammar</span><span class="Punctuation">(</span><span class="Identifier">grammarPath</span><span class="Punctuation">)</span></pre></p>
 
-<h3 id="Z2dot-one-grammar-per-module-recommended">2. One Grammar Per Module (Recommended)</h3><p>While you can import multiple grammars, it's cleaner to create separate modules:</p>
-<p><pre class="listing"><span class="Comment"># json_parser.nim</span>
-<span class="Keyword">import</span> <span class="Identifier">treestand</span>
-<span class="Identifier">importGrammar</span><span class="Punctuation">(</span><span class="StringLit">&quot;json/grammar.js&quot;</span><span class="Punctuation">)</span>
-
-<span class="Comment"># yaml_parser.nim</span>
-<span class="Keyword">import</span> <span class="Identifier">treestand</span>
-<span class="Identifier">importGrammar</span><span class="Punctuation">(</span><span class="StringLit">&quot;yaml/grammar.js&quot;</span><span class="Punctuation">)</span>
-
-<span class="Comment"># main.nim</span>
-<span class="Keyword">import</span> <span class="Identifier">json_parser</span><span class="Punctuation">,</span> <span class="Identifier">yaml_parser</span></pre></p>
-
-<h3 id="Z3dot-organize-grammar-files">3. Organize Grammar Files</h3><p><pre class="listing">project/
+<h3 id="Z2dot-organize-grammar-files">2. Organize Grammar Files</h3><p><pre class="listing">project/
 ├── grammars/
 │   ├── json/
 │   │   └── grammar.js
@@ -245,12 +229,6 @@
 │   ├── json_parser.nim
 │   ├── yaml_parser.nim
 │   └── main.nim</pre></p>
-
-<h3 id="Z4dot-handle-compilation-time">4. Handle Compilation Time</h3><p>Parser generation can take a few seconds for complex grammars. For development, consider:</p>
-<ul class="simple"><li>Using incremental compilation (<tt class="docutils literal"><span class="pre">nim c --incremental:on</span></tt>)</li>
-<li>Separating parser modules from main code</li>
-<li>Using Nim's incremental compilation cache</li>
-</ul>
 
 <h2 id="debugging">Debugging</h2><p>If compilation fails:</p>
 <ol class="simple"><li><strong>Check Grammar Path</strong>: Ensure the path is correct and accessible</li>
@@ -264,12 +242,6 @@
 <li><strong>Binary Size</strong>: Each imported grammar adds to binary size (similar to manual generation)</li>
 </ul>
 
-<h2 id="limitations">Limitations</h2><ol class="simple"><li><strong>Static Paths Only</strong>: Grammar path must be known at compile-time</li>
-<li><strong>No Dynamic Loading</strong>: Cannot choose grammars at runtime</li>
-<li><strong>Recompilation Required</strong>: Grammar changes require full recompilation</li>
-</ol>
-<p>For dynamic grammar loading, use the traditional <tt class="docutils literal"><span class="pre">generateParser</span></tt> approach and load the generated parser at runtime.</p>
-
 <h2 id="see-also">See Also</h2><ul class="simple"><li><a class="reference external" href="getting_started.md">Getting Started</a> - Traditional parser generation approach</li>
 <li><a class="reference external" href="using_dsl.md">Using DSL</a> - Defining grammars in pure Nim</li>
 <li><a class="reference external" href="advanced_usage.md">Advanced Usage</a> - Conflict resolution and debugging</li>
@@ -280,7 +252,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 00:43:30 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 04:11:55 UTC</small>
       </div>
     </div>
   </div>

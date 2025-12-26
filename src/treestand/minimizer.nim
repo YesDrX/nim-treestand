@@ -12,12 +12,10 @@
 ## The algorithm reduces parse table size significantly (e.g., JSON: 54 -> 41 states)
 ## while preserving correctness.
 
-import std/[tables, sets, algorithm, sequtils, options, hashes]
-import grammar, rules, parser_types, tables as build_tables
+import std/[tables, sets, options, hashes]
+import grammar
 
 type
-  IntSet = HashSet[int]
-
   Partition = object
     ## Partition refinement data structure for state merging.
     ## Tracks which states belong to which equivalence groups.

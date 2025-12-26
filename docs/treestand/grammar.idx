@@ -1,20 +1,75 @@
 nimTitle	grammar	treestand/grammar.html	module src/treestand/grammar		0
-nim	vtHidden	treestand/grammar.html#vtHidden	VariableType.vtHidden		7
-nim	vtAuxiliary	treestand/grammar.html#vtAuxiliary	VariableType.vtAuxiliary		7
-nim	vtAnonymous	treestand/grammar.html#vtAnonymous	VariableType.vtAnonymous		7
-nim	vtNamed	treestand/grammar.html#vtNamed	VariableType.vtNamed		7
-nim	VariableType	treestand/grammar.html#VariableType	enum VariableType		7
-nim	PrecedenceEntry	treestand/grammar.html#PrecedenceEntry	object PrecedenceEntry		14
-nim	ReservedWordContext	treestand/grammar.html#ReservedWordContext	object ReservedWordContext		22
-nim	Variable	treestand/grammar.html#Variable	object Variable		27
-nim	InputGrammar	treestand/grammar.html#InputGrammar	object InputGrammar		33
-nim	LexicalVariable	treestand/grammar.html#LexicalVariable	object LexicalVariable		47
-nim	LexicalGrammar	treestand/grammar.html#LexicalGrammar	object LexicalGrammar		56
-nim	ReservedWordSetId	treestand/grammar.html#ReservedWordSetId	type ReservedWordSetId		62
-nim	ProductionStep	treestand/grammar.html#ProductionStep	object ProductionStep		64
-nim	Production	treestand/grammar.html#Production	object Production		73
-nim	InlinedProductionMap	treestand/grammar.html#InlinedProductionMap	object InlinedProductionMap		80
-nim	SyntaxVariable	treestand/grammar.html#SyntaxVariable	object SyntaxVariable		84
-nim	ExternalToken	treestand/grammar.html#ExternalToken	object ExternalToken		92
-nim	SyntaxGrammar	treestand/grammar.html#SyntaxGrammar	object SyntaxGrammar		97
-nim	NoReservedWords	treestand/grammar.html#NoReservedWords	const NoReservedWords		111
+nim	vtHidden	treestand/grammar.html#vtHidden	VariableType.vtHidden		8
+nim	vtAuxiliary	treestand/grammar.html#vtAuxiliary	VariableType.vtAuxiliary		8
+nim	vtAnonymous	treestand/grammar.html#vtAnonymous	VariableType.vtAnonymous		8
+nim	vtNamed	treestand/grammar.html#vtNamed	VariableType.vtNamed		8
+nim	VariableType	treestand/grammar.html#VariableType	enum VariableType		8
+nim	PrecedenceEntry	treestand/grammar.html#PrecedenceEntry	object PrecedenceEntry		15
+nim	ReservedWordContext	treestand/grammar.html#ReservedWordContext	object ReservedWordContext		23
+nim	Variable	treestand/grammar.html#Variable	object Variable		28
+nim	InputGrammar	treestand/grammar.html#InputGrammar	object InputGrammar		34
+nim	LexicalVariable	treestand/grammar.html#LexicalVariable	object LexicalVariable		48
+nim	LexicalGrammar	treestand/grammar.html#LexicalGrammar	object LexicalGrammar		57
+nim	ReservedWordSetId	treestand/grammar.html#ReservedWordSetId	type ReservedWordSetId		63
+nim	ProductionStep	treestand/grammar.html#ProductionStep	object ProductionStep		65
+nim	Production	treestand/grammar.html#Production	object Production		74
+nim	InlinedProductionMap	treestand/grammar.html#InlinedProductionMap	object InlinedProductionMap		81
+nim	SyntaxVariable	treestand/grammar.html#SyntaxVariable	object SyntaxVariable		85
+nim	ExternalToken	treestand/grammar.html#ExternalToken	object ExternalToken		93
+nim	SyntaxGrammar	treestand/grammar.html#SyntaxGrammar	object SyntaxGrammar		98
+nim	GrammarSymbolType	treestand/grammar.html#GrammarSymbolType	enum GrammarSymbolType		111
+nim	gaLeft	treestand/grammar.html#gaLeft	GrammarAssociativity.gaLeft		119
+nim	gaRight	treestand/grammar.html#gaRight	GrammarAssociativity.gaRight		119
+nim	GrammarAssociativity	treestand/grammar.html#GrammarAssociativity	enum GrammarAssociativity		119
+nim	Alias	treestand/grammar.html#Alias	object Alias		124
+nim	pkNone	treestand/grammar.html#pkNone	PrecedenceKind.pkNone		129
+nim	pkInteger	treestand/grammar.html#pkInteger	PrecedenceKind.pkInteger		129
+nim	pkName	treestand/grammar.html#pkName	PrecedenceKind.pkName		129
+nim	PrecedenceKind	treestand/grammar.html#PrecedenceKind	enum PrecedenceKind		129
+nim	Precedence	treestand/grammar.html#Precedence	object Precedence		134
+nim	MetadataParams	treestand/grammar.html#MetadataParams	object MetadataParams		144
+nim	GrammarSymbol	treestand/grammar.html#GrammarSymbol	object GrammarSymbol		154
+nim	rkBlank	treestand/grammar.html#rkBlank	RuleKind.rkBlank		160
+nim	rkString	treestand/grammar.html#rkString	RuleKind.rkString		160
+nim	rkPattern	treestand/grammar.html#rkPattern	RuleKind.rkPattern		160
+nim	rkNamedSymbol	treestand/grammar.html#rkNamedSymbol	RuleKind.rkNamedSymbol		160
+nim	rkSymbol	treestand/grammar.html#rkSymbol	RuleKind.rkSymbol		160
+nim	rkChoice	treestand/grammar.html#rkChoice	RuleKind.rkChoice		160
+nim	rkMetadata	treestand/grammar.html#rkMetadata	RuleKind.rkMetadata		160
+nim	rkRepeat	treestand/grammar.html#rkRepeat	RuleKind.rkRepeat		160
+nim	rkSeq	treestand/grammar.html#rkSeq	RuleKind.rkSeq		160
+nim	rkReserved	treestand/grammar.html#rkReserved	RuleKind.rkReserved		160
+nim	RuleKind	treestand/grammar.html#RuleKind	enum RuleKind		160
+nim	Rule	treestand/grammar.html#Rule	object Rule		173
+nim	TokenSet	treestand/grammar.html#TokenSet	object TokenSet		201
+nim	AliasMap	treestand/grammar.html#AliasMap	type AliasMap		208
+nim	bpakShift	treestand/grammar.html#bpakShift	BuildParseActionKind.bpakShift		210
+nim	bpakReduce	treestand/grammar.html#bpakReduce	BuildParseActionKind.bpakReduce		210
+nim	bpakAccept	treestand/grammar.html#bpakAccept	BuildParseActionKind.bpakAccept		210
+nim	bpakError	treestand/grammar.html#bpakError	BuildParseActionKind.bpakError		210
+nim	bpakShiftExtra	treestand/grammar.html#bpakShiftExtra	BuildParseActionKind.bpakShiftExtra		210
+nim	bpakSplit	treestand/grammar.html#bpakSplit	BuildParseActionKind.bpakSplit		210
+nim	BuildParseActionKind	treestand/grammar.html#BuildParseActionKind	enum BuildParseActionKind		210
+nim	BuildParseAction	treestand/grammar.html#BuildParseAction	object BuildParseAction		218
+nim	BuildParseTableEntry	treestand/grammar.html#BuildParseTableEntry	object BuildParseTableEntry		236
+nim	BuildProductionInfo	treestand/grammar.html#BuildProductionInfo	object BuildProductionInfo		244
+nim	BuildParseTable	treestand/grammar.html#BuildParseTable	object BuildParseTable		251
+nim	BuildLexState	treestand/grammar.html#BuildLexState	object BuildLexState		257
+nim	BuildLexTransition	treestand/grammar.html#BuildLexTransition	object BuildLexTransition		261
+nim	BuildLexTable	treestand/grammar.html#BuildLexTable	object BuildLexTable		267
+nim	NoReservedWords	treestand/grammar.html#NoReservedWords	const NoReservedWords		271
+nim	newPrecedence	treestand/grammar.html#newPrecedence,int32	proc newPrecedence(value: int32): Precedence		275
+nim	newPrecedence	treestand/grammar.html#newPrecedence,string	proc newPrecedence(name: string): Precedence		278
+nim	nonePrecedence	treestand/grammar.html#nonePrecedence	proc nonePrecedence(): Precedence		281
+nim	`==`	treestand/grammar.html#==,Precedence,Precedence	proc `==`(a, b: Precedence): bool		284
+nim	newGrammarSymbol	treestand/grammar.html#newGrammarSymbol,GrammarSymbolType,int	proc newGrammarSymbol(kind: GrammarSymbolType; index: int): GrammarSymbol		293
+nim	`==`	treestand/grammar.html#==,GrammarSymbol,GrammarSymbol	proc `==`(a, b: GrammarSymbol): bool		296
+nim	hash	treestand/grammar.html#hash,GrammarSymbol	proc hash(s: GrammarSymbol): Hash		299
+nim	`$`	treestand/grammar.html#$,GrammarSymbol	proc `$`(s: GrammarSymbol): string		302
+nim	hash	treestand/grammar.html#hash,Rule	proc hash(r: Rule): Hash		312
+nim	`==`	treestand/grammar.html#==,Rule,Rule	proc `==`(a, b: Rule): bool		342
+nim	`==`	treestand/grammar.html#==,BuildParseAction,BuildParseAction	proc `==`(a, b: BuildParseAction): bool		368
+nim	hash	treestand/grammar.html#hash,BuildParseAction	proc hash(a: BuildParseAction): Hash		390
+nimgrp	==	treestand/grammar.html#==-procs-all	proc		284
+nimgrp	newprecedence	treestand/grammar.html#newPrecedence-procs-all	proc		275
+nimgrp	hash	treestand/grammar.html#hash-procs-all	proc		299

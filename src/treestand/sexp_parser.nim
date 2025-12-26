@@ -1285,7 +1285,7 @@ proc advance(lexer: Lexer, count: int = 1) =
 
 proc nextToken*(lexer: Lexer, validExternalSymbols: set[int16] = {}, lexState: int = 0): Token =
   # Skip whitespace and extras (preserve start for scanning)
-  let startPosBeforeSkip = lexer.pos
+  let startPosBeforeSkip {.used.} = lexer.pos
   
   # Skip whitespace
   while lexer.pos < lexer.input.len and lexer.input[lexer.pos] in {'\t', ' ', '\r', '\n'}:

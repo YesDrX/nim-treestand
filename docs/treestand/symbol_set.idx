@@ -1,12 +1,12 @@
 nimTitle	symbol_set	treestand/symbol_set.html	module src/treestand/symbol_set		0
-nim	SymbolSet	treestand/symbol_set.html#SymbolSet	object SymbolSet		14
-nim	initSymbolSet	treestand/symbol_set.html#initSymbolSet,int	proc initSymbolSet(capacity: int = 8): SymbolSet		31
-nim	len	treestand/symbol_set.html#len,SymbolSet	proc len(s: SymbolSet): int		36
-nim	contains	treestand/symbol_set.html#contains,SymbolSet,GrammarSymbol	proc contains(s: SymbolSet; sym: GrammarSymbol): bool		40
-nim	incl	treestand/symbol_set.html#incl,SymbolSet,GrammarSymbol	proc incl(s: var SymbolSet; sym: GrammarSymbol)		44
-nim	excl	treestand/symbol_set.html#excl,SymbolSet,GrammarSymbol	proc excl(s: var SymbolSet; sym: GrammarSymbol)		48
-nim	items	treestand/symbol_set.html#items.i,SymbolSet	iterator items(s: SymbolSet): GrammarSymbol		52
-nim	`==`	treestand/symbol_set.html#==,SymbolSet,SymbolSet	proc `==`(a, b: SymbolSet): bool		57
-nim	`$`	treestand/symbol_set.html#$,SymbolSet	proc `$`(s: SymbolSet): string		61
-nim	toHashSet	treestand/symbol_set.html#toHashSet,SymbolSet	proc toHashSet(s: SymbolSet): HashSet[GrammarSymbol]		75
-nim	toSymbolSet	treestand/symbol_set.html#toSymbolSet,HashSet[GrammarSymbol]	proc toSymbolSet(hs: HashSet[GrammarSymbol]): SymbolSet		81
+nim	SymbolSet	treestand/symbol_set.html#SymbolSet	object SymbolSet		9
+nim	initSymbolSet	treestand/symbol_set.html#initSymbolSet,int	proc initSymbolSet(capacity: int = 8): SymbolSet		26
+nim	len	treestand/symbol_set.html#len,SymbolSet	proc len(s: SymbolSet): int		31
+nim	contains	treestand/symbol_set.html#contains,SymbolSet,GrammarSymbol	proc contains(s: SymbolSet; sym: GrammarSymbol): bool		35
+nim	incl	treestand/symbol_set.html#incl,SymbolSet,GrammarSymbol	proc incl(s: var SymbolSet; sym: GrammarSymbol)		39
+nim	excl	treestand/symbol_set.html#excl,SymbolSet,GrammarSymbol	proc excl(s: var SymbolSet; sym: GrammarSymbol)		43
+nim	items	treestand/symbol_set.html#items.i,SymbolSet	iterator items(s: SymbolSet): GrammarSymbol		47
+nim	`==`	treestand/symbol_set.html#==,SymbolSet,SymbolSet	proc `==`(a, b: SymbolSet): bool		52
+nim	`$`	treestand/symbol_set.html#$,SymbolSet	proc `$`(s: SymbolSet): string		56
+nim	toHashSet	treestand/symbol_set.html#toHashSet,SymbolSet	proc toHashSet(s: SymbolSet): HashSet[GrammarSymbol]		69
+nim	toSymbolSet	treestand/symbol_set.html#toSymbolSet,HashSet[GrammarSymbol]	proc toSymbolSet(hs: HashSet[GrammarSymbol]): SymbolSet		75
