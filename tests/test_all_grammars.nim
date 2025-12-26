@@ -17,8 +17,11 @@ proc testGrammar(fixtureDir: string): GrammarTestResult =
   echo "\n\n===================================================="
   echo &"[TEST] Testing grammar: {result.name}"
   let treecliDir = currentSourcePath().parentDir().parentDir() / "src"
-  let cmd = fmt"""timeout 30s nim r --hints:off {treecliDir / "treestand.nim"} --cmd test --fixture_dir {fixtureDir.quoteShell}"""
-  echo cmd
+  when defined(linux):
+    let cmd = fmt"""timeout 30s nim r --hints:off {treecliDir / "treestand.nim"} --cmd test --fixture_dir {fixtureDir.quoteShell}"""
+  else:
+    let cmd = fmt"""nim r --hints:off {treecliDir / "treestand.nim"} --cmd test --fixture_dir {fixtureDir.quoteShell}"""
+  echo "[TEST] Running command: " & cmd
   let (output, exitCode) = execCmdEx(cmd)
   if exitCode != 0:
     result.success = false

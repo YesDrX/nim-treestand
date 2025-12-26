@@ -7,7 +7,14 @@ type
 
 proc findExeStatic*(name: string): string =
   when defined(windows):
-    let (output, exitcode) = gorgeEx("where " & name & ".exe")
+    var
+      output: string
+      exitcode: int
+    (output, exitcode) = gorgeEx("where " & name & ".exe")
+    if exitcode != 0:
+      (output, exitcode) = gorgeEx("where " & name & ".cmd")
+    if exitcode != 0:
+      (output, exitcode) = gorgeEx("where " & name)
   else:
     let (output, exitcode) = gorgeEx("which " & name)
   

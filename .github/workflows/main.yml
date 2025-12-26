@@ -41,7 +41,8 @@ jobs:
         repo-token: ${{ github.token }}
 
     - name: Install Packages
-      run: nimble install -y
+      run: |
+        nimble install -y
 
     - name: Setup Bun
       uses: oven-sh/setup-bun@v2

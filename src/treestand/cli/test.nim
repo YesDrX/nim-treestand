@@ -88,7 +88,8 @@ proc testCommand*(fixtureDir: string) =
   
   # Handle positive tests (expected to succeed)
   if genExit != 0:
-    echo "[TEST Error]: Error generating parser"
+    echo "[TEST Error]: Error generating parser:"
+    echo genOutput
     quit(1)
   
   if not fileExists(parserPath):

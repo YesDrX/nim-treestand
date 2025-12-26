@@ -4,6 +4,7 @@ nimcache/
 *.so
 *.dylib
 *.exe
+*.txt
 tmp
 gen
 main
