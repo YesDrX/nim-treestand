@@ -20,7 +20,6 @@ array.h
 parser.h
 node-types.json
 package-lock.json
-node-types.json
 grammar.json
 tree-sitter
 callgrind.out

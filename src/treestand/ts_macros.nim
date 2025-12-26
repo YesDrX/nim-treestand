@@ -1,5 +1,5 @@
 
-import std/[os, macros, strformat, strutils, tables]
+import std/[os, macros, strformat, strutils, tables, compilesettings]
 import ./[js_exec, dsl, parse_grammar, prepare_grammar, build_tables, codegen, grammar]
 {.warning[UnusedImport]: off.}
 
@@ -88,19 +88,30 @@ macro importGrammar*(grammar: static[string]): untyped =
 
   # Static run implementation
   let libSourceDir = currentSourcePath.parentDir.parentDir
+  var
+    output: string
+    exitCode: int
+  
   when defined(debug):
     let cmd = fmt"""nim r -d:debug --path:"{libSourceDir}" "{libSourceDir / "treestand.nim"}" --cmd generate --grammar_path "{grammar.expandTilde()}" """
   else:
     let treestand_cmd = findExeStatic("treestand")
-    var cmd: string
+    var success: bool = false
     if treestand_cmd.len > 0:
-      cmd = fmt"""{treestand_cmd} --cmd generate --grammar_path "{grammar.expandTilde()}" """
-    else:
-      cmd = fmt"""nim r -d:release --path:"{libSourceDir}" "{libSourceDir / "treestand.nim"}" --cmd generate --grammar_path "{grammar.expandTilde()}" """
-  echo "[Treestand] Running: " & cmd
-  let (output, exitcode) = gorgeEx(cmd)
-  if exitcode != 0:
-    raise newException(Exception, "Failed to generate parser from " & grammar)
+      let cmd = fmt"""{treestand_cmd} --cmd generate --grammar_path "{grammar.expandTilde()}" """ # Why the fuck this fails on windows? Windows is just the worst in the world.
+      echo "[Treestand] Running: " & cmd
+      (output, exitcode) = gorgeEx(cmd)
+      if exitcode == 0:
+        success = true
+    if not success:
+      let cmd = fmt"""nim r -d:release --path:"{libSourceDir}" "{libSourceDir / "treestand.nim"}" --cmd generate --grammar_path "{grammar.expandTilde()}" """
+      echo "[Treestand] Running: " & cmd
+      (output, exitcode) = gorgeEx(cmd)
+      if exitcode == 0:
+        success = true
+      else:
+        raise newException(Exception, "Failed to generate parser. Output:\n" & output)
+
   return output[output.find("# GENERATED PARSER.NIM") ..< output.len].parseStmt()
 
 macro buildGrammar*(createGrammarFunction: untyped): untyped =
