@@ -74,45 +74,36 @@ when isMainModule:
 The easiest way to define grammars is using the `tsGrammar` macro with a concise, PEG/EBNF-like syntax:
 
 ```nim
-import treestand/dsl_macros
-import treestand/dsl
-import std/os
+import treestand
 
-# Define grammar using clean DSL syntax
-tsGrammar "math":
-  # Entry point - one or more statements
-  program     <- +statement
+tsGrammar "my_lang":
+  # Rule Assignment
+  program     <- +stmt
+
+  # Sequence (*) and Choice (|)
+  stmt        <- assign * semi
   
-  # Choice between different statement types
-  statement   <- assignment | expression
+  # Repetition
+  # +rule  -> One or more
+  # *rule  -> Zero or more
+  # ?rule  -> Optional
+  assign      <- (variable: identifier) * eq * (value: expr) # Named fields by (fld : rule) format
+  expr        <- identifier | number | external_token # external_token is a token handled by an external scanner (C function), but not implemented in tsGrammar yet
   
-  # Named fields for AST nodes
-  assignment  <- (target: identifier) * eq * (value: expression)
-  
-  # Precedence and associativity
-  expression  <- number | binary_op | parens
-  binary_op   <- ((left: expression) * op * (right: expression)) ^ 1
-  parens      <- lparen * expression * rparen
-  
-  # Lexical tokens - use token() wrapper
-  identifier  <- token(re"[a-zA-Z_]\w*")
-  number      <- token(re"\d+")
-  op          <- token(re"[+\-*/]")
+  # Lexical Tokens
+  # Use token() wrapper for lexical rules
+  # String literals and regex patterns are auto-wrapped with str() or patt()
+  identifier  <- token(re"\w+")
+  number      <- token(re"\\d+")
   eq          <- token("=")
-  lparen      <- token("(")
-  rparen      <- token(")")
+  semi        <- token(";")
   
-  # Keywords using set syntax
-  keyword     <- {"if", "else", "while"}
-  
-  # Configuration - skip whitespace
+  # Configuration·
   extras      = token(re"\s+")
+  # word        = "identifier"
 
-# The macro generates a function to create the grammar
 when isMainModule:
-  let g = math()
-  generateParser(g, currentSourcePath().parentDir() / "parser.nim")
-  echo "Parser generated!"
+  echo parseMyLang("a = 1; b=a;")
 ```
 
 **Benefits:**
