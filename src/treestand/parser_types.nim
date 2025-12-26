@@ -5,7 +5,7 @@
 ##
 
 {.push warning[UnusedImport]: off.}
-import std/[options, times, strformat]
+import std/[options, times, strformat, hashes]
 {.pop.}
 
 type  
@@ -206,6 +206,14 @@ func err*(): ParseAction = ParseAction(kind: pakError)
 
 func t*(i: int): Symbol = terminal(i)
 func nt*(i: int): Symbol = nonTerminal(i)
+
+proc hash*(node: ParseNode): Hash =
+  result = hash(node.symbol)
+  for child in node.children:
+    result = result !& hash(result)
+  result = result !& hash(node.token)
+  result = result !& hash(node.startPos)
+  result = result !& hash(node.endPos)
 
 import macros
 macro debugEchoMsg*(msg: varargs[untyped]): untyped =

@@ -44,4 +44,5 @@ nim	acc	treestand/parser_types.html#acc	proc acc(): ParseAction		204
 nim	err	treestand/parser_types.html#err	proc err(): ParseAction		205
 nim	t	treestand/parser_types.html#t,int	proc t(i: int): Symbol		207
 nim	nt	treestand/parser_types.html#nt,int	proc nt(i: int): Symbol		208
-nim	debugEchoMsg	treestand/parser_types.html#debugEchoMsg.m,varargs[untyped]	macro debugEchoMsg(msg: varargs[untyped]): untyped		211
+nim	hash	treestand/parser_types.html#hash,ParseNode	proc hash(node: ParseNode): Hash		210
+nim	debugEchoMsg	treestand/parser_types.html#debugEchoMsg.m,varargs[untyped]	macro debugEchoMsg(msg: varargs[untyped]): untyped		219

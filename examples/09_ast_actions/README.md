@@ -26,9 +26,6 @@ type
 ### 2. Create Builder with Table
 
 ```nim
-proc hash(node: ParseNode): Hash =
-  hash(cast[int](node))  # Enable ParseNode as table key
-
 type
   AstBuilder = object
     astMap: Table[ParseNode, Expr]

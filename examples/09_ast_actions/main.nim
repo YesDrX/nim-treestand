@@ -26,10 +26,6 @@ proc `$`(e: Expr): string =
 # AST Builder Pattern
 # ==============================================================================
 
-# ParseNode needs a hash proc to be used as Table key
-proc hash(node: ParseNode): Hash =
-  hash(cast[int](node))
-
 type
   AstBuilder = object
     astMap: Table[ParseNode, Expr]
