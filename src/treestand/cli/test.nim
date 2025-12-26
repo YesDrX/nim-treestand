@@ -13,9 +13,12 @@ proc prepareExternalScanner(fixtureDir: string, expectError: bool): tuple[succes
     return (true, "Tree-sitter not found")
   
   # Run tree-sitter generate in the fixture directory
-  let cmd = &"cd {fixtureDir.quoteShell} && {treeSitterTool.quoteShell} generate" # remove 2>&1 to make windows happy
+  let originalCwd = getCurrentDir()
+  setCurrentDir(fixtureDir)
+  let cmd = &"{treeSitterTool.quoteShell} generate" # remove 2>&1 to make windows happy
   echo "[TEST] Running: ", cmd
   let (output, exitCode) = execCmdEx(cmd)
+  setCurrentDir(originalCwd)
   
   if not expectError and exitCode != 0:
     echo "[TEST] Warning: tree-sitter generate failed."
