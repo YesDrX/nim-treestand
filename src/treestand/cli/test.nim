@@ -133,9 +133,8 @@ proc testCommand*(fixtureDir: string) =
   runnerCode.add("var passed = 0\nvar failed = 0\n\n")
   
   for i, test in tests:
-    let escapedInput = test.input.multiReplace([("\\", "\\\\"), ("\"", "\\\""), ("\n", "\\n")])
+    let escapedInput = test.input.multiReplace([("\\", "\\\\"), ("\"", "\\\""), ("\n", "\\n"), ("\r", "\\r")])
     let escapedName = test.name.multiReplace([("\"", "\\\"")])
-    # let escapedExpected = test.expected.multiReplace([("\\", "\\\\"), ("\"", "\\\""), ("\n", "\\n")])
     let expectsError = test.expected.contains("(ERROR") or test.expected.contains("(MISSING")
     
     runnerCode.add(&"""
@@ -173,9 +172,9 @@ except Exception as e:
   passC = " --passC:\"-I\'" & grammarSrcInclude & "\'\" "
   
   when defined(debug):
-    let compileCmd = "nim r -d:debug --hints:off" & passC & " --path:\'" & treestandSrc & "\' \"" & runnerPath.quoteShell & "\""
+    let compileCmd = "nim r -d:debug --hints:off" & passC & " --path:\"" & treestandSrc & "\" \"" & runnerPath.quoteShell & "\""
   else:
-    let compileCmd = "nim r --hints:off" & passC & " --path:\'" & treestandSrc & "\' \"" & runnerPath.quoteShell & "\""
+    let compileCmd = "nim r --hints:off" & passC & " --path:\"" & treestandSrc & "\" \"" & runnerPath.quoteShell & "\""
   
   echo "[TEST] Running tests:"
   echo compileCmd
