@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.1.1"
 author        = "Treestand Contributors"
 description   = "Tree-sitter parser generator for Nim"
 license       = "MIT"
