@@ -121,8 +121,8 @@ except Exception as e:
     # Compile and run, capturing output
     let compileCmd = "nim c -r -d:debug --hints:off --path:\'" & srcDir.quoteShell & "\' " & runnerPath.quoteShell
     echo "  Running: ", compileCmd
-    let exitCode = execCmd(compileCmd)
+    let exitCode2 = execCmd(compileCmd)
     
-    if exitCode != 0:
-      echo "Runner failed with exit code ", exitCode
+    if exitCode2 != 0:
+      echo "Runner failed with exit code ", exitCode2
       fail()
