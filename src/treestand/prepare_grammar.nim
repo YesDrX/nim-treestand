@@ -778,6 +778,62 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
 
   for extraRule in interned.extraSymbols:
     collectExtras(extraRule)
+
+  # Smart Extras: Resolve conflicts between default extras and user tokens
+  # If the user is using the default extras ([\s]), and they also define a token
+  # that matches whitespace (e.g. `space: $ => / /`), we should remove the default extra
+  # to avoid ambiguity/conflicts.
+  proc detectAndResolveExtrasConflicts(extras: var seq[GrammarSymbol], lexicalVars: seq[LexicalVariable]) =
+    # 1. Check if extras is exactly the default `[\s]`
+    if extras.len != 1: return
+    
+    let extraSym = extras[0]
+    if extraSym.kind != stTerminal: return
+    
+    let extraVar = lexicalVars[extraSym.index.int]
+    
+    # Check if this extra is `/\s/`
+    var isDefaultExtra = false
+    if extraVar.rule.kind == rkPattern and extraVar.rule.patternValue == "\\s":
+      isDefaultExtra = true
+    
+    if not isDefaultExtra: return
+    
+    # 2. Check for conflicting user tokens
+    var hasConflict = false
+    for i, lexVar in lexicalVars:
+      # Skip the extra itself
+      if i.uint16 == extraSym.index: continue
+      
+      # Check for whitespace overlap
+      var overlaps = false
+      
+      if lexVar.rule.kind == rkString:
+        # Check if string literal contains whitespace
+        for c in lexVar.rule.stringValue:
+          if c in {' ', '\t', '\r', '\n'}:
+            overlaps = true
+            break
+            
+      elif lexVar.rule.kind == rkPattern:
+        # Check if pattern implies whitespace
+        # Heuristic: contains \s or space char
+        if lexVar.rule.patternValue.contains("\\s") or 
+           lexVar.rule.patternValue.contains(" ") or
+           lexVar.rule.patternValue.contains("\\t") or
+           lexVar.rule.patternValue.contains("\\r") or
+           lexVar.rule.patternValue.contains("\\n"):
+          overlaps = true
+      
+      if overlaps:
+        hasConflict = true
+        echo "[Treestand] Removing default extra `\\s` because it conflicts with user token: ", lexVar.name
+        break
+    
+    if hasConflict:
+      extras.setLen(0)
+
+  detectAndResolveExtrasConflicts(extraSymbols, lexicalVars)
   
   # Resolve named precedences
   proc resolveNamedPrecedences(orderings: seq[seq[PrecedenceEntry]]): stdtables.Table[string, int32] =

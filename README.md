@@ -111,8 +111,37 @@ when isMainModule:
 - **Named Fields**: Easy AST node field access with `(name: rule)`
 - **Operator Sugar**: `*` for sequence, `|` for choice, `+`/`*`/`?` for repetition
 - **Set Syntax**: `{"a", "b"}` for keyword choices
+- **Embedded Actions**: Execute Nim code during parsing (see below)
 - **No JavaScript**: Pure Nim, zero dependencies
 - **Compile-time**: All generation happens at compile-time
+
+#### Embedded Actions
+
+Attach Nim code blocks to rules to execute actions during parsing:
+
+```nim
+type Env = object
+  vars: Table[string, int]
+
+tsGrammar "calc", userdata: Env:
+  assign <- ident * eq * number * semi:
+    # Access matched node via `node`
+    let varName = node.child("ident").text
+    let value = parseInt(node.child("number").text)
+    userdata.vars[varName] = value
+  
+  ident  <- token(re"[a-zA-Z_]\\w*")
+  number <- token(re"\\d+")
+  eq     <- token("=")
+  semi   <- token(";")
+
+# Usage
+var env = Env()
+if matchCalc("x = 10; y = 20;", env):
+  echo env.vars  # {"x": 10, "y": 20}
+```
+
+Actions can build custom AST structures, populate symbol tables, perform semantic validation, and more. See [`examples/09_ast_actions`](examples/09_ast_actions) for a complete example.
 
 See [docs/using_dsl.md](docs/using_dsl.md) for the complete macro reference.
 

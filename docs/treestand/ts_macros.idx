@@ -1,17 +1,14 @@
 nimTitle	ts_macros	treestand/ts_macros.html	module src/treestand/ts_macros		0
-nim	importGrammar	treestand/ts_macros.html#importGrammar.m,static[string]	macro importGrammar(grammar: static[string]): untyped		5
-nim	buildGrammar	treestand/ts_macros.html#buildGrammar.m,untyped	macro buildGrammar(createGrammarFunction: untyped): untyped		105
-nim	tsGrammar	treestand/ts_macros.html#tsGrammar.m,staticstring,untyped	macro tsGrammar(name: static string; body: untyped): untyped		335
-heading	How It Works	treestand/ts_macros.html#how-it-works	 How It Works		0
-heading	Parameters	treestand/ts_macros.html#parameters	 Parameters		0
-heading	Generated API	treestand/ts_macros.html#generated-api	 Generated API		0
-heading	DSL Functions	treestand/ts_macros.html#dsl-functions	 DSL Functions		0
-heading	Example	treestand/ts_macros.html#example	 Example		0
-heading	Advantages	treestand/ts_macros.html#advantages	 Advantages		0
-heading	Notes	treestand/ts_macros.html#notes	 Notes		0
+nim	importGrammar	treestand/ts_macros.html#importGrammar.m,static[string]	macro importGrammar(grammar: static[string]): untyped		6
+nim	buildGrammar	treestand/ts_macros.html#buildGrammar.m,untyped	macro buildGrammar(createGrammarFunction: untyped): untyped		106
+nim	tsGrammar	treestand/ts_macros.html#tsGrammar.m,staticstring,untyped,untyped	macro tsGrammar(name: static string; arg2: untyped; arg3: untyped = nil): untyped		452
 heading	Parameters	treestand/ts_macros.html#parameters	 Parameters		0
 heading	Generated API	treestand/ts_macros.html#generated-api	 Generated API		0
 heading	Example	treestand/ts_macros.html#example	 Example		0
 heading	Relative Paths	treestand/ts_macros.html#relative-paths	 Relative Paths		0
 heading	Compile-Time vs Runtime	treestand/ts_macros.html#compileminustime-vs-runtime	 Compile-Time vs Runtime		0
 heading	Notes	treestand/ts_macros.html#notes	 Notes		0
+heading	Basic Usage (No Actions)	treestand/ts_macros.html#notes-basic-usage-no-actions	  Basic Usage (No Actions)		0
+heading	Usage with Embedded Actions	treestand/ts_macros.html#notes-usage-with-embedded-actions	  Usage with Embedded Actions		0
+heading	Available Symbols in Actions	treestand/ts_macros.html#available-symbols-in-actions	 Available Symbols in Actions		0
+heading	Operators	treestand/ts_macros.html#available-symbols-in-actions-operators	  Operators		0

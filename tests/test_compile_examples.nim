@@ -2,14 +2,15 @@ import unittest, os, osproc
 
 suite "Compile Examples":
     test "Compile Examples":
-        let examplesDir = currentSourcePath().parentDir().parentDir() / "examples"
+        let rootPath = currentSourcePath().parentDir().parentDir()
+        let examplesDir = rootPath / "examples"
         for example_dir in examplesDir.walkDir():
             if example_dir.kind == pcFile: continue
             let genNim = example_dir.path / "gen.nim"
             let mainNim = example_dir.path / "main.nim"
             let parserNim = example_dir.path / "parser.nim"
             if fileExists(genNim):
-                let cmd = "nim r -f --hints:off " & $genNim
+                let cmd = "nim r -f --hints:off " & & $genNim
                 echo "Running: " & cmd
                 let exitCode = execCmd(cmd)
                 check exitCode == 0

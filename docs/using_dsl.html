@@ -91,6 +91,58 @@
 <h3 id="external-tokens">External Tokens</h3><p>To define a token handled by an external scanner (C function):</p>
 <p><pre class="listing"><span class="Identifier">indent</span> <span class="Operator">&lt;-</span> <span class="Identifier">external_token</span></pre></p>
 
+<h3 id="embedded-actions">Embedded Actions</h3><p>The <tt class="docutils literal"><span class="pre">tsGrammar</span></tt> macro supports <strong>embedded actions</strong> - Nim code blocks that execute during parsing to build custom data structures, validate semantics, or perform side effects.</p>
+
+<h4 id="basic-syntax">Basic Syntax</h4><p><pre class="listing"><span class="Keyword">type</span> <span class="Identifier">UserData</span> <span class="Operator">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">vars</span><span class="Punctuation">:</span> <span class="Identifier">Table</span><span class="Punctuation">[</span><span class="Identifier">string</span><span class="Punctuation">,</span> <span class="Identifier">int</span><span class="Punctuation">]</span>
+
+<span class="Identifier">tsGrammar</span> <span class="StringLit">&quot;calc&quot;</span><span class="Punctuation">,</span> <span class="Identifier">userdata</span><span class="Punctuation">:</span> <span class="Identifier">UserData</span><span class="Punctuation">:</span>
+  <span class="Identifier">assign</span> <span class="Operator">&lt;-</span> <span class="Identifier">ident</span> <span class="Operator">*</span> <span class="Identifier">eq</span> <span class="Operator">*</span> <span class="Identifier">number</span> <span class="Operator">*</span> <span class="Identifier">semi</span><span class="Punctuation">:</span>
+    <span class="Comment"># Action code runs when this rule matches</span>
+    <span class="Identifier">echo</span> <span class="StringLit">&quot;Found assignment!&quot;</span></pre></p>
+
+<h4 id="available-symbols">Available Symbols</h4><p>Within action blocks, you have access to:</p>
+<ul class="simple"><li><strong>`node: ParseNode`</strong> - The matched parse node for this rule</li>
+<li><strong>`userdata: var YourType`</strong> - Mutable userdata object</li>
+<li><strong>`input: string`</strong> - The original input string</li>
+</ul>
+
+<h4 id="node-api">Node API</h4><p><pre class="listing"><span class="Comment"># Access children</span>
+<span class="Identifier">node</span><span class="Operator">.</span><span class="Identifier">children</span>         <span class="Comment"># seq[ParseNode] - all children</span>
+<span class="Identifier">node</span><span class="Operator">.</span><span class="Identifier">child</span><span class="Punctuation">(</span><span class="DecNumber">0</span><span class="Punctuation">)</span>         <span class="Comment"># Get child by index (0-based)</span>
+<span class="Identifier">node</span><span class="Operator">.</span><span class="Identifier">child</span><span class="Punctuation">(</span><span class="StringLit">&quot;ident&quot;</span><span class="Punctuation">)</span>   <span class="Comment"># Get first child with symbol name</span>
+<span class="Identifier">node</span><span class="Operator">.</span><span class="Identifier">childCount</span><span class="Punctuation">(</span><span class="Punctuation">)</span>     <span class="Comment"># Number of children</span>
+
+<span class="Comment"># Get text content</span>
+<span class="Identifier">node</span><span class="Operator">.</span><span class="Identifier">text</span>             <span class="Comment"># Text content of node</span>
+<span class="Identifier">node</span><span class="Operator">.</span><span class="Identifier">kind</span>             <span class="Comment"># Symbol name as string</span></pre></p>
+
+<h4 id="examplecolon-symbol-table">Example: Symbol Table</h4><p><pre class="listing"><span class="Keyword">type</span> <span class="Identifier">Env</span> <span class="Operator">=</span> <span class="Keyword">object</span>
+  <span class="Identifier">vars</span><span class="Punctuation">:</span> <span class="Identifier">Table</span><span class="Punctuation">[</span><span class="Identifier">string</span><span class="Punctuation">,</span> <span class="Identifier">int</span><span class="Punctuation">]</span>
+
+<span class="Identifier">tsGrammar</span> <span class="StringLit">&quot;calc&quot;</span><span class="Punctuation">,</span> <span class="Identifier">userdata</span><span class="Punctuation">:</span> <span class="Identifier">Env</span><span class="Punctuation">:</span>
+  <span class="Identifier">assign</span> <span class="Operator">&lt;-</span> <span class="Identifier">ident</span> <span class="Operator">*</span> <span class="Identifier">eq</span> <span class="Operator">*</span> <span class="Identifier">number</span> <span class="Operator">*</span> <span class="Identifier">semi</span><span class="Punctuation">:</span>
+    <span class="Keyword">let</span> <span class="Identifier">varName</span> <span class="Operator">=</span> <span class="Identifier">node</span><span class="Operator">.</span><span class="Identifier">child</span><span class="Punctuation">(</span><span class="StringLit">&quot;ident&quot;</span><span class="Punctuation">)</span><span class="Operator">.</span><span class="Identifier">text</span>
+    <span class="Keyword">let</span> <span class="Identifier">value</span> <span class="Operator">=</span> <span class="Identifier">parseInt</span><span class="Punctuation">(</span><span class="Identifier">node</span><span class="Operator">.</span><span class="Identifier">child</span><span class="Punctuation">(</span><span class="StringLit">&quot;number&quot;</span><span class="Punctuation">)</span><span class="Operator">.</span><span class="Identifier">text</span><span class="Punctuation">)</span>
+    <span class="Identifier">userdata</span><span class="Operator">.</span><span class="Identifier">vars</span><span class="Punctuation">[</span><span class="Identifier">varName</span><span class="Punctuation">]</span> <span class="Operator">=</span> <span class="Identifier">value</span>
+  
+  <span class="Identifier">ident</span>  <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="RawData">re&quot;[a-zA-Z_]\\w*&quot;</span><span class="Punctuation">)</span>
+  <span class="Identifier">number</span> <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="RawData">re&quot;\\d+&quot;</span><span class="Punctuation">)</span>
+  <span class="Identifier">eq</span>     <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="StringLit">&quot;=&quot;</span><span class="Punctuation">)</span>
+  <span class="Identifier">semi</span>   <span class="Operator">&lt;-</span> <span class="Identifier">token</span><span class="Punctuation">(</span><span class="StringLit">&quot;;&quot;</span><span class="Punctuation">)</span>
+
+<span class="Comment"># Usage</span>
+<span class="Keyword">var</span> <span class="Identifier">env</span> <span class="Operator">=</span> <span class="Identifier">Env</span><span class="Punctuation">(</span><span class="Punctuation">)</span>
+<span class="Keyword">if</span> <span class="Identifier">matchCalc</span><span class="Punctuation">(</span><span class="StringLit">&quot;x = 10;&quot;</span><span class="Punctuation">,</span> <span class="Identifier">env</span><span class="Punctuation">)</span><span class="Punctuation">:</span>
+  <span class="Identifier">echo</span> <span class="Identifier">env</span><span class="Operator">.</span><span class="Identifier">vars</span>  <span class="Comment"># {&quot;x&quot;: 10}</span></pre></p>
+<p>See <a class="reference external" href="../examples/09_ast_actions">`examples/09_ast_actions`</a> for a complete AST construction example.</p>
+
+<h4 id="action-execution-order">Action Execution Order</h4><p>Actions execute in <strong>post-order</strong> (bottom-up):</p>
+<ol class="simple"><li>Child nodes are visited first</li>
+<li>Then parent node's action runs</li>
+</ol>
+<p>This ensures child data is available when processing parents.</p>
+
 <h2 id="procedural-dsl-lowminuslevel">Procedural DSL (Low-Level)</h2><p>The procedural DSL involves manually constructing <tt class="docutils literal"><span class="pre">InputGrammar</span></tt> objects using helper functions. This is useful for programmatic generation or dynamic grammars.</p>
 
 <h3 id="core-dsl-functions">Core DSL Functions</h3><p>Import <tt class="docutils literal"><span class="pre">treestand/dsl</span></tt> to access these helpers.</p>
@@ -195,7 +247,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 04:11:55 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 18:12:36 UTC</small>
       </div>
     </div>
   </div>

@@ -51,13 +51,16 @@ nim	kind	treestand/sexp_parser.html#kind,ParseNode	proc kind(node: ParseNode): s
 nim	text	treestand/sexp_parser.html#text,ParseNode	proc text(node: ParseNode): string		348
 nim	child	treestand/sexp_parser.html#child,ParseNode,int	proc child(node: ParseNode; index: int): ParseNode		360
 nim	childCount	treestand/sexp_parser.html#childCount,ParseNode	proc childCount(node: ParseNode): int		366
-nim	children	treestand/sexp_parser.html#children.i,ParseNode	iterator children(node: ParseNode): ParseNode		371
-nim	namedChildren	treestand/sexp_parser.html#namedChildren.i,ParseNode	iterator namedChildren(node: ParseNode): ParseNode		377
-nim	namedChild	treestand/sexp_parser.html#namedChild,ParseNode,int	proc namedChild(node: ParseNode; index: int): ParseNode		384
-nim	namedChildCount	treestand/sexp_parser.html#namedChildCount,ParseNode	proc namedChildCount(node: ParseNode): int		394
-nim	hasError	treestand/sexp_parser.html#hasError,ParseNode	proc hasError(node: ParseNode): bool		402
-nim	edit	treestand/sexp_parser.html#edit,ParseNode,InputEdit	proc edit(node: ParseNode; edit: InputEdit)		424
-nim	writeCorpus	treestand/sexp_parser.html#writeCorpus,string,string,string,ParseNode,string	proc writeCorpus(filename: string; testName: string; input: string;\n            tree: ParseNode = nil; expectedSExpr: string = "")		484
+nim	child	treestand/sexp_parser.html#child,ParseNode,string	proc child(node: ParseNode; name: string): ParseNode		371
+nim	capture	treestand/sexp_parser.html#capture,ParseNode	proc capture(node: ParseNode): string		379
+nim	children	treestand/sexp_parser.html#children.i,ParseNode	iterator children(node: ParseNode): ParseNode		383
+nim	namedChildren	treestand/sexp_parser.html#namedChildren.i,ParseNode	iterator namedChildren(node: ParseNode): ParseNode		389
+nim	namedChild	treestand/sexp_parser.html#namedChild,ParseNode,int	proc namedChild(node: ParseNode; index: int): ParseNode		396
+nim	namedChildCount	treestand/sexp_parser.html#namedChildCount,ParseNode	proc namedChildCount(node: ParseNode): int		406
+nim	hasError	treestand/sexp_parser.html#hasError,ParseNode	proc hasError(node: ParseNode): bool		414
+nim	edit	treestand/sexp_parser.html#edit,ParseNode,InputEdit	proc edit(node: ParseNode; edit: InputEdit)		436
+nim	writeCorpus	treestand/sexp_parser.html#writeCorpus,string,string,string,ParseNode,string	proc writeCorpus(filename: string; testName: string; input: string;\n            tree: ParseNode = nil; expectedSExpr: string = "")		496
 nim	newParser	treestand/sexp_parser.html#newParser,string	proc newParser(input: string): Parser		1469
 nim	parse	treestand/sexp_parser.html#parse,Parser	proc parse(parser: var Parser): ParseNode		1487
 nim	parseSexp	treestand/sexp_parser.html#parseSexp,string	proc parseSexp(input: string): ParseNode		1490
+nimgrp	child	treestand/sexp_parser.html#child-procs-all	proc		360

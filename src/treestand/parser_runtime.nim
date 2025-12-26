@@ -160,8 +160,8 @@ proc runGenericGLR*(parser: var Parser): ParseNode =
       let state = currentStack[^1].state
       if state >= parseTableIndex.len: continue
 
-      # debugEchoMsg fmt"queue.len: {queue.len}, i: {i}, currentStack.len: {currentStack.len}"
-      # debugEchoMsg fmt"Processing state: {state} with lookahead: (kind: {parser.lookahead.kind.kind}, terminalIndex: {parser.lookahead.kind.terminalIndex}, text: {parser.lookahead.text})"
+      debugEchoMsg fmt"queue.len: {queue.len}, i: {i}, currentStack.len: {currentStack.len}"
+      debugEchoMsg fmt"Processing state: {state} with lookahead: (kind: {parser.lookahead.kind.kind}, terminalIndex: {parser.lookahead.kind.terminalIndex}, text: {parser.lookahead.text})"
       
       # Lookup actions (replacing findAction helper)
       var actions: seq[parser_types.ParseAction] = @[]
@@ -367,6 +367,18 @@ proc childCount*(node: ParseNode): int =
   ## Get number of children
   if node == nil: return 0
   return node.children.len
+
+proc child*(node: ParseNode, name: string): ParseNode =
+  ## Find first child with the given symbol name (e.g. "assign", "ident")
+  if node == nil: return nil
+  for c in node.children:
+    if symbolName(c.symbol) == name:
+      return c
+  return nil
+
+proc capture*(node: ParseNode): string =
+  ## Syntactic sugar for text(node)
+  text(node)
 
 iterator children*(node: ParseNode): ParseNode =
   ## Iterate over all children

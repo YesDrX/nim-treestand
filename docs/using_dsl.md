@@ -84,6 +84,77 @@ To define a token handled by an external scanner (C function):
 indent <- external_token
 ```
 
+### Embedded Actions
+
+The `tsGrammar` macro supports **embedded actions** - Nim code blocks that execute during parsing to build custom data structures, validate semantics, or perform side effects.
+
+#### Basic Syntax
+
+```nim
+type UserData = object
+  vars: Table[string, int]
+
+tsGrammar "calc", userdata: UserData:
+  assign <- ident * eq * number * semi:
+    # Action code runs when this rule matches
+    echo "Found assignment!"
+```
+
+#### Available Symbols
+
+Within action blocks, you have access to:
+
+- **`node: ParseNode`** - The matched parse node for this rule
+- **`userdata: var YourType`** - Mutable userdata object
+- **`input: string`** - The original input string
+
+#### Node API
+
+```nim
+# Access children
+node.children         # seq[ParseNode] - all children
+node.child(0)         # Get child by index (0-based)
+node.child("ident")   # Get first child with symbol name
+node.childCount()     # Number of children
+
+# Get text content
+node.text             # Text content of node
+node.kind             # Symbol name as string
+```
+
+#### Example: Symbol Table
+
+```nim
+type Env = object
+  vars: Table[string, int]
+
+tsGrammar "calc", userdata: Env:
+  assign <- ident * eq * number * semi:
+    let varName = node.child("ident").text
+    let value = parseInt(node.child("number").text)
+    userdata.vars[varName] = value
+  
+  ident  <- token(re"[a-zA-Z_]\\w*")
+  number <- token(re"\\d+")
+  eq     <- token("=")
+  semi   <- token(";")
+
+# Usage
+var env = Env()
+if matchCalc("x = 10;", env):
+  echo env.vars  # {"x": 10}
+```
+
+See [`examples/09_ast_actions`](../examples/09_ast_actions) for a complete AST construction example.
+
+#### Action Execution Order
+
+Actions execute in **post-order** (bottom-up):
+1. Child nodes are visited first
+2. Then parent node's action runs
+
+This ensures child data is available when processing parents.
+
 ## Procedural DSL (Low-Level)
 
 The procedural DSL involves manually constructing `InputGrammar` objects using helper functions. This is useful for programmatic generation or dynamic grammars.

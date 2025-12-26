@@ -1402,8 +1402,13 @@
   <li><a class="reference" href="#%24%2CParseNode" title="`$`(node: ParseNode): string">`$`(node: ParseNode): string</a></li>
 
 </ul>
+<ul class="simple nested-toc-section">capture
+  <li><a class="reference" href="#capture%2CParseNode" title="capture(node: ParseNode): string">capture(node: ParseNode): string</a></li>
+
+</ul>
 <ul class="simple nested-toc-section">child
   <li><a class="reference" href="#child%2CParseNode%2Cint" title="child(node: ParseNode; index: int): ParseNode">child(node: ParseNode; index: int): ParseNode</a></li>
+<li><a class="reference" href="#child%2CParseNode%2Cstring" title="child(node: ParseNode; name: string): ParseNode">child(node: ParseNode; name: string): ParseNode</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">childCount
@@ -2998,6 +3003,19 @@
 </div>
 
 </div>
+<div id="capture-procs-all">
+  <div id="capture,ParseNode">
+  <dt><pre><span class="Keyword">proc</span> <a href="#capture%2CParseNode"><span class="Identifier">capture</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="parser_types.html#ParseNode"><span class="Identifier">ParseNode</span></a><span class="Other">)</span><span class="Other">:</span> <span class="Identifier">string</span> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Syntactic sugar for text(node)
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L379" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L379" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+
+</div>
 <div id="child-procs-all">
   <div id="child,ParseNode,int">
   <dt><pre><span class="Keyword">proc</span> <a href="#child%2CParseNode%2Cint"><span class="Identifier">child</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="parser_types.html#ParseNode"><span class="Identifier">ParseNode</span></a><span class="Other">;</span> <span class="Identifier">index</span><span class="Other">:</span> <span class="Identifier">int</span><span class="Other">)</span><span class="Other">:</span> <a href="parser_types.html#ParseNode"><span class="Identifier">ParseNode</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
@@ -3007,6 +3025,17 @@
     Get child at index, returning nil if out of bounds
     <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L360" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
 <a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L360" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+
+  </dd>
+</div>
+<div id="child,ParseNode,string">
+  <dt><pre><span class="Keyword">proc</span> <a href="#child%2CParseNode%2Cstring"><span class="Identifier">child</span></a><span class="Other">(</span><span class="Identifier">node</span><span class="Other">:</span> <a href="parser_types.html#ParseNode"><span class="Identifier">ParseNode</span></a><span class="Other">;</span> <span class="Identifier">name</span><span class="Other">:</span> <span class="Identifier">string</span><span class="Other">)</span><span class="Other">:</span> <a href="parser_types.html#ParseNode"><span class="Identifier">ParseNode</span></a> {.<span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span>
+    <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <dd>
+    
+    Find first child with the given symbol name (e.g. &quot;assign&quot;, &quot;ident&quot;)
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L371" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L371" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -3031,8 +3060,8 @@
   <dd>
     
     Edit the node to reflect a change in the source code
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L424" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L424" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L436" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L436" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -3072,8 +3101,8 @@
   <dd>
     
     Check if the node or any of its children is an error node
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L402" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L402" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L414" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L414" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -3112,8 +3141,8 @@
   <dd>
     
     Get named child at index, returning nil if out of bounds
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L384" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L384" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L396" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L396" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -3125,8 +3154,8 @@
   <dd>
     
     Get number of named children
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L394" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L394" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L406" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L406" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -3277,8 +3306,8 @@
   <dd>
     
     Write or append a test case to a corpus file If <tt class="docutils literal"><span class="pre"><span class="Identifier">tree</span></span></tt> is provided, it is converted to S-expression as expected output. If <tt class="docutils literal"><span class="pre"><span class="Identifier">expectedSExpr</span></span></tt> is provided, it is used directly.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L484" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L484" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L496" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L496" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -3297,8 +3326,8 @@
   <dd>
     
     Iterate over all children
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L371" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L371" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L383" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L383" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -3311,8 +3340,8 @@
   <dd>
     
     Iterate over named children only
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L377" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L377" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/parser_runtime.nim#L389" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/parser_runtime.nim#L389" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -3328,7 +3357,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 04:11:53 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 18:12:34 UTC</small>
       </div>
     </div>
   </div>

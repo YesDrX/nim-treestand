@@ -5,33 +5,27 @@ import os, osproc, strutils, options, strformat
 type
   JsExecError* = object of CatchableError
 
-proc findExeStatic*(name: string): string =
+proc findExeStatic*(name: string): string {.compileTime.} =
   when defined(windows):
-    var
-      output: string
-      exitcode: int
-    (output, exitcode) = gorgeEx("where " & name & ".exe")
-    if exitcode != 0:
-      (output, exitcode) = gorgeEx("where " & name & ".cmd")
-    if exitcode != 0:
-      (output, exitcode) = gorgeEx("where " & name)
+    for ext in ["", ".exe", ".cmd"]:
+      let (outp, err) = gorgeEx("where " & name & ext)
+      if err == 0 and outp.len > 0:
+        return outp.strip().splitLines()[0]
   else:
-    let (output, exitcode) = gorgeEx("which " & name)
-  
-  if exitcode == 0 and output.len > 0:
-    return output.strip()
-
-  let (output2, exitcode2) = gorgeEx(fmt"""ls {"~/.nimble/bin/".expandTilde() / name}""")
-  if exitcode2 == 0 and output2.len > 0:
-    return "~/.nimble/bin/".expandTilde() / name
-
+    let (outp, err) = gorgeEx("which " & name)
+    if err == 0 and outp.len > 0:
+      return outp.strip()
   return ""
 
 proc findExeEx*(name: string): string =
-  if findExeStatic(name).len > 0:
-    return name
-  if findExe(name).len > 0:
-    return name
+  when nimvm:
+    let found = findExeStatic(name)
+    if found.len > 0:
+      return found
+  else:
+    let foundRuntime = findExe(name)
+    if foundRuntime.len > 0:
+      return foundRuntime
   return ""
 
 proc findJsRuntime*(): Option[string] =
