@@ -29,6 +29,7 @@ type
   SymbolKind* = enum
     skTerminal
     skNonTerminal
+    skError
 
   Symbol* = object
     case kind*: SymbolKind
@@ -36,6 +37,8 @@ type
       terminalIndex*: int
     of skNonTerminal:
       nonTerminalIndex*: int
+    of skError:
+      discard
 
 proc terminal*(idx: int): Symbol =
   Symbol(kind: skTerminal, terminalIndex: idx)
@@ -43,11 +46,20 @@ proc terminal*(idx: int): Symbol =
 proc nonTerminal*(idx: int): Symbol =
   Symbol(kind: skNonTerminal, nonTerminalIndex: idx)
 
+proc errSymbol*(): Symbol = Symbol(kind: skError)
+
 proc `==`*(a, b: Symbol): bool =
   if a.kind != b.kind: return false
   case a.kind
   of skTerminal: a.terminalIndex == b.terminalIndex
   of skNonTerminal: a.nonTerminalIndex == b.nonTerminalIndex
+  of skError: true
+
+proc hash*(s: Symbol): Hash =
+  case s.kind
+  of skTerminal: hash(s.terminalIndex)
+  of skNonTerminal: hash(s.nonTerminalIndex)
+  of skError: hash(0)
 
 # Symbol metadata - distinguishes named nodes from anonymous tokens
 type
@@ -175,7 +187,7 @@ type
     startPoint*: Point
     endPoint*: Point
 
-  Parser* = object
+  Parser* = ref object
     lexer*: Lexer
     stacks*: seq[seq[tuple[state: int, node: ParseNode]]]
     lookahead*: Token

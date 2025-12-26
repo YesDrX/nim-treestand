@@ -22,6 +22,8 @@ proc symbolName*(sym: parser_types.Symbol): string =
       return nonTerminalSymbolNames[sym.nonTerminalIndex]
     else:
       return "<unknown non-terminal " & $sym.nonTerminalIndex & ">"
+  of skError:
+    return "<error>"
 
 proc isNamed*(sym: parser_types.Symbol): bool =
   ## Check if a symbol represents a named node
@@ -34,6 +36,8 @@ proc isNamed*(sym: parser_types.Symbol): bool =
     if sym.nonTerminalIndex >= 0 and sym.nonTerminalIndex < nonTerminalSymbolMetadata.len:
       return nonTerminalSymbolMetadata[sym.nonTerminalIndex].named
     return true
+  of skError:
+    return false
 
 # Pretty printing for parse nodes
 proc `$`*(node: ParseNode): string =
@@ -115,16 +119,34 @@ proc findNodesBySymbol*(node: ParseNode, symbolNameToFind: string): seq[ParseNod
     symbolName(n.symbol) == symbolNameToFind
 
 # GLR Runtime
-proc runGenericGLR*(parser: var Parser): ParseNode =
+proc runGenericGLR*(parser: var Parser, raiseOnFail: bool = false): ParseNode =
   var activeStacks = parser.stacks
   var successes: seq[ParseNode] = @[]
+  
+  # Track recovered nodes (ERROR nodes and successfully parsed children) for building final tree
+  # This allows us to include ERROR nodes in the result even after error recovery
+  var recoveredNodes: seq[ParseNode] = @[]
+  
+  # Recovery point tracking: save lexer position when at state 0 (good, stable position)
+  # On error, we'll rewind to this position and try skipping minimal tokens
+  var lastGoodLexerPos = parser.lexer.pos
+  var lastGoodLexerRow = parser.lexer.row
+  var lastGoodLexerCol = parser.lexer.col
   
   # Limit iterations to prevent infinite loops in bad grammars
   # But infinite loop detection should happen via state logic ideally.
   
   while true:
+    # Update recovery point when we're at state 0 with a valid stack
+    if activeStacks.len > 0 and activeStacks[0].len > 0:
+      let topState = activeStacks[0][^1].state
+      if topState == 0:
+        lastGoodLexerPos = parser.lexer.pos
+        lastGoodLexerRow = parser.lexer.row
+        lastGoodLexerCol = parser.lexer.col
+        debugEchoMsg fmt"[Recovery] Saved recovery point at pos {lastGoodLexerPos}"
+    
     var pendingShifts: seq[tuple[stackIdx: int, newState: uint32, isExtra: bool]] = @[]
-    # var nextStacks: seq[seq[tuple[state: int, node: ParseNode]]] = @[]
     
     # Process each active stack
     # We use a queue to handle reductions (which don't consume token)
@@ -135,23 +157,8 @@ proc runGenericGLR*(parser: var Parser): ParseNode =
     var queue: seq[seq[tuple[state: int, node: ParseNode]]] = activeStacks
     var shiftableStacks: seq[seq[tuple[state: int, node: ParseNode]]] = @[]
     
-    # # Helper to calculate valid external symbols for a set of states
-    # proc calculateValidExternal(stacks: seq[seq[tuple[state: int, node: ParseNode]]]): set[int16] =
-    #    result = externalExtraTokens
-    #    for s in stacks:
-    #      let state = s[^1].state
-    #      if state < parseTableIndex.len:
-    #        let idx = parseTableIndex[state]
-    #        for i in 0 ..< idx.actionLen:
-    #          let (sym, _) = parseTableActions[idx.actionStart + i]
-    #          if sym.kind == skTerminal:
-    #            if sym.terminalIndex >= externalTokenBase:
-    #              result.incl(sym.terminalIndex.int16)
-    #    return result
-    
     # Currently `parser.lookahead` is already set.
     
-    # var loopCounter = 0
     var i = 0
     while i < queue.len:
       let currentStack = queue[i]
@@ -244,15 +251,241 @@ proc runGenericGLR*(parser: var Parser): ParseNode =
     
     # End of Phase 1
     if successes.len > 0:
-      # echo "[GLR] Success count: ", successes.len
-      return successes[0] # Pick first success
-      
+      # If we have recovered nodes (ERROR nodes from error recovery),
+      # we need to incorporate them into the final tree
+      if recoveredNodes.len > 0:
+        let successTree = successes[0]
+        
+        # Build a new program node that includes both ERROR nodes and successfully parsed content
+        # The successTree should be the program node; we need to inject recoveredNodes as children
+        var allChildren: seq[ParseNode] = @[]
+        
+        # Add recovered nodes (ERROR nodes) first
+        allChildren.add(recoveredNodes)
+        
+        # Then add children from the success tree (if any)
+        if successTree != nil and successTree.children.len > 0:
+          allChildren.add(successTree.children)
+        
+        # Create new program node with all children
+        let finalTree = ParseNode(
+          symbol: successTree.symbol,
+          children: allChildren,
+          startPos: if allChildren.len > 0: allChildren[0].startPos else: 0,
+          endPos: if allChildren.len > 0: allChildren[^1].endPos else: 0,
+          startPoint: if allChildren.len > 0: allChildren[0].startPoint else: Point(row:0, column:0),
+          endPoint: if allChildren.len > 0: allChildren[^1].endPoint else: Point(row:0, column:0)
+        )
+        return finalTree
+      else:
+        return successes[0] # No error recovery, return normal result
+    
+    # OLD: Just die if no shifts
+    # if pendingShifts.len == 0:
+    #   # No shifts, no successes -> Error
+    #   # echo "[GLR] All ", queue.len, " paths deadended on lookahead ", symbolName(parser.lookahead.kind), " (", parser.lookahead.text, ")"
+    #   # for i, s in queue:
+    #   #    echo "  Stack ", i, " top state: ", s[^1].state
+    #   raise newException(ValueError, "Parse error: All paths failed")
+
+    # NEW: Skip garbage tokens and mark as an Error node
     if pendingShifts.len == 0:
-      # No shifts, no successes -> Error
-      # echo "[GLR] All ", queue.len, " paths deadended on lookahead ", symbolName(parser.lookahead.kind), " (", parser.lookahead.text, ")"
-      # for i, s in queue:
-      #    echo "  Stack ", i, " top state: ", s[^1].state
-      raise newException(ValueError, "Parse error: All paths failed")
+      # ========================================================================
+      # Old behavior: Just die if no shifts
+      # ========================================================================
+      if raiseOnFail:
+        raise newException(ValueError, "Parse error: All paths failed")
+
+      # ========================================================================
+      # ERROR RECOVERY: Skip Strategy
+      # ========================================================================
+      
+      let badToken = parser.lookahead
+      
+      # 1. EOF Check (Hard Failure / Force Accept)
+      if badToken.kind.kind == skTerminal and badToken.kind.terminalIndex == 0:
+         # ... (Use the EOF Fix from previous answer) ...
+         # [Paste the EOF force-accept logic here]
+         discard
+
+      # ============================================================
+      # NEW: Strategy 2 - Stack Unwinding (Context Recovery)
+      # ============================================================
+      # Before skipping the token, check if a PARENT state can handle it.
+      # This allows us to "break out" of a bad rule (like an unclosed object).
+      
+      var unwound = false
+      
+      # We only try this on the first active stack for simplicity in this heuristic
+      if activeStacks.len > 0:
+        let stack = activeStacks[0]
+        
+        # Iterate backwards from the parent of current state down to root
+        # i = index of the candidate state to resume from
+        for i in countdown(stack.len - 2, 0): 
+            let ancestorState = stack[i].state
+           
+            # Check if 'ancestorState' accepts 'badToken'
+            var accepts = false
+            if ancestorState < parseTableIndex.len:
+                let idx = parseTableIndex[ancestorState]
+                for k in 0 ..< idx.actionLen:
+                    let (sym, _) = parseTableActions[idx.actionStart + k]
+                    if sym == badToken.kind:
+                      accepts = true
+                      break
+           
+            if accepts:
+              debugEchoMsg fmt"[Recovery] Unwinding stack to state {ancestorState} to handle '{badToken.text}'"
+             
+              # 1. Collect all nodes that are being dropped (from i+1 to top)
+              var droppedNodes: seq[ParseNode] = @[]
+              for j in (i + 1) ..< stack.len:
+                if stack[j].node != nil:
+                  droppedNodes.add(stack[j].node)
+             
+              # 2. Wrap them in an ERROR node
+              let errorNode = ParseNode(
+                  symbol: Symbol(kind: skError),
+                  children: droppedNodes,
+                  token: badToken, # Mark the location where we gave up
+                  startPos: if droppedNodes.len > 0: droppedNodes[0].startPos else: badToken.startPos,
+                  endPos: if droppedNodes.len > 0: droppedNodes[^1].endPos else: badToken.endPos,
+                  startPoint: if droppedNodes.len > 0: droppedNodes[0].startPoint else: badToken.startPoint,
+                  endPoint: if droppedNodes.len > 0: droppedNodes[^1].endPoint else: badToken.endPoint
+                )
+              
+              # 3. Add ERROR node to recovered nodes list (will be included in final tree)
+              recoveredNodes.add(errorNode)
+              
+              # 4. Unwind the stack to the ancestor state (don't add ERROR to stack)
+              # Create the new stack: [0..i] (just the unwound states, ERROR is tracked separately)
+              var newStack = stack[0..i]
+              
+              # 5. Update Parser
+              activeStacks = @[newStack]
+              parser.stacks = activeStacks
+              # 4. RECOVERY POINT STRATEGY: Instead of just unwinding stack and skipping forward,
+              # rewind lexer to the last good position (saved recovery point) and try skipping
+              # minimal tokens from there (1, 2, 3...) until we can parse successfully
+              
+              debugEchoMsg fmt"[Recovery] Rewinding lexer from pos {parser.lexer.pos} to recovery point {lastGoodLexerPos}"
+              
+              # Rewind lexer to recovery point
+              parser.lexer.pos = lastGoodLexerPos
+              parser.lexer.row = lastGoodLexerRow  
+              parser.lexer.col = lastGoodLexerCol
+              
+              # Try skipping 0, 1, 2, 3... tokens from recovery point until we find a valid continuation
+              # Starting with 0 means we first try WITHOUT skipping, preserving as many tokens as possible
+              # Limit attempts to avoid infinite loops
+              var tokensToSkip = 0
+              var foundValidContinuation = false
+              let maxSkipAttempts = 10
+              
+              while tokensToSkip <= maxSkipAttempts and not foundValidContinuation:
+                debugEchoMsg fmt"[Recovery] Attempting to skip {tokensToSkip} token(s) from recovery point"
+                
+                # Reset lexer to recovery point for this attempt
+                parser.lexer.pos = lastGoodLexerPos
+                parser.lexer.row = lastGoodLexerRow
+                parser.lexer.col = lastGoodLexerCol
+                
+                # Prepare valid external symbols for state 0
+                var recoveryValidExternal = externalExtraTokens
+                if 0 < parseTableIndex.len:
+                  let idx = parseTableIndex[0]
+                  for k in 0 ..< idx.actionLen:
+                    let (sym, _) = parseTableActions[idx.actionStart + k]
+                    if sym.kind == skTerminal and sym.terminalIndex >= externalTokenBase:
+                      recoveryValidExternal.incl(sym.terminalIndex.int16)
+                
+                let lexState = parseTableIndex[0].lexState
+                
+                # Skip N tokens
+                for skipCount in 1..tokensToSkip:
+                  let skippedToken = parser.lexer.nextToken(recoveryValidExternal, lexState)
+                  debugEchoMsg fmt"[Recovery]   Skipped token #{skipCount}: '{skippedToken.text}'"
+                  if skippedToken.text.len == 0:
+                    #  Hit EOF, stop trying
+                    break
+                
+                # Now try to get the next token and check if it's shiftable from state 0
+                parser.lookahead = parser.lexer.nextToken(recoveryValidExternal, lexState)
+                
+                if parser.lookahead.text.len == 0:
+                  # Hit EOF, stop trying
+                  debugEchoMsg "[Recovery] Hit EOF, stopping skip attempts"
+                  break
+                
+                # Check if this token can be shifted/accepted from state 0
+                var canProgress = false
+                if 0 < parseTableIndex.len:
+                  let idx = parseTableIndex[0]
+                  for k in 0 ..< idx.actionLen:
+                    let (sym, act) = parseTableActions[idx.actionStart + k]
+                    if sym == parser.lookahead.kind:
+                      if act.kind == pakShift or act.kind == pakAccept or act.kind == pakShiftExtra:
+                        canProgress = true
+                        debugEchoMsg fmt"[Recovery] Found valid continuation after skipping {tokensToSkip} tokens: '{parser.lookahead.text}' can {act.kind}"
+                        foundValidContinuation = true
+                        break
+                
+                if not foundValidContinuation:
+                  tokensToSkip += 1
+              
+              # Now set up the stack to resume from state 0
+              var recoveryStack = stack[0..0]  # Just keep root state
+              activeStacks = @[recoveryStack]
+              parser.stacks = activeStacks
+              
+              unwound = true
+              break
+        
+        if unwound:
+          continue # Restart loop with new stack and lookahead
+
+      # ============================================================
+      # Strategy 3: Skip Token (Fallback)
+      # ============================================================
+      # If Unwinding didn't help (or wasn't possible), consume the garbage.
+      
+      debugEchoMsg fmt"[Recovery] Skipping unexpected token: {badToken.text}"
+      
+      let errorNode = ParseNode(
+        symbol: Symbol(kind: skError), 
+        children: @[],                 
+        token: badToken,               
+        startPos: badToken.startPos,
+        endPos: badToken.endPos,
+        startPoint: badToken.startPoint,
+        endPoint: badToken.endPoint
+      )
+
+      var recoveredStacks: seq[seq[tuple[state: int, node: ParseNode]]] = @[]
+      for stack in activeStacks:
+         var newStack = stack
+         newStack.add((stack[^1].state, errorNode)) 
+         recoveredStacks.add(newStack)
+      
+      activeStacks = recoveredStacks
+      parser.stacks = activeStacks
+
+      # Advance Lexer (Manually)
+      var recoveryValidExternal = externalExtraTokens
+      for stack in activeStacks:
+        let s = stack[^1].state
+        if s < parseTableIndex.len:
+           let idx = parseTableIndex[s]
+           for k in 0 ..< idx.actionLen:
+             let (sym, _) = parseTableActions[idx.actionStart + k]
+             if sym.kind == skTerminal and sym.terminalIndex >= externalTokenBase:
+                recoveryValidExternal.incl(sym.terminalIndex.int16)
+
+      let lexState = parseTableIndex[activeStacks[0][^1].state].lexState
+      parser.lookahead = parser.lexer.nextToken(recoveryValidExternal, lexState)
+
+      continue
           
 
     # Phase 2: Shift
