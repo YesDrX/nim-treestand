@@ -1,0 +1,21 @@
+[
+  {
+    "type": "document",
+    "named": true,
+    "root": true,
+    "fields": {}
+  },
+  {
+    "type": "a",
+    "named": false
+  },
+  {
+    "type": "b",
+    "named": false
+  },
+  {
+    "type": "comment",
+    "named": true,
+    "extra": true
+  }
+]

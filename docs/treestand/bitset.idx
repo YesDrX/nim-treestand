@@ -1,0 +1,21 @@
+nimTitle	bitset	treestand/bitset.html	module src/treestand/bitset		0
+nim	BitSet	treestand/bitset.html#BitSet	object BitSet		8
+nim	newBitSet	treestand/bitset.html#newBitSet,int	proc newBitSet(capacity: int): BitSet		14
+nim	initBitSet	treestand/bitset.html#initBitSet,int	proc initBitSet(capacity: int = 128): BitSet		22
+nim	len	treestand/bitset.html#len,BitSet	proc len(bs: BitSet): int		26
+nim	incl	treestand/bitset.html#incl,BitSet,int	proc incl(bs: var BitSet; bitIndex: int)		32
+nim	excl	treestand/bitset.html#excl,BitSet,int	proc excl(bs: var BitSet; bitIndex: int)		45
+nim	contains	treestand/bitset.html#contains,BitSet,int	proc contains(bs: BitSet; bitIndex: int): bool		54
+nim	union	treestand/bitset.html#union,BitSet,BitSet	proc union(dest: var BitSet; src: BitSet): bool		66
+nim	intersect	treestand/bitset.html#intersect,BitSet,BitSet	proc intersect(dest: var BitSet; src: BitSet)		87
+nim	clear	treestand/bitset.html#clear,BitSet	proc clear(bs: var BitSet)		98
+nim	`==`	treestand/bitset.html#==,BitSet,BitSet	proc `==`(a, b: BitSet): bool		103
+nim	hash	treestand/bitset.html#hash,BitSet	proc hash(bs: BitSet): Hash		114
+nim	items	treestand/bitset.html#items.i,BitSet	iterator items(bs: BitSet): int		122
+nim	`$`	treestand/bitset.html#$,BitSet	proc `$`(bs: BitSet): string		131
+nim	symbolToInt	treestand/bitset.html#symbolToInt,GrammarSymbol	proc symbolToInt(sym: GrammarSymbol): int		144
+nim	intToSymbol	treestand/bitset.html#intToSymbol,int,int,int	proc intToSymbol(value: int; terminalCount: int; externalCount: int): GrammarSymbol		163
+nim	SymbolContext	treestand/bitset.html#SymbolContext	object SymbolContext		181
+nim	newSymbolContext	treestand/bitset.html#newSymbolContext,int,int	proc newSymbolContext(terminalCount, externalCount: int): SymbolContext		187
+nim	symbolToBit	treestand/bitset.html#symbolToBit,SymbolContext,GrammarSymbol	proc symbolToBit(ctx: SymbolContext; sym: GrammarSymbol): int		195
+nim	bitToSymbol	treestand/bitset.html#bitToSymbol,SymbolContext,int	proc bitToSymbol(ctx: SymbolContext; bit: int): GrammarSymbol		209

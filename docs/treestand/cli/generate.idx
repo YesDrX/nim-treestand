@@ -1,0 +1,2 @@
+nimTitle	generate	treestand/cli/generate.html	module src/treestand/cli/generate		0
+nim	generateParser	treestand/cli/generate.html#generateParser,string,string,string,string	proc generateParser(grammarPath: string; outputDir: string; dslPath: string = "";\n               name: string = "")		5

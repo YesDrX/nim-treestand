@@ -1,0 +1,17 @@
+nimTitle	ts_macros	treestand/ts_macros.html	module src/treestand/ts_macros		0
+nim	importGrammar	treestand/ts_macros.html#importGrammar.m,static[string]	macro importGrammar(grammar: static[string]): untyped		5
+nim	buildGrammar	treestand/ts_macros.html#buildGrammar.m,untyped	macro buildGrammar(createGrammarFunction: untyped): untyped		106
+nim	ts_grammar	treestand/ts_macros.html#ts_grammar.m,staticstring,untyped	macro ts_grammar(name: static string; body: untyped): untyped		343
+heading	How It Works	treestand/ts_macros.html#how-it-works	 How It Works		0
+heading	Parameters	treestand/ts_macros.html#parameters	 Parameters		0
+heading	Generated API	treestand/ts_macros.html#generated-api	 Generated API		0
+heading	DSL Functions	treestand/ts_macros.html#dsl-functions	 DSL Functions		0
+heading	Example	treestand/ts_macros.html#example	 Example		0
+heading	Advantages	treestand/ts_macros.html#advantages	 Advantages		0
+heading	Notes	treestand/ts_macros.html#notes	 Notes		0
+heading	Parameters	treestand/ts_macros.html#parameters	 Parameters		0
+heading	Generated API	treestand/ts_macros.html#generated-api	 Generated API		0
+heading	Example	treestand/ts_macros.html#example	 Example		0
+heading	Relative Paths	treestand/ts_macros.html#relative-paths	 Relative Paths		0
+heading	Compile-Time vs Runtime	treestand/ts_macros.html#compileminustime-vs-runtime	 Compile-Time vs Runtime		0
+heading	Notes	treestand/ts_macros.html#notes	 Notes		0

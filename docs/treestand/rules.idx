@@ -1,0 +1,40 @@
+nimTitle	rules	treestand/rules.html	module src/treestand/rules		0
+nim	GrammarSymbolType	treestand/rules.html#GrammarSymbolType	enum GrammarSymbolType		6
+nim	gaLeft	treestand/rules.html#gaLeft	GrammarAssociativity.gaLeft		14
+nim	gaRight	treestand/rules.html#gaRight	GrammarAssociativity.gaRight		14
+nim	GrammarAssociativity	treestand/rules.html#GrammarAssociativity	enum GrammarAssociativity		14
+nim	Alias	treestand/rules.html#Alias	object Alias		19
+nim	pkNone	treestand/rules.html#pkNone	PrecedenceKind.pkNone		24
+nim	pkInteger	treestand/rules.html#pkInteger	PrecedenceKind.pkInteger		24
+nim	pkName	treestand/rules.html#pkName	PrecedenceKind.pkName		24
+nim	PrecedenceKind	treestand/rules.html#PrecedenceKind	enum PrecedenceKind		24
+nim	Precedence	treestand/rules.html#Precedence	object Precedence		29
+nim	MetadataParams	treestand/rules.html#MetadataParams	object MetadataParams		39
+nim	GrammarSymbol	treestand/rules.html#GrammarSymbol	object GrammarSymbol		49
+nim	rkBlank	treestand/rules.html#rkBlank	RuleKind.rkBlank		55
+nim	rkString	treestand/rules.html#rkString	RuleKind.rkString		55
+nim	rkPattern	treestand/rules.html#rkPattern	RuleKind.rkPattern		55
+nim	rkNamedSymbol	treestand/rules.html#rkNamedSymbol	RuleKind.rkNamedSymbol		55
+nim	rkSymbol	treestand/rules.html#rkSymbol	RuleKind.rkSymbol		55
+nim	rkChoice	treestand/rules.html#rkChoice	RuleKind.rkChoice		55
+nim	rkMetadata	treestand/rules.html#rkMetadata	RuleKind.rkMetadata		55
+nim	rkRepeat	treestand/rules.html#rkRepeat	RuleKind.rkRepeat		55
+nim	rkSeq	treestand/rules.html#rkSeq	RuleKind.rkSeq		55
+nim	rkReserved	treestand/rules.html#rkReserved	RuleKind.rkReserved		55
+nim	RuleKind	treestand/rules.html#RuleKind	enum RuleKind		55
+nim	Rule	treestand/rules.html#Rule	object Rule		68
+nim	TokenSet	treestand/rules.html#TokenSet	object TokenSet		96
+nim	AliasMap	treestand/rules.html#AliasMap	type AliasMap		103
+nim	newPrecedence	treestand/rules.html#newPrecedence,int32	proc newPrecedence(value: int32): Precedence		105
+nim	newPrecedence	treestand/rules.html#newPrecedence,string	proc newPrecedence(name: string): Precedence		108
+nim	nonePrecedence	treestand/rules.html#nonePrecedence	proc nonePrecedence(): Precedence		111
+nim	`==`	treestand/rules.html#==,Precedence,Precedence	proc `==`(a, b: Precedence): bool		114
+nim	newSymbol	treestand/rules.html#newSymbol,GrammarSymbolType,int	proc newSymbol(kind: GrammarSymbolType; index: int): GrammarSymbol		121
+nim	`==`	treestand/rules.html#==,GrammarSymbol,GrammarSymbol	proc `==`(a, b: GrammarSymbol): bool		124
+nim	hash	treestand/rules.html#hash,GrammarSymbol	proc hash(s: GrammarSymbol): Hash		127
+nim	`$`	treestand/rules.html#$,GrammarSymbol	proc `$`(s: GrammarSymbol): string		130
+nim	hash	treestand/rules.html#hash,Rule	proc hash(r: Rule): Hash		138
+nim	`==`	treestand/rules.html#==,Rule,Rule	proc `==`(a, b: Rule): bool		168
+nimgrp	==	treestand/rules.html#==-procs-all	proc		114
+nimgrp	newprecedence	treestand/rules.html#newPrecedence-procs-all	proc		105
+nimgrp	hash	treestand/rules.html#hash-procs-all	proc		127

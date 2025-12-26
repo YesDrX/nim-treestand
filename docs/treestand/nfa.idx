@@ -1,0 +1,30 @@
+nimTitle	nfa	treestand/nfa.html	module src/treestand/nfa		0
+nim	CharacterRange	treestand/nfa.html#CharacterRange	object CharacterRange		8
+nim	CharacterSet	treestand/nfa.html#CharacterSet	object CharacterSet		12
+nim	nskAdvance	treestand/nfa.html#nskAdvance	NfaStateKind.nskAdvance		15
+nim	nskSplit	treestand/nfa.html#nskSplit	NfaStateKind.nskSplit		15
+nim	nskAccept	treestand/nfa.html#nskAccept	NfaStateKind.nskAccept		15
+nim	NfaStateKind	treestand/nfa.html#NfaStateKind	enum NfaStateKind		15
+nim	NfaState	treestand/nfa.html#NfaState	object NfaState		20
+nim	Nfa	treestand/nfa.html#Nfa	object Nfa		34
+nim	NfaCursor	treestand/nfa.html#NfaCursor	object NfaCursor		37
+nim	NfaTransition	treestand/nfa.html#NfaTransition	object NfaTransition		41
+nim	EndChar	treestand/nfa.html#EndChar	const EndChar		48
+nim	emptyCharacterSet	treestand/nfa.html#emptyCharacterSet	proc emptyCharacterSet(): CharacterSet		50
+nim	fromChar	treestand/nfa.html#fromChar,char	proc fromChar(c: char): CharacterSet		53
+nim	fromRange	treestand/nfa.html#fromRange,char,char	proc fromRange(first, last: char): CharacterSet		57
+nim	contains	treestand/nfa.html#contains,CharacterSet,char	proc contains(cs: CharacterSet; c: char): bool		64
+nim	intersects	treestand/nfa.html#intersects,CharacterSet,CharacterSet	proc intersects(a, b: CharacterSet): bool		71
+nim	intersection	treestand/nfa.html#intersection,CharacterSet,CharacterSet	proc intersection(a, b: CharacterSet): CharacterSet		80
+nim	negate	treestand/nfa.html#negate,CharacterSet	proc negate(cs: CharacterSet): CharacterSet		93
+nim	newNfa	treestand/nfa.html#newNfa	proc newNfa(): Nfa		115
+nim	addState	treestand/nfa.html#addState,Nfa,NfaState	proc addState(nfa: var Nfa; state: NfaState): uint32		118
+nim	newNfaCursor	treestand/nfa.html#newNfaCursor,ptr.Nfa	proc newNfaCursor(nfa: ptr Nfa): NfaCursor		155
+nim	reset	treestand/nfa.html#reset,NfaCursor	proc reset(cursor: var NfaCursor)		159
+nim	isInAcceptState	treestand/nfa.html#isInAcceptState,NfaCursor	proc isInAcceptState(cursor: NfaCursor): bool		162
+nim	getAcceptingVariable	treestand/nfa.html#getAcceptingVariable,NfaCursor	proc getAcceptingVariable(cursor: NfaCursor): Option[int]		170
+nim	advance	treestand/nfa.html#advance,NfaCursor,char,bool	proc advance(cursor: var NfaCursor; c: char; isSeparator: bool): seq[uint32]		184
+nim	completions	treestand/nfa.html#completions,NfaCursor	proc completions(cursor: var NfaCursor): seq[(int, int32)]		210
+nim	transitions	treestand/nfa.html#transitions,NfaCursor	proc transitions(cursor: var NfaCursor): seq[NfaTransition]		218
+nim	transitionChars	treestand/nfa.html#transitionChars,NfaCursor	proc transitionChars(cursor: var NfaCursor): seq[(CharacterSet, bool)]		326
+nim	setStates	treestand/nfa.html#setStates,NfaCursor,seq[uint32]	proc setStates(cursor: var NfaCursor; bucket: seq[uint32])		334

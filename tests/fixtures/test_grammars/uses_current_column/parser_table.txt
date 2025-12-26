@@ -1,0 +1,201 @@
+158:const parseTableEntries* = [
+159-  ParseTableEntry(
+160-    actionMap: @[
+161-      (sym: terminal(6), action: 
+162-ParseAction(kind: pakShift, shiftState: 7u32)),
+163-      (sym: terminal(2), action: 
+164-ParseAction(kind: pakShift, shiftState: 2u32)),
+165-      (sym: terminal(1), action: 
+166-ParseAction(kind: pakShiftExtra)),
+167-    ],
+168-    gotoMap: @[
+169-      (sym: nonTerminal(2), state: 4u32),
+170-      (sym: nonTerminal(3), state: 5u32),
+171-      (sym: nonTerminal(0), state: 1u32),
+172-      (sym: nonTerminal(4), state: 3u32),
+173-      (sym: nonTerminal(5), state: 8u32),
+174-      (sym: nonTerminal(1), state: 6u32),
+175-    ],
+176-    lexState: 0
+177-  ),
+178-  ParseTableEntry(
+179-    actionMap: @[
+180-      (sym: terminal(0), action: 
+181-ParseAction(kind: pakAccept)),
+182-      (sym: terminal(1), action: 
+183-ParseAction(kind: pakShiftExtra)),
+184-    ],
+185-    gotoMap: @[
+186-    ],
+187-    lexState: 0
+188-  ),
+189-  ParseTableEntry(
+190-    actionMap: @[
+191-      (sym: terminal(0), action: 
+192-ParseAction(kind: pakReduce, reduceSymbol: nonTerminal(3), 
+193-reduceCount: 1u32, reducePrecedence: 0)),
+194-      (sym: terminal(1), action: 
+195-ParseAction(kind: pakShiftExtra)),
+196-    ],
+197-    gotoMap: @[
+198-    ],
+199-    lexState: 0
+200-  ),
+201-  ParseTableEntry(
+202-    actionMap: @[
+203-      (sym: terminal(0), action: 
+204-ParseAction(kind: pakReduce, reduceSymbol: nonTerminal(2), 
+205-reduceCount: 1u32, reducePrecedence: 0)),
+206-      (sym: terminal(1), action: 
+207-ParseAction(kind: pakShiftExtra)),
+208-    ],
+209-    gotoMap: @[
+210-    ],
+211-    lexState: 0
+212-  ),
+213-  ParseTableEntry(
+214-    actionMap: @[
+215-      (sym: terminal(0), action: 
+216-ParseAction(kind: pakReduce, reduceSymbol: nonTerminal(4), 
+217-reduceCount: 1u32, reducePrecedence: 0)),
+218-      (sym: terminal(1), action: 
+219-ParseAction(kind: pakShiftExtra)),
+220-    ],
+221-    gotoMap: @[
+222-    ],
+223-    lexState: 0
+224-  ),
+225-  ParseTableEntry(
+226-    actionMap: @[
+227-      (sym: terminal(0), action: 
+228-ParseAction(kind: pakReduce, reduceSymbol: nonTerminal(2), 
+229-reduceCount: 1u32, reducePrecedence: 0)),
+230-      (sym: terminal(1), action: 
+231-ParseAction(kind: pakShiftExtra)),
+232-    ],
+233-    gotoMap: @[
+234-    ],
+235-    lexState: 0
+236-  ),
+237-  ParseTableEntry(
+238-    actionMap: @[
+239-      (sym: terminal(0), action: 
+240-ParseAction(kind: pakReduce, reduceSymbol: nonTerminal(0), 
+241-reduceCount: 1u32, reducePrecedence: 0)),
+242-      (sym: terminal(1), action: 
+243-ParseAction(kind: pakShiftExtra)),
+244-    ],
+245-    gotoMap: @[
+246-    ],
+247-    lexState: 0
+248-  ),
+249-  ParseTableEntry(
+250-    actionMap: @[
+251-      (sym: terminal(0), action: 
+252-ParseAction(kind: pakReduce, reduceSymbol: nonTerminal(5), 
+253-reduceCount: 1u32, reducePrecedence: 0)),
+254-      (sym: terminal(1), action: 
+255-ParseAction(kind: pakShiftExtra)),
+256-    ],
+257-    gotoMap: @[
+258-    ],
+259-    lexState: 0
+260-  ),
+261-  ParseTableEntry(
+262-    actionMap: @[
+263-      (sym: terminal(0), action: 
+264-ParseAction(kind: pakReduce, reduceSymbol: nonTerminal(2), 
+265-reduceCount: 1u32, reducePrecedence: 0)),
+266-      (sym: terminal(1), action: 
+267-ParseAction(kind: pakShiftExtra)),
+268-    ],
+269-    gotoMap: @[
+270-    ],
+271-    lexState: 0
+272-  ),
+273-]
+274-
+275-proc findAction*(entry: ParseTableEntry, lookahead: Symbol): ParseAction =
+276-  for (sym, action) in entry.actionMap:
+277-    if sym == lookahead:
+278-      return action
+279-  return ParseAction(kind: pakError)
+280-
+281-proc findGoto*(entry: ParseTableEntry, symbol: Symbol): int =
+282-  for (sym, state) in entry.gotoMap:
+283-    if sym == symbol:
+284-      return state.int
+285-  return -1
+286-
+287-# Production metadata
+288-type
+289-  ProductionInfo* = object
+290-    symbol*: Symbol
+291-    fieldCount*: uint32
+292-    childCount*: uint32
+293-    fieldNames*: seq[string]
+294-
+295-const productionInfos* = @[
+296-  ProductionInfo(
+297-    symbol: nonTerminal(0),
+298-    fieldCount: 1u32,
+299-    childCount: 1u32,
+300-    fieldNames: @[
+301-      "",
+302-    ]
+303-  ),
+304-  ProductionInfo(
+305-    symbol: nonTerminal(1),
+306-    fieldCount: 1u32,
+307-    childCount: 1u32,
+308-    fieldNames: @[
+309-      "",
+310-    ]
+311-  ),
+312-  ProductionInfo(
+313-    symbol: nonTerminal(2),
+314-    fieldCount: 1u32,
+315-    childCount: 1u32,
+316-    fieldNames: @[
+317-      "",
+318-    ]
+319-  ),
+320-  ProductionInfo(
+321-    symbol: nonTerminal(2),
+322-    fieldCount: 1u32,
+323-    childCount: 1u32,
+324-    fieldNames: @[
+325-      "",
+326-    ]
+327-  ),
+328-  ProductionInfo(
+329-    symbol: nonTerminal(2),
+330-    fieldCount: 1u32,
+331-    childCount: 1u32,
+332-    fieldNames: @[
+333-      "",
+334-    ]
+335-  ),
+336-  ProductionInfo(
+337-    symbol: nonTerminal(3),
+338-    fieldCount: 1u32,
+339-    childCount: 1u32,
+340-    fieldNames: @[
+341-      "",
+342-    ]
+343-  ),
+344-  ProductionInfo(
+345-    symbol: nonTerminal(4),
+346-    fieldCount: 1u32,
+347-    childCount: 1u32,
+348-    fieldNames: @[
+349-      "",
+350-    ]
+351-  ),
+352-  ProductionInfo(
+353-    symbol: nonTerminal(4),
+354-    fieldCount: 1u32,
+355-    childCount: 1u32,
+356-    fieldNames: @[
+357-      "",
+358-    ]

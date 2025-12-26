@@ -1,0 +1,10 @@
+nimTitle	query	treestand/query.html	module src/treestand/query		0
+nim	pkSymbol	treestand/query.html#pkSymbol	PatternNodeKind.pkSymbol		22
+nim	pkLiteral	treestand/query.html#pkLiteral	PatternNodeKind.pkLiteral		22
+nim	pkWildcard	treestand/query.html#pkWildcard	PatternNodeKind.pkWildcard		22
+nim	PatternNodeKind	treestand/query.html#PatternNodeKind	enum PatternNodeKind		22
+nim	PatternNode	treestand/query.html#PatternNode	type PatternNode		28
+nim	Query	treestand/query.html#Query	type Query		37
+nim	QueryMatch	treestand/query.html#QueryMatch	object QueryMatch		43
+nim	newQuery	treestand/query.html#newQuery,string	proc newQuery(source: string): Query		181
+nim	exec	treestand/query.html#exec.i,Query,ParseNode,proc(Symbol)	iterator exec(query: Query; node: ParseNode; symName: proc (s: Symbol): string): QueryMatch		250
