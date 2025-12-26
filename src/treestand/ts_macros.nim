@@ -95,22 +95,24 @@ macro importGrammar*(grammar: static[string]): untyped =
   when defined(debug):
     let cmd = fmt"""nim r -d:debug --path:"{libSourceDir}" "{libSourceDir / "treestand.nim"}" --cmd generate --grammar_path "{grammar.expandTilde()}" """
   else:
-    let treestand_cmd = findExeStatic("treestand")
-    var success: bool = false
-    if treestand_cmd.len > 0:
-      let cmd = fmt"""{treestand_cmd} --cmd generate --grammar_path "{grammar.expandTilde()}" """ # Why the fuck this fails on windows? Windows is just the worst in the world.
-      echo "[Treestand] Running: " & cmd
-      (output, exitcode) = gorgeEx(cmd)
-      if exitcode == 0:
-        success = true
-    if not success:
+    when defined(windows):
+      # stupid windows's app is either console or gui; need attach console manually; skip that; just compile it; nobody will use windows for serious work.
       let cmd = fmt"""nim r -d:release --path:"{libSourceDir}" "{libSourceDir / "treestand.nim"}" --cmd generate --grammar_path "{grammar.expandTilde()}" """
       echo "[Treestand] Running: " & cmd
       (output, exitcode) = gorgeEx(cmd)
-      if exitcode == 0:
-        success = true
+    
+    else:
+      let treestand_cmd = findExeStatic("treestand")
+      var cmd : string
+      if treestand_cmd.len > 0:
+        cmd = fmt"""{treestand_cmd} --cmd generate --grammar_path "{grammar.expandTilde()}" """
       else:
-        raise newException(Exception, "Failed to generate parser. Output:\n" & output)
+        cmd = fmt"""nim r -d:release --path:"{libSourceDir}" "{libSourceDir / "treestand.nim"}" --cmd generate --grammar_path "{grammar.expandTilde()}" """
+      echo "[Treestand] Running: " & cmd
+      (output, exitcode) = gorgeEx(cmd)
+    
+    if exitcode != 0:
+      raise newException(Exception, "Failed to generate parser. Output:\n" & output)
 
   return output[output.find("# GENERATED PARSER.NIM") ..< output.len].parseStmt()
 
