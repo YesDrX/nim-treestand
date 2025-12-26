@@ -10,7 +10,7 @@ suite "Compile Examples":
             let mainNim = example_dir.path / "main.nim"
             let parserNim = example_dir.path / "parser.nim"
             if fileExists(genNim):
-                let cmd = "nim r -f --hints:off " & & $genNim
+                let cmd = "nim r -f --hints:off " & $genNim
                 echo "Running: " & cmd
                 let exitCode = execCmd(cmd)
                 check exitCode == 0
