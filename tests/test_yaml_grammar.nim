@@ -37,9 +37,11 @@ suite "YAML Grammar Pipeline":
     # Use tree-sitter to generate tree-sitter/*.h
     let originalCwd = getCurrentDir()
     setCurrentDir(fixtureDir)
-    let treeSitterCmd = "tree-sitter generate"
-    let exitCode = execCmd(treeSitterCmd)
+    let treesitter = findExeEx("tree-sitter")
+    check treesitter.len > 0
+    let exitCode = execCmd(treesitter & " generate")
     setCurrentDir(originalCwd)
+    check exitCode == 0
       
     echo "1. Parsing grammar form ", grammarPath
     let grammarJson = executeGrammarJs(grammarPath, dslPath)
@@ -119,7 +121,7 @@ except Exception as e:
     
     echo "6. Running Verification"
     # Compile and run, capturing output
-    let compileCmd = "nim c -r -d:debug --hints:off --path:\'" & srcDir.quoteShell & "\' " & runnerPath.quoteShell
+    let compileCmd = "nim c -r -d:debug --hints:off --path:\"" & srcDir.quoteShell & "\" " & runnerPath.quoteShell
     echo "  Running: ", compileCmd
     let exitCode2 = execCmd(compileCmd)
     

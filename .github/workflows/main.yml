@@ -48,6 +48,11 @@ jobs:
       uses: oven-sh/setup-bun@v2
       with:
         bun-version: latest
+    
+    - name: Setup Node.js # stupid windows
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
     - name: Install tree-sitter CLI
       run: bun install --global tree-sitter-cli

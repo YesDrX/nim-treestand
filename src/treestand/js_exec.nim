@@ -11,10 +11,9 @@ proc findExeStatic*(name: string): string {.compileTime.} =
       let (outp, err) = gorgeEx("where " & name & ext)
       if err == 0 and outp.len > 0:
         return outp.strip().splitLines()[0]
-  else:
-    let (outp, err) = gorgeEx("which " & name)
-    if err == 0 and outp.len > 0:
-      return outp.strip()
+  let (outp, err) = gorgeEx("which " & name)
+  if err == 0 and outp.len > 0:
+    return outp.strip()
   return ""
 
 proc findExeEx*(name: string): string =
