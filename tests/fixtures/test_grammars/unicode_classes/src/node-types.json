@@ -1,0 +1,46 @@
+[
+  {
+    "type": "program",
+    "named": true,
+    "root": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "letter_number",
+          "named": true
+        },
+        {
+          "type": "lower",
+          "named": true
+        },
+        {
+          "type": "math_sym",
+          "named": true
+        },
+        {
+          "type": "upper",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "letter_number",
+    "named": true
+  },
+  {
+    "type": "lower",
+    "named": true
+  },
+  {
+    "type": "math_sym",
+    "named": true
+  },
+  {
+    "type": "upper",
+    "named": true
+  }
+]

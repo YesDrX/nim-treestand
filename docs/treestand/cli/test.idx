@@ -1,0 +1,2 @@
+nimTitle	test	treestand/cli/test.html	module src/treestand/cli/test		0
+nim	testCommand	treestand/cli/test.html#testCommand,string	proc testCommand(fixtureDir: string)		30

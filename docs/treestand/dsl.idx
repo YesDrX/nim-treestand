@@ -1,0 +1,14 @@
+nimTitle	dsl	treestand/dsl.html	module src/treestand/dsl		0
+nim	str	treestand/dsl.html#str,string	proc str(s: string): Rule		12
+nim	patt	treestand/dsl.html#patt,string	proc patt(p: string): Rule		17
+nim	sym	treestand/dsl.html#sym,string	proc sym(name: string): Rule		22
+nim	seq	treestand/dsl.html#seq,varargs[Rule]	proc seq(rules: varargs[Rule]): Rule		27
+nim	choice	treestand/dsl.html#choice,varargs[Rule]	proc choice(rules: varargs[Rule]): Rule		32
+nim	rep	treestand/dsl.html#rep,Rule	proc rep(r: Rule): Rule		37
+nim	opt	treestand/dsl.html#opt,Rule	proc opt(r: Rule): Rule		44
+nim	token	treestand/dsl.html#token,Rule	proc token(r: Rule): Rule		49
+nim	prec	treestand/dsl.html#prec,int,Rule	proc prec(p: int; r: Rule): Rule		57
+nim	prec_left	treestand/dsl.html#prec_left,int,Rule	proc prec_left(p: int; r: Rule): Rule		69
+nim	prec_right	treestand/dsl.html#prec_right,int,Rule	proc prec_right(p: int; r: Rule): Rule		81
+nim	prec_dynamic	treestand/dsl.html#prec_dynamic,int,Rule	proc prec_dynamic(p: int; r: Rule): Rule		93
+nim	field	treestand/dsl.html#field,string,Rule	proc field(name: string; r: Rule): Rule		104

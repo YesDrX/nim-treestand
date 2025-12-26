@@ -1,0 +1,8 @@
+==================
+Precedence Resolution (Path B wins)
+==================
+example
+---
+(source
+  (path_b
+    (shared_rule)))

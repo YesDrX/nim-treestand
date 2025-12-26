@@ -1,0 +1,4 @@
+nimTitle	corpus	treestand/corpus.html	module src/treestand/corpus		0
+nim	TestCase	treestand/corpus.html#TestCase	object TestCase		16
+nim	CorpusParseError	treestand/corpus.html#CorpusParseError	object CorpusParseError		21
+nim	parseCorpus	treestand/corpus.html#parseCorpus,string	proc parseCorpus(content: string): seq[TestCase]		25

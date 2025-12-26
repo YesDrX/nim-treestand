@@ -1,0 +1,20 @@
+[
+  {
+    "type": "first_rule",
+    "named": true,
+    "root": true,
+    "fields": {}
+  },
+  {
+    "type": "\n",
+    "named": false
+  },
+  {
+    "type": "\r\n",
+    "named": false
+  },
+  {
+    "type": "'hello'",
+    "named": false
+  }
+]

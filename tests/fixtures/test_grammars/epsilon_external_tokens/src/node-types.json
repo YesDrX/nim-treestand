@@ -1,0 +1,26 @@
+[
+  {
+    "type": "document",
+    "named": true,
+    "root": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "zero_width",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "hello",
+    "named": false
+  },
+  {
+    "type": "zero_width",
+    "named": true
+  }
+]

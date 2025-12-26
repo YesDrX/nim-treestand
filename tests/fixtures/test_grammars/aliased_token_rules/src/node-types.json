@@ -1,0 +1,34 @@
+[
+  {
+    "type": "expression",
+    "named": true,
+    "root": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "X",
+          "named": true
+        },
+        {
+          "type": "Y",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "X",
+    "named": true
+  },
+  {
+    "type": "Y",
+    "named": true
+  },
+  {
+    "type": "a",
+    "named": false
+  }
+]

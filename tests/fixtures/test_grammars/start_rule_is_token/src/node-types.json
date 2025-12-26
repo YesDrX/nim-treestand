@@ -1,0 +1,12 @@
+[
+  {
+    "type": "first_rule",
+    "named": true,
+    "root": true,
+    "fields": {}
+  },
+  {
+    "type": "the-value",
+    "named": false
+  }
+]
