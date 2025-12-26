@@ -11,6 +11,14 @@ suite "External Scanner Integration":
     let srcDir = testDir.parentDir() / "src"
     let dslPath = srcDir / "treestand" / "dsl.js"
     
+    # use tree-sitter generate to generate scanner.c and parser.h
+    let originalCwd = getCurrentDir()
+    setCurrentDir(fixtureDir)
+    let generateCmd = "tree-sitter generate"
+    let (generateOut, generateCode) = execCmdEx(generateCmd)
+    check generateCode == 0
+    setCurrentDir(originalCwd)
+
     # Check files exist
     check fileExists(grammarPath)
     check fileExists(fixtureDir / "src" / "scanner.c")

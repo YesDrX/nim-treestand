@@ -447,6 +447,10 @@ proc parseGrammar*(input: string): InputGrammar {.raises: [ParseGrammarError, Js
       raise newException(ParseGrammarError, "Rules in extras array must not contain empty strings")
     extraSymbols.add(rule)
   
+  # Apply default whitespace pattern if no extras provided (same logic as tsGrammar)
+  if extraSymbols.len == 0:
+    extraSymbols.add(Rule(kind: rkPattern, patternValue: "\\s", patternFlags: ""))  
+ 
   # Parse externals
   var externalTokens: seq[Rule] = @[]
   for external in jsonNode{"externals"}:
@@ -507,7 +511,7 @@ proc parseGrammar*(input: string): InputGrammar {.raises: [ParseGrammarError, Js
         reservedWords: reservedTokens
       ))
   
-  InputGrammar(
+  result = InputGrammar(
     name: grammarJson.name,
     variables: variables,
     extraSymbols: extraSymbols,

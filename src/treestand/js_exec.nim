@@ -1,6 +1,6 @@
 ## Execute JavaScript grammar files to get JSON representation
 
-import os, osproc, strutils, options, strformat
+import os, osproc, strutils, options
 
 type
   JsExecError* = object of CatchableError

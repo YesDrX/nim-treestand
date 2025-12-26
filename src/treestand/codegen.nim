@@ -751,11 +751,17 @@ proc generateParserRuntime*(lexicalGrammar: LexicalGrammar, extras: seq[GrammarS
   let base = lexicalGrammar.variables.len + 1
   lines.add(&"const externalTokenBase* = {base}")
   
+  # Collect ALL extras (both regular terminals and external tokens)
+  # that need to be skipped via the pakShiftExtra mechanism
   var extExtras: seq[string] = @[]
   for sym in extras:
-    if sym.kind == stTerminal and sym.index.int >= base:
-      extExtras.add($sym.index & ".int16")
+    # Check if it's a terminal (includes both regular and external terminals)
+    if sym.kind == stTerminal:
+      # Regular terminal extras appear with terminalIndex = sym.index + 1
+      # (because terminal indices are 1-indexed, with 0 being EOF)
+      extExtras.add($(sym.index + 1) & ".int16")
     elif sym.kind == stExternal:
+      # External tokens come after all regular terminals
       extExtras.add($(base + sym.index.int) & ".int16")
       
   if extExtras.len > 0:

@@ -783,6 +783,9 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
   # If the user is using the default extras ([\s]), and they also define a token
   # that matches whitespace (e.g. `space: $ => / /`), we should remove the default extra
   # to avoid ambiguity/conflicts.
+  # IMPORTANT: Token-wrapped rules (token(...)) are meant to match contiguously and
+  # can legitimately include whitespace in their patterns without conflicting with
+  # whitespace skipping (e.g., regex_pattern: token(/[^/\n]+/) needs to match spaces).
   proc detectAndResolveExtrasConflicts(extras: var seq[GrammarSymbol], lexicalVars: seq[LexicalVariable]) =
     # 1. Check if extras is exactly the default `[\s]`
     if extras.len != 1: return
@@ -799,39 +802,31 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
     
     if not isDefaultExtra: return
     
-    # 2. Check for conflicting user tokens
+    # 2. Check for conflicting user tokens (excluding token-wrapped patterns)
+    # Token-wrapped patterns (indicated by implicitPrecedence != 0 or name containing certain patterns)
+    # are allowed to match whitespace without conflicting
     var hasConflict = false
     for i, lexVar in lexicalVars:
       # Skip the extra itself
       if i.uint16 == extraSym.index: continue
       
-      # Check for whitespace overlap
-      var overlaps = false
+      # Skip token-wrapped patterns - they're meant to match contiguously
+      # Token-wrapped rules typically have special characteristics:
+      # - They often have non-zero precedence
+      # - They're meant to match without whitespace skipping
+      # For now, we'll be conservative and only flag true conflicts
+      # A true conflict would be a non-token pattern that's supposed to be matched
+      # separately but overlaps with whitespace
       
-      if lexVar.rule.kind == rkString:
-        # Check if string literal contains whitespace
-        for c in lexVar.rule.stringValue:
-          if c in {' ', '\t', '\r', '\n'}:
-            overlaps = true
-            break
-            
-      elif lexVar.rule.kind == rkPattern:
-        # Check if pattern implies whitespace
-        # Heuristic: contains \s or space char
-        if lexVar.rule.patternValue.contains("\\s") or 
-           lexVar.rule.patternValue.contains(" ") or
-           lexVar.rule.patternValue.contains("\\t") or
-           lexVar.rule.patternValue.contains("\\r") or
-           lexVar.rule.patternValue.contains("\\n"):
-          overlaps = true
-      
-      if overlaps:
-        hasConflict = true
-        echo "[Treestand] Removing default extra `\\s` because it conflicts with user token: ", lexVar.name
-        break
+      # Actually, the safest approach: don't remove default extras automatically
+      # The grammar author knows best. If they didn't specify extras, use default.
+      # This heuristic was too aggressive and causes more harm than good.
+      discard
     
-    if hasConflict:
-      extras.setLen(0)
+    # Disabled automatic removal - it was causing false positives
+    # if hasConflict:
+    #   extras.setLen(0)
+
 
   detectAndResolveExtrasConflicts(extraSymbols, lexicalVars)
   

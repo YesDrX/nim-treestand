@@ -445,9 +445,9 @@ macro tsGrammarImpl(name: static string, userdata: untyped, body: untyped): unty
      buildCall.add fullMatchProc
 
   result = buildCall
-  echo "=================="
-  echo result.repr
-  echo "=================="
+  # echo "=================="
+  # echo result.repr
+  # echo "=================="
 
 macro tsGrammar*(name: static string, arg2: untyped, arg3: untyped = nil): untyped =
   ## Define a grammar using the concise `tsGrammar` DSL.
