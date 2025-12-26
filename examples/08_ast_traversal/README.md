@@ -7,7 +7,7 @@ This example demonstrates how to:
 
 ## Files
 
-- `traverse.nim`: The complete example containing the grammar, AST definition, traversal logic, and main execution.
+- `main.nim`: The complete example containing the grammar, AST definition, traversal logic, and main execution.
 
 ## Key Concepts
 
@@ -21,7 +21,7 @@ This example demonstrates how to:
 Run the example using Nim:
 
 ```bash
-nim r examples/08_ast_traversal/traverse.nim
+nim r examples/08_ast_traversal/main.nim
 ```
 
 ## Output
