@@ -53,6 +53,5 @@ jobs:
       run: bun install --global tree-sitter-cli
       
     - name: Test
-      working-directory: ${{ github.workspace }}/tests
       run: |
         nimble test
