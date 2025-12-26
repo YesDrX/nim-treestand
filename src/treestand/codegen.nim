@@ -242,9 +242,9 @@ proc generateExternalScannerBindings*(grammarName: string, grammarPath: string, 
       raise newException(ValueError, "External scanner not found")
   
   lines.add(&"# Compile external scanner")
-  lines.add(&"{{.passC: \"-I{grammarPath}\".}}")
-  lines.add(&"{{.passC: \"-I{scannerStrPath}\".}}")
-  lines.add(&"{{.compile: \"{scannerPath}\".}}")
+  lines.add(&"{{.passC: \"\"\" -I\"{grammarPath}\" \"\"\".}}")
+  lines.add(&"{{.passC: \"\"\" -I\"{scannerStrPath}\" \"\"\".}}")
+  lines.add(&"{{.compile: \"\"\"{scannerPath}\"\"\".}}")
   lines.add("")
   
   # # TSLexer type definition

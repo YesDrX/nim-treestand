@@ -29,10 +29,17 @@ suite "YAML Grammar Pipeline":
     let grammarPath = fixtureDir / "grammar.js"
     let srcDir = testDir.parentDir() / "src"
     let dslPath = srcDir / "treestand" / "dsl.js"
-    
+
     # Ensure fixture dir exists (it should)
     if not dirExists(fixtureDir):
       createDir(fixtureDir)
+
+    # Use tree-sitter to generate tree-sitter/*.h
+    let originalCwd = getCurrentDir()
+    setCurrentDir(fixtureDir)
+    let treeSitterCmd = "tree-sitter generate"
+    let exitCode = execCmd(treeSitterCmd)
+    setCurrentDir(originalCwd)
       
     echo "1. Parsing grammar form ", grammarPath
     let grammarJson = executeGrammarJs(grammarPath, dslPath)

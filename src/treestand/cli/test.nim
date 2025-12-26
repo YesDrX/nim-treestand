@@ -169,8 +169,8 @@ except Exception as e:
   let grammarSrcInclude = fixtureDir / "src"
   
   var passC = ""
-  passC = " --passC:\"-I" & includeDir & "\""
-  passC = " --passC:\"-I" & grammarSrcInclude & "\""
+  passC = " --passC:\"-I\'" & includeDir & "\'\" "
+  passC = " --passC:\"-I\'" & grammarSrcInclude & "\'\" "
   
   when defined(debug):
     let compileCmd = "nim r -d:debug --hints:off" & passC & " --path:" & treestandSrc.quoteShell & " " & runnerPath.quoteShell
