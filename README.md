@@ -16,7 +16,11 @@ The goal of Treestand is to provide a native Nim implementation of the Tree-sitt
 - **Direct Execution**: Executes `grammar.js` using Bun or Node.js via an integrated DSL.
 - **Full Compatibility**: Closely follows Tree-sitter's internal algorithms (NFA, DFA, LR(1) table construction).
 - **Nim-Native**: Generates pure Nim code for the parser and runtime.
-- **External Scanners**: Native support for `scanner.c` files using Nim's `{.compile.}` and `importc` pragmas.
+- **External Scanners**: Native support for both **scanner.nim** (pure Nim) and **scanner.c** (C/C++) external scanners:
+  - **Auto-detection**: Automatically finds `scanner.nim` or `scanner.c` in the grammar directory when external tokens are defined
+  - **Priority order**: `scanner.nim` → `scanner.c` → `scanner.cc` → `src/scanner.c` → `src/scanner.cc`
+  - **Nim scanners**: Imported directly as Nim modules (zero FFI overhead)
+  - **C scanners**: Compiled using `{.compile.}` and `{.importc.}` pragmas
 - **Excellent Conflict Detection**: Accurate reporting of Shift/Reduce and Reduce/Reduce conflicts.
 
 ## Installation

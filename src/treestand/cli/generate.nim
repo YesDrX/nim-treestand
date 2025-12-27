@@ -80,7 +80,8 @@ proc generateParser*(grammarPath: string, outputDir: string, dslPath: string = "
     lexicalGrammar,
     tables.parseTable,
     tables.mainLexTable,
-    externalTokens
+    externalTokens,
+    inputGrammar.externalScanner  # Pass external scanner path from grammar
   )
   
   # 6. Write output

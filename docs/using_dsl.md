@@ -78,10 +78,84 @@ You can set `InputGrammar` properties using `field = value` syntax within the ma
 
 ### External Tokens
 
-To define a token handled by an external scanner (C function):
+To define a token handled by an external scanner:
 
 ```nim
 indent <- external_token
+dedent <- external_token
+```
+
+### External Scanners
+
+Treestand supports both **Nim** and **C/C++** external scanners for complex lexical analysis.
+
+#### Auto-Detection
+
+When you define external tokens, Treestand automatically searches for scanner files in the grammar directory:
+
+**Priority order:**
+1. `scanner.nim`
+2. `scanner.c`  
+3. `scanner.cc`
+4. `src/scanner.c`
+5. `src/scanner.cc`
+
+```nim
+tsGrammar "python":
+  # If scanner.nim or scanner.c exists in the current directory (getCurrentDir()), it will be found automatically
+  indent <- external_token
+  dedent <- external_token
+```
+
+#### Manual Scanner Path
+
+You can explicitly specify the scanner file:
+
+```nim
+tsGrammar "my_lang":
+  # Specify Nim scanner
+  externalScanner = "scanners/my_scanner.nim"
+  
+  # Or C scanner
+  # externalScanner = "scanners/my_scanner.c"
+  
+  indent <- external_token
+```
+
+#### Nim Scanners
+
+Nim scanners are imported directly as modules with zero FFI overhead. Your scanner must export these functions:
+
+```nim
+# scanner.nim
+import treestand/parser_types
+
+proc scanner_create*(): pointer {.exportc: "tree_sitter_mylang_external_scanner_create".}
+proc scanner_destroy*(payload: pointer) {.exportc:  "tree_sitter_mylang_external_scanner_destroy".}
+proc scanner_scan*(payload: pointer, lexer: ptr TSLexer, valid_symbols: ptr bool): bool {.exportc: "tree_sitter_mylang_external_scanner_scan".}
+proc scanner_serialize*(payload: pointer, buffer: cstring): cuint {.exportc: "tree_sitter_mylang_external_scanner_serialize".}
+proc scanner_deserialize*(payload: pointer, buffer: cstring, length: cuint) {.exportc: "tree_sitter_mylang_external_scanner_deserialize".}
+```
+
+**Generated code:**
+```nim
+# Import external Nim scanner
+import path/to/scanner
+```
+
+#### C/C++ Scanners
+
+C scanners are compiled using Nim's `{.compile.}` and `{.importc.}` pragmas:
+
+**Generated code:**
+```nim
+# Compile external scanner
+{.passC: """ -I"grammar_dir" """.}
+{.passC: """ -I"scanner_dir" """.}
+{.compile: """scanner.c""".}
+
+proc scanner_create*(): pointer {.importc: "tree_sitter_mylang_external_scanner_create".}
+# ... other importc declarations
 ```
 
 ### Embedded Actions

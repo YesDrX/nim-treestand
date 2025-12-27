@@ -511,6 +511,7 @@ proc parseGrammar*(input: string): InputGrammar {.raises: [ParseGrammarError, Js
         reservedWords: reservedTokens
       ))
   
+  
   result = InputGrammar(
     name: grammarJson.name,
     variables: variables,
@@ -533,7 +534,8 @@ proc parseGrammar*(input: string): InputGrammar {.raises: [ParseGrammarError, Js
         rst
       ) else: @[],
     wordToken: wordToken,
-    reservedWords: reservedWords
+    reservedWords: reservedWords,
+    externalScanner: ""  # Empty - codegen will auto-detect based on grammarPath
   )
 
 proc parseGrammarJson*(jsonFilename: string): InputGrammar {.raises: [ParseGrammarError, JsonParsingError, IOError, OSError, ValueError].} =

@@ -44,6 +44,7 @@ type
     supertypeSymbols*: seq[string]               ## Rules grouped as supertypes (for query API).
     wordToken*: Option[string]                   ## Keyword tokenizer optimization.
     reservedWords*: seq[ReservedWordContext[Rule]]
+    externalScanner*: string                     ## Path to external scanner (scanner.nim or scanner.c).
 
   LexicalVariable* = object
     ## A refined variable for the Lexical Grammar (Lexer).

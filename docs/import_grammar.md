@@ -241,15 +241,62 @@ importGrammar(projectRoot / "grammars" / "json" / "grammar.js")
 
 ## External Scanners
 
-Some Tree-sitter grammars use external scanners (written in C) for complex tokenization. Treestand supports these through external tokens:
+Some Tree-sitter grammars use external scanners for complex tokenization tasks (e.g., Python indentation, string interpolation). Treestand supports both **Nim** and **C/C++** external scanners.
+
+### Auto-Detection
+
+When a grammar defines external tokens, Treestand automatically searches for scanner files in the grammar directory:
+
+**Priority order:**
+1. `scanner.nim` (Nim scanner)
+2. `scanner.c` (C scanner)
+3. `scanner.cc` (C++ scanner)
+4. `src/scanner.c`
+5. `src/scanner.cc`
 
 ```nim
-# The grammar.js defines external tokens
-# Treestand will generate hooks for them
-importGrammar("grammar.js")
+# If grammar.js defines external tokens and scanner.nim or scanner.c exists
+# in the grammar directory, it will be automatically detected and used
+importGrammar("path/to/grammar.js")
+```
 
-# automatically generate the following
-# {.compile: "path/to/scanner.c".}
+### Nim Scanners
+
+If `scanner.nim` is found, Treestand imports it directly:
+
+**Generated code:**
+```nim
+# Import external Nim scanner
+import path/to/scanner
+```
+
+**Your scanner.nim must export these functions:**
+```nim
+import treestand/parser_types
+
+proc scanner_create*(): pointer {.exportc: "tree_sitter_mylang_external_scanner_create".}
+proc scanner_destroy*(payload: pointer) {.exportc: "tree_sitter_mylang_external_scanner_destroy".}
+proc scanner_scan*(payload: pointer, lexer: ptr TSLexer, valid_symbols: ptr bool): bool {.exportc: "tree_sitter_mylang_external_scanner_scan".}
+proc scanner_serialize*(payload: pointer, buffer: cstring): cuint {.exportc: "tree_sitter_mylang_external_scanner_serialize".}
+proc scanner_deserialize*(payload: pointer, buffer: cstring, length: cuint) {.exportc: "tree_sitter_mylang_external_scanner_deserialize".}
+```
+
+**Benefits of Nim scanners:**
+- Zero FFI overhead
+- Full Nim type safety
+- Access to Nim's standard library
+- Easier debugging
+
+### C/C++ Scanners
+
+If `scanner.c` or `scanner.cc` is found, Treestand compiles it using Nim's FFI:
+
+**Generated code:**
+```nim
+# Compile external scanner
+{.passC: """ -I"grammar_dir" """.}
+{.passC: """ -I"grammar_dir/src" """.}
+{.compile: """grammar_dir/src/scanner.c""".}
 
 # External scanner functions
 proc scanner_create*(): pointer {.importc: "tree_sitter_simple_scanner_external_scanner_create".}
@@ -259,7 +306,7 @@ proc scanner_serialize*(payload: pointer, buffer: cstring): cuint {.importc: "tr
 proc scanner_deserialize*(payload: pointer, buffer: cstring, length: cuint) {.importc: "tree_sitter_simple_scanner_external_scanner_deserialize".}
 ```
 
-The `importGrammar` macro automatically detects external tokens and generates the appropriate hooks.
+The C scanner is automatically compiled as part of your Nim project.
 
 ## Build-Time Messages
 

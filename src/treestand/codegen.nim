@@ -219,60 +219,77 @@ proc generateSymbolEnum*(syntaxGrammar: SyntaxGrammar, lexicalGrammar: LexicalGr
   
   result = lines.join("\n")
 
-proc generateExternalScannerBindings*(grammarName: string, grammarPath: string, externalTokens: seq[string]): string =
-  ## Generate external scanner bindings if grammar has external tokens
+proc generateExternalScannerBindings*(grammarName: string, grammarPath: string, externalTokens: seq[string], externalScanner: string = ""): string =
+  ## Generate external scanner bindings or imports
+  ## Handles three cases:
+  ## 1. externalScanner ends with .nim -> import the Nim scanner module
+  ## 2. externalScanner ends with .c -> compile C scanner with passC/compile directives
+  ## 3. externalScanner is empty -> auto-detect scanner.c location (fallback behavior)
+  
   if externalTokens.len == 0:
     return ""
   
   var lines: seq[string] = @[]
+  var scannerPath = externalScanner
   
-  # Compile pragma with absolute path
-  # Try src/scanner.c first (standard tree-sitter convention)
-  let grammarDir = grammarPath
-  let scannerStrPath = grammarDir / "src"
-  var scannerPath = scannerStrPath / "scanner.c"
-  if not fileExists(scannerPath):
-    if fileExists(scannerStrPath / "scanner.cc"):
-      scannerPath = scannerStrPath / "scanner.cc"
+  # Determine scanner type and path
+  if scannerPath.len == 0:
+    # Auto-detection: only when we have external tokens
+    # Priority: scanner.nim > scanner.c > src/scanner.c > src/scanner.cc
+    let grammarDir = grammarPath
+    let scannerSrcPath = grammarDir / "src"
+    
+    if fileExists(grammarDir / "scanner.nim"):
+      scannerPath = grammarDir / "scanner.nim"
     elif fileExists(grammarDir / "scanner.c"):
       scannerPath = grammarDir / "scanner.c"
     elif fileExists(grammarDir / "scanner.cc"):
       scannerPath = grammarDir / "scanner.cc"
+    elif fileExists(scannerSrcPath / "scanner.c"):
+      scannerPath = scannerSrcPath / "scanner.c"
+    elif fileExists(scannerSrcPath / "scanner.cc"):
+      scannerPath = scannerSrcPath / "scanner.cc"
     else:
-      raise newException(ValueError, "External scanner not found")
+      raise newException(ValueError, 
+        "External tokens defined but no scanner found. " &
+        "Looked for: scanner.nim, scanner.c, src/scanner.c, src/scanner.cc in " & grammarDir)
   
-  lines.add(&"# Compile external scanner")
-  lines.add(&"{{.passC: \"\"\" -I\"{grammarPath}\" \"\"\".}}")
-  lines.add(&"{{.passC: \"\"\" -I\"{scannerStrPath}\" \"\"\".}}")
-  lines.add(&"{{.compile: \"\"\"{scannerPath}\"\"\".}}")
-  lines.add("")
-  
-  # # TSLexer type definition
-  # lines.add("# TSLexer type (matches tree-sitter C API)")
-  # lines.add("type")
-  # lines.add("  TSSymbol* = uint16")
-  # lines.add("")
-  # lines.add("  TSLexer* {.bycopy.} = object")
-  # lines.add("    lookahead*: int32")
-  # lines.add("    result_symbol*: TSSymbol")
-  # lines.add("    advance*: proc(self: ptr TSLexer, skip: bool) {.cdecl.}")
-  # lines.add("    mark_end*: proc(self: ptr TSLexer) {.cdecl.}")
-  # lines.add("    get_column*: proc(self: ptr TSLexer): uint32 {.cdecl.}")
-  # lines.add("    is_at_included_range_start*: proc(self: ptr TSLexer): bool {.cdecl.}")
-  # lines.add("    eof*: proc(self: ptr TSLexer): bool {.cdecl.}")
-  # lines.add("    log*: proc(self: ptr TSLexer, msg: cstring) {.cdecl, varargs.}")
-  # lines.add("")
-  
-  # Scanner function imports
-  let prefix = &"tree_sitter_{grammarName}_external_scanner"
-  lines.add("# External scanner functions")
-  lines.add(&"proc scanner_create*(): pointer {{.importc: \"{prefix}_create\".}}")
-  lines.add(&"proc scanner_destroy*(payload: pointer) {{.importc: \"{prefix}_destroy\".}}")
-  lines.add(&"proc scanner_scan*(payload: pointer, lexer: ptr TSLexer, valid_symbols: ptr bool): bool {{.importc: \"{prefix}_scan\".}}")
-  lines.add(&"proc scanner_serialize*(payload: pointer, buffer: cstring): cuint {{.importc: \"{prefix}_serialize\".}}")
-  lines.add(&"proc scanner_deserialize*(payload: pointer, buffer: cstring, length: cuint) {{.importc: \"{prefix}_deserialize\".}}")
+  # Check scanner type and generate appropriate code
+  if scannerPath.endsWith(".nim"):
+    # Nim scanner: generate import statement
+    lines.add("# Import external Nim scanner")
+    var importPath = scannerPath
+    # Remove .nim extension
+    if importPath.endsWith(".nim"):
+      importPath = importPath[0..^5]
+    lines.add(&"import {importPath}")
+    lines.add("")
+    
+  else:
+    # C scanner: generate passC and compile directives
+    lines.add("# Compile external scanner")
+    
+    # Get directory paths for include directives
+    let scannerDir = scannerPath.parentDir()
+    let grammarDir = grammarPath
+    
+    # Add include paths with triple quotes and inner double quotes for Windows
+    lines.add(&"{{.passC: \"\"\" -I\"{grammarDir}\" \"\"\".}}")
+    lines.add(&"{{.passC: \"\"\" -I\"{scannerDir}\" \"\"\".}}")
+    lines.add(&"{{.compile: \"\"\"{scannerPath}\"\"\".}}")
+    lines.add("")
+    
+    # Scanner function imports
+    let prefix = &"tree_sitter_{grammarName}_external_scanner"
+    lines.add("# External scanner functions")
+    lines.add(&"proc scanner_create*(): pointer {{.importc: \"{prefix}_create\".}}")
+    lines.add(&"proc scanner_destroy*(payload: pointer) {{.importc: \"{prefix}_destroy\".}}")
+    lines.add(&"proc scanner_scan*(payload: pointer, lexer: ptr TSLexer, valid_symbols: ptr bool): bool {{.importc: \"{prefix}_scan\".}}")
+    lines.add(&"proc scanner_serialize*(payload: pointer, buffer: cstring): cuint {{.importc: \"{prefix}_serialize\".}}")
+    lines.add(&"proc scanner_deserialize*(payload: pointer, buffer: cstring, length: cuint) {{.importc: \"{prefix}_deserialize\".}}")
   
   result = lines.join("\n")
+
 
 proc generateParseTableCode*(parseTable: BuildParseTable, lexicalGrammar: LexicalGrammar, externalTokens: seq[string]): string =
   ## Generate parse table data as Nim code using COMPACT arrays
@@ -814,7 +831,8 @@ proc generateParser*(grammarName: string, grammarPath: string,
                      lexicalGrammar: LexicalGrammar,
                      parseTable: BuildParseTable,
                      lexTable: BuildLexTable,
-                     externalTokens: seq[string]): string =
+                     externalTokens: seq[string],
+                     externalScanner: string = ""): string =
   ## Generate complete parser code
   var lines: seq[string] = @[]
   
@@ -840,7 +858,7 @@ proc generateParser*(grammarName: string, grammarPath: string,
   
   # Generate external scanner bindings if needed
   if externalTokens.len > 0:
-    lines.add(generateExternalScannerBindings(grammarName, grammarPath, externalTokens))
+    lines.add(generateExternalScannerBindings(grammarName, grammarPath, externalTokens, externalScanner))
     lines.add("")
   
   # Generate parse table

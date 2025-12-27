@@ -132,12 +132,13 @@ macro buildGrammar*(createGrammarFunction: untyped): untyped =
       for ext in syntaxGrammar.externalTokens: externalTokens.add(ext.name)
       let parserCode = generateParser(
         parserName,
-        "",
+        ".",
         syntaxGrammar,
         lexicalGrammar,
         tables.parseTable,
         tables.mainLexTable,
-        externalTokens
+        externalTokens,
+        inputGrammar.externalScanner  # Pass external scanner path
       )
       # echo parserCode
       return parserCode.parseStmt()
@@ -285,6 +286,7 @@ macro tsGrammarImpl(name: static string, userdata: untyped, body: untyped): unty
     none(string)
   var variablesToInline = newNimNode(nnkBracket)
   var supertypeSymbols = newNimNode(nnkBracket)
+  var externalScanner = newLit("")
 
   var ruleActions = initTable[string, NimNode]()
   var ruleFields = initTable[string, seq[string]]()
@@ -340,6 +342,7 @@ macro tsGrammarImpl(name: static string, userdata: untyped, body: untyped): unty
           extraSymbols.add transformRule(value)
       of "conflicts": expectedConflicts = value 
       of "scanner": discard
+      of "externalScanner": externalScanner = value
       of "inline": variablesToInline = value
       of "supertypes": supertypeSymbols = value
       of "word": wordToken = newCall("some", value)
@@ -364,7 +367,8 @@ macro tsGrammarImpl(name: static string, userdata: untyped, body: untyped): unty
         externalTokens: @`externalTokens`,
         variablesToInline: @`variablesToInline`,
         supertypeSymbols: @`supertypeSymbols`,
-        wordToken: `wordToken`
+        wordToken: `wordToken`,
+        externalScanner: `externalScanner`
       )
     buildGrammar(`grammarProcName`)
   
