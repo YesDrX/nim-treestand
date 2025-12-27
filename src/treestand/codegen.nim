@@ -262,7 +262,7 @@ proc generateExternalScannerBindings*(grammarName: string, grammarPath: string, 
     # Remove .nim extension
     if importPath.endsWith(".nim"):
       importPath = importPath[0..^5]
-    lines.add(&"import {importPath}")
+    lines.add(&"import \"{importPath}\"")
     lines.add("")
     
   else:
