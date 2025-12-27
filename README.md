@@ -1,4 +1,4 @@
-# Treestand
+# Treestand [![Test treestand](https://github.com/YesDrX/nim-treestand/actions/workflows/main.yml/badge.svg)](https://github.com/YesDrX/nim-treestand/actions/workflows/main.yml)
 
 Treestand is a complete re-implementation of the [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) parser generator in Nim. It takes `grammar.js`, or grammar rules defined in Nim and optionally `scanner.c` as input and generates high-performance Nim parsers automatically.
 
