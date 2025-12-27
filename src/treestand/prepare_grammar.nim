@@ -805,29 +805,11 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
     # 2. Check for conflicting user tokens (excluding token-wrapped patterns)
     # Token-wrapped patterns (indicated by implicitPrecedence != 0 or name containing certain patterns)
     # are allowed to match whitespace without conflicting
-    var hasConflict = false
     for i, lexVar in lexicalVars:
       # Skip the extra itself
       if i.uint16 == extraSym.index: continue
-      
-      # Skip token-wrapped patterns - they're meant to match contiguously
-      # Token-wrapped rules typically have special characteristics:
-      # - They often have non-zero precedence
-      # - They're meant to match without whitespace skipping
-      # For now, we'll be conservative and only flag true conflicts
-      # A true conflict would be a non-token pattern that's supposed to be matched
-      # separately but overlaps with whitespace
-      
-      # Actually, the safest approach: don't remove default extras automatically
-      # The grammar author knows best. If they didn't specify extras, use default.
-      # This heuristic was too aggressive and causes more harm than good.
       discard
     
-    # Disabled automatic removal - it was causing false positives
-    # if hasConflict:
-    #   extras.setLen(0)
-
-
   detectAndResolveExtrasConflicts(extraSymbols, lexicalVars)
   
   # Resolve named precedences

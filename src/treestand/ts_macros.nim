@@ -376,7 +376,6 @@ macro tsGrammarImpl(name: static string, userdata: untyped, body: untyped): unty
   var matchImpl = newStmtList()
   if userdata.kind != nnkNilLit:
      let matchName = ident("match" & name.capitalizeAscii())
-     let parserCtor = ident("parse" & name.capitalizeAscii())
      var userDataType = userdata
      if userdata.kind == nnkExprColonExpr:
          userDataType = userdata[1]

@@ -122,7 +122,7 @@ proc dfaFromNfa(
     tokenConflictMap: TokenConflictMap,
     startConfigs: seq[seq[uint32]]
 ): tuple[table: BuildLexTable, startStateMap: seq[uint32]]
-proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar): BuildParseTable
+proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, skipConflictDetection: bool = false): BuildParseTable
 
 # Conflict helper declarations
 proc computeFirst*(grammar: SyntaxGrammar): FirstSets
@@ -138,7 +138,7 @@ proc newTokenConflictMap*(
     followingTokens: seq[HashSet[uint32]]
 ): TokenConflictMap
 
-proc buildTables*(syntaxGrammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar): Tables =
+proc buildTables*(syntaxGrammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, skipConflictDetection: bool = false): Tables =
   ## Main entry point for building parse and lexical tables from a grammar.
   ##
   ## This procedure orchestrates the entire table construction pipeline:
@@ -224,7 +224,7 @@ proc buildTables*(syntaxGrammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar):
 
   # 3. Build parse table from syntax grammar
   # Using modified syntax grammar with newly detected extras
-  var parseTable = buildParseTable(mutableSyntax, mutableLexical)
+  var parseTable = buildParseTable(mutableSyntax, mutableLexical, skipConflictDetection)
 
   let firstSets = computeFirst(syntaxGrammar)
   let lastSets = computeLast(syntaxGrammar)
@@ -1610,6 +1610,8 @@ proc precomputeClosureCache*(
   ## Precompute closure expansions using BitSet for efficient lookahead operations.
   ## This is the optimized version for LALR(1) with kernel-only storage.
   
+  echo "[Treestand] Precomputing closure cache..."
+
   # Create symbol context for bit mapping
   let terminalCount = lexicalGrammar.variables.len
   let externalCount = grammar.externalTokens.len
@@ -2206,7 +2208,7 @@ proc buildCanonicalCollection*(grammar: SyntaxGrammar, firstSets: FirstSets, aug
     
     inc steps
     if steps mod 500 == 0:
-      debugEchoMsg "[BuildTables] Processing state ", stateId, ". Total states: ", states.len
+      echo "[Treestand] Processing state ", stateId, ". Total states: ", states.len
     
     # Map: Symbol → List of Kernel Items for the next state
     var nextStateKernels = stdtables.initTable[GrammarSymbol, seq[LR1Item]]()
@@ -2549,7 +2551,7 @@ proc buildLR0Automaton(
   augmentedStartIndex: int
 ): (seq[seq[LR0Item]], seq[stdtables.Table[GrammarSymbol, int]]) =
   ## Build LR(0) automaton: states contain only kernel items (no lookaheads)
-  debugEchoMsg "[Pager] Building LR(0) automaton..."
+  echo "[Treestand] Building LR(0) automaton..."
   
   var states = newSeq[seq[LR0Item]]()
   var stateMap = stdtables.initTable[seq[LR0Item], int]()
@@ -2636,7 +2638,7 @@ proc computeLookaheadPropagations(
 ): seq[LR0State] =
   ## Compute spontaneous lookaheads and propagation links for each LR(0) state
   ## KEY FIX: Process ALL closure items, not just kernels!
-  debugEchoMsg "[Pager] Computing lookahead propagations..."
+  echo "[Treestand] Computing lookahead propagations..."
   
   result = newSeq[LR0State](lr0States.len)
   
@@ -2805,7 +2807,7 @@ proc propagateLookaheads(
   states: var seq[LR0State]
 ): void =
   ## Iteratively propagate lookaheads through the graph until no changes
-  debugEchoMsg "[Pager] Propagating lookaheads..."
+  echo "[Treestand] Propagating lookaheads..."
   
   var changed = true
   var iterations = 0
@@ -2843,7 +2845,7 @@ proc convertPagerToStateKernels(
   ctx: SymbolContext
 ): seq[StateKernels] =
   ## Convert from Pager's format to existing StateKernels format
-  debugEchoMsg "[Pager] Converting to StateKernels format..."
+  echo "[Treestand] Converting to StateKernels format..."
   
   result = newSeq[StateKernels](pagerStates.len)
   
@@ -2868,7 +2870,7 @@ proc convertPagerToStateKernels(
 
 # TODO: Integration point in buildParseTable with -d:usePagerLALR
 
-proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar): BuildParseTable =
+proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, skipConflictDetection: bool = false): BuildParseTable =
   ## Builds the LR(1) parse table from the syntax grammar.
   ##
   ## This is the core of the parser generator - it constructs the parse table
@@ -2990,6 +2992,8 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar): B
     
     # Step 5: Convert to full LR1 items for table building
     let closureCache = precomputeClosureCache(augmentedGrammar, lexicalGrammar, firstSets)
+
+    echo "[Treestand] Converting to full LR1 items for table building..."
     var states = newSeq[HashSet[LR1Item]](statesLALR.len)
     for i, kernels in statesLALR:
       let fullClosure = getTransitiveClosure(augmentedGrammar, kernels, closureCache, firstSets)
@@ -3021,6 +3025,7 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar): B
       states[i] = convertStateKernelsToLR1Items(fullClosure, ctx)
     
     let transitions = transitionsLALR
+  
   else:
     echo "[Treestand] Using traditional Canonical LR(1) implementation"
     # Pass augmentedStartIndex to buildCanonicalCollection so it knows where to start
@@ -3072,8 +3077,6 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar): B
   for stateId in 0 ..< states.len:
     let itemSet = states[stateId]
     
-
-    
     for item in itemSet:
       let variable = augmentedGrammar.variables[item.variableIndex]
       let production = variable.productions[item.productionIndex]
@@ -3094,14 +3097,6 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar): B
           let gotoStateId = transitions[stateId][nextSym]
           
           if nextSym.kind != stNonTerminal:
-            # let newAction = BuildParseAction(
-            #   kind: bpakShift,
-            #   participants: @[],
-            #   shiftState: gotoStateId.uint32,
-            #   shiftPrecedence: shiftPrecVal,
-            #   shiftDynamicPrecedence: production.dynamicPrecedence
-            # )
-
             var alreadyExists = false
             for (sym, action) in entries[stateId].actionMap:
                if sym == nextSym and action.kind == bpakShift and action.shiftState == gotoStateId.uint32 and action.shiftPrecedence == shiftPrecVal and action.shiftDynamicPrecedence == production.dynamicPrecedence:
@@ -3160,8 +3155,6 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar): B
                action: reduceAction
              ))
 
-
-  
   var productionInfos = newSeq[BuildProductionInfo]()
   for i in 0 ..< grammar.variables.len:
     let variable = grammar.variables[i]
@@ -3196,257 +3189,268 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar): B
           ))
   
   # Detect conflicts in the parse table
-  for stateId in 0..<entries.len:
+  # BUGGY
+  if not skipConflictDetection:
+    echo "[Treestand] Detecting conflicts in the parse table ..."
+    proc getOriginalSymbol(g: SyntaxGrammar, sym: GrammarSymbol): GrammarSymbol =
+      #TODO#FIXME: find the original symbol of the auxiliary symbol
+      return sym
+    
     proc isConflictExpected(ruleSymbols: seq[GrammarSymbol]): bool =
       if ruleSymbols.len == 0: return true
       for expectedSet in augmentedGrammar.expectedConflicts:
         var allFound = true
         for rule in ruleSymbols:
+          var originalRule = getOriginalSymbol(augmentedGrammar, rule)
           var ruleFound = false
           for expectedRule in expectedSet:
-            if rule == expectedRule:
+            if originalRule == expectedRule:
               ruleFound = true
               break
           if not ruleFound:
             allFound = false
             break
         if allFound: 
-           debugEchoMsg "Conflict expected and suppressed for: ", ruleSymbols
-           return true
+            debugEchoMsg "Conflict expected and suppressed for: ", ruleSymbols
+            return true
       debugEchoMsg "Conflict NOT expected for: ", ruleSymbols
       debugEchoMsg "Available expected sets:"
       for s in augmentedGrammar.expectedConflicts:
         debugEchoMsg "  Set: ", s
       return false
-
-    var actionsBySymbol = stdtables.initTable[GrammarSymbol, seq[BuildParseAction]]()
     
-    for (sym, action) in entries[stateId].actionMap:
-      if sym notin actionsBySymbol:
-        actionsBySymbol[sym] = @[]
-      actionsBySymbol[sym].add(action)
-    var resolvedActions: seq[tuple[sym: GrammarSymbol, action: BuildParseAction]] = @[]
-
-    for sym, actions in actionsBySymbol:
-      var shiftActions: seq[BuildParseAction] = @[]
-      var reduces: seq[BuildParseAction] = @[]
+    for stateId in 0..<entries.len:
+      var actionsBySymbol = stdtables.initTable[GrammarSymbol, seq[BuildParseAction]]()
       
-      for action in actions:
-        case action.kind
-        of bpakShift, bpakShiftExtra:
-          shiftActions.add(action)
-        of bpakReduce:
-          reduces.add(action)
-        else:
-          discard
+      for (sym, action) in entries[stateId].actionMap:
+        if sym notin actionsBySymbol:
+          actionsBySymbol[sym] = @[]
+        actionsBySymbol[sym].add(action)
+      var resolvedActions: seq[tuple[sym: GrammarSymbol, action: BuildParseAction]] = @[]
 
-      # Deduplication of shift actions removed to allow conflict detection to see 
-      # all potential shifts, especially for Shift/Reduce/Shift conflicts where
-      # different shifts might have different precedences relative to a reduce.
-      # The conflict resolution logic later will handle choosing the best shift 
-      # if they are compatible, or report a conflict if they are not.
+      for sym, actions in actionsBySymbol:
+        var shiftActions: seq[BuildParseAction] = @[]
+        var reduces: seq[BuildParseAction] = @[]
+        
+        for action in actions:
+          case action.kind
+          of bpakShift, bpakShiftExtra:
+            shiftActions.add(action)
+          of bpakReduce:
+            reduces.add(action)
+          else:
+            discard
 
-      var processed = false
+        # Deduplication of shift actions removed to allow conflict detection to see 
+        # all potential shifts, especially for Shift/Reduce/Shift conflicts where
+        # different shifts might have different precedences relative to a reduce.
+        # The conflict resolution logic later will handle choosing the best shift 
+        # if they are compatible, or report a conflict if they are not.
 
-      if shiftActions.len > 0 and reduces.len > 0:
-          # Shift/Reduce conflict
-          var allResolved = true
-          var winningReduces: seq[BuildParseAction] = @[]
-          var keepShifts = false
-          
-          # Find winning reduces first
-          for r in reduces:
-            let reducePrecedence = r.reduceStaticPrecedence
-            var shiftIsMore = false
-            var shiftIsLess = false
+        var processed = false
+
+        if shiftActions.len > 0 and reduces.len > 0:
+            # Shift/Reduce conflict
+            var allResolved = true
+            var winningReduces: seq[BuildParseAction] = @[]
+            var keepShifts = false
             
-            for shift in shiftActions:
-               let shiftPrecedence = shift.shiftPrecedence
-               # debugEchoMsg "Conflict: Shift(", shift.shiftPrecedence, ") vs Reduce(", reducePrecedence, ") for symbol ", getSymbolName(sym)
-               if shiftPrecedence > reducePrecedence:
-                 shiftIsMore = true
-               elif shiftPrecedence < reducePrecedence:
-                 shiftIsLess = true
-             
-            if shiftIsMore and not shiftIsLess:
-              # Shift wins over this reduce
-              keepShifts = true
-            elif shiftIsLess and not shiftIsMore:
-              # This reduce wins
-              winningReduces.add(r)
+            # Find winning reduces first
+            for r in reduces:
+              let reducePrecedence = r.reduceStaticPrecedence
+              var shiftIsMore = false
+              var shiftIsLess = false
               
-              # HEURISTIC: If Shift lost because it has negative precedence vs default (0),
-              # keep it anyway to allow GLR to resolve potential invalid reductions.
-              if shiftActions.len == 1 and shiftActions[0].shiftPrecedence < 0 and reducePrecedence == 0:
+              for shift in shiftActions:
+                let shiftPrecedence = shift.shiftPrecedence
+                # debugEchoMsg "Conflict: Shift(", shift.shiftPrecedence, ") vs Reduce(", reducePrecedence, ") for symbol ", getSymbolName(sym)
+                if shiftPrecedence > reducePrecedence:
+                  shiftIsMore = true
+                elif shiftPrecedence < reducePrecedence:
+                  shiftIsLess = true
+              
+              if shiftIsMore and not shiftIsLess:
+                # Shift wins over this reduce
                 keepShifts = true
-            elif not shiftIsLess and not shiftIsMore:
-               # Precedence equal, check associativity
-               var resolved = false
-               if r.reduceAssociativity.isSome:
-                  let assoc = r.reduceAssociativity.get
-                  if assoc == gaLeft:
-                     # Associativity: Left -> Reduce wins
-                     winningReduces.add(r)
-                     resolved = true
-                  elif assoc == gaRight:
-                     # Associativity: Right -> Shift wins
-                     keepShifts = true
-                     resolved = true
-               if not resolved:
-                  allResolved = false
-            else:
-               allResolved = false
-          
-          if not allResolved:
-            var participants: seq[GrammarSymbol] = @[]
-            for a in actions:
-              for p in a.participants:
-                if p notin participants: participants.add(p)
+              elif shiftIsLess and not shiftIsMore:
+                # This reduce wins
+                winningReduces.add(r)
+                
+                # HEURISTIC: If Shift lost because it has negative precedence vs default (0),
+                # keep it anyway to allow GLR to resolve potential invalid reductions.
+                if shiftActions.len == 1 and shiftActions[0].shiftPrecedence < 0 and reducePrecedence == 0:
+                  keepShifts = true
+              elif not shiftIsLess and not shiftIsMore:
+                # Precedence equal, check associativity
+                var resolved = false
+                if r.reduceAssociativity.isSome:
+                    let assoc = r.reduceAssociativity.get
+                    if assoc == gaLeft:
+                      # Associativity: Left -> Reduce wins
+                      winningReduces.add(r)
+                      resolved = true
+                    elif assoc == gaRight:
+                      # Associativity: Right -> Shift wins
+                      keepShifts = true
+                      resolved = true
+                if not resolved:
+                    allResolved = false
+              else:
+                allResolved = false
             
-            if not isConflictExpected(participants):
-              # --- Path Reconstruction for Context ---
-              let path = findPathToState(stateId)
-              var contextStr = ""
-              for s in path:
-                contextStr &= getSymbolName(s) & " "
-              contextStr &= " •  " & getSymbolName(sym) & "  ..."
-
-              var conflictMsg = "Unresolved conflict for symbol sequence:\n\n"
-              conflictMsg &= "  " & contextStr & "\n\n"
-              conflictMsg &= "Possible interpretations:\n\n"
-              for i, s in shiftActions:
-                 conflictMsg &= "  " & $(i+1) & ":  SHIFT " & getSymbolName(sym) & " (precedence: " & $s.shiftPrecedence & ")\n"
+            if not allResolved:
+              var participants: seq[GrammarSymbol] = @[]
+              for a in actions:
+                for p in a.participants:
+                  if p notin participants: participants.add(p)
               
-              let baseIdx = shiftActions.len + 1
-              for i, r in reduces:
-                conflictMsg &= "  " & $(baseIdx+i) & ":  REDUCE using rule " & getSymbolName(r.reduceSymbol) & 
-                               " (precedence: " & $r.reduceStaticPrecedence & 
-                               ", assoc: " & (if r.reduceAssociativity.isSome: $r.reduceAssociativity.get else: "none") & ")\n"
-              conflictMsg &= "\nPossible resolutions:\n\n"
-              conflictMsg &= "  1:  Specify a higher precedence in the reduce rules\n"
-              conflictMsg &= "  2:  Add a conflict declaration for these rules\n"
-              
-              raise newException(BuildTablesError, conflictMsg)
-            else:
-               # Conflict expected - keep all actions (GLR)
-               for a in actions: resolvedActions.add((sym: sym, action: a))
-               processed = true
-          
-          else:
-             # All resolved! Add winners
-             if keepShifts:
-                # Keep highest precedence shift(s)
-                var bestShiftPrec = int32.low
-                for s in shiftActions:
-                   if s.shiftPrecedence > bestShiftPrec: bestShiftPrec = s.shiftPrecedence
-                for s in shiftActions:
-                   if s.shiftPrecedence == bestShiftPrec:
-                     resolvedActions.add((sym: sym, action: s))
-             
-             for r in winningReduces:
-                resolvedActions.add((sym: sym, action: r))
-             processed = true
+              if not isConflictExpected(participants):
+                # --- Path Reconstruction for Context ---
+                let path = findPathToState(stateId)
+                var contextStr = ""
+                for s in path:
+                  contextStr &= getSymbolName(s) & " "
+                contextStr &= " •  " & getSymbolName(sym) & "  ..."
 
-      elif reduces.len > 1:
-          # Reduce/Reduce conflict
-          var bestPrecedence = int32.low
-          var bestCount = 0
-          
-          # Find max precedence
-          for r in reduces:
-              let currentPrec = r.reduceStaticPrecedence
-              if currentPrec > bestPrecedence:
-                bestPrecedence = currentPrec
-                bestCount = 1
-              elif currentPrec == bestPrecedence:
-                bestCount += 1
-          
-          # Identify winners based on precedence
-          var precedenceWinners: seq[BuildParseAction] = @[]
-          for r in reduces:
-              if r.reduceStaticPrecedence == bestPrecedence:
-                  precedenceWinners.add(r)
-
-          if precedenceWinners.len > 1:
-            var isExpected = false
+                var conflictMsg = "Unresolved conflict for symbol sequence:\n\n"
+                conflictMsg &= "  " & contextStr & "\n\n"
+                conflictMsg &= "Possible interpretations:\n\n"
+                for i, s in shiftActions:
+                  conflictMsg &= "  " & $(i+1) & ":  SHIFT " & getSymbolName(sym) & " (precedence: " & $s.shiftPrecedence & ")\n"
+                
+                let baseIdx = shiftActions.len + 1
+                for i, r in reduces:
+                  conflictMsg &= "  " & $(baseIdx+i) & ":  REDUCE using rule " & getSymbolName(r.reduceSymbol) & 
+                                " (precedence: " & $r.reduceStaticPrecedence & 
+                                ", assoc: " & (if r.reduceAssociativity.isSome: $r.reduceAssociativity.get else: "none") & ")\n"
+                conflictMsg &= "\nPossible resolutions:\n\n"
+                conflictMsg &= "  1:  Specify a higher precedence in the reduce rules\n"
+                conflictMsg &= "  2:  Add a conflict declaration for these rules\n"
+                
+                raise newException(BuildTablesError, conflictMsg)
+              else:
+                # Conflict expected - keep all actions (GLR)
+                for a in actions: resolvedActions.add((sym: sym, action: a))
+                processed = true
             
-            var allPairsExpected = true
-            if precedenceWinners.len > 1:
-               for idx1 in 0 ..< precedenceWinners.len:
-                 for idx2 in (idx1 + 1) ..< precedenceWinners.len:
-                   let sym1 = precedenceWinners[idx1].reduceSymbol
-                   let sym2 = precedenceWinners[idx2].reduceSymbol
-                   
-                   var pairFound = false
-                   for conflictSet in augmentedGrammar.expectedConflicts:
-                      if sym1 in conflictSet and sym2 in conflictSet:
-                        pairFound = true
-                        break
-                   if not pairFound:
-                     allPairsExpected = false
-                     break
-                 if not allPairsExpected: break
-            
-            if allPairsExpected:
-               isExpected = true
-               
-            if not isExpected:
-              # --- Path Reconstruction for Context ---
-              let path = findPathToState(stateId)
-              var contextStr = ""
-              for s in path:
-                contextStr &= getSymbolName(s) & " "
-              contextStr &= " •  " & getSymbolName(sym) & "  ..."
-
-              var conflictMsg = "Unresolved conflict for symbol sequence:\n\n"
-              conflictMsg &= "  " & contextStr & "\n\n"
-              conflictMsg &= "Possible interpretations:\n\n"
-              for i, r in reduces:
-                conflictMsg &= "  " & $(i+1) & ":  REDUCE using rule " & getSymbolName(r.reduceSymbol) & 
-                               " (precedence: " & $r.reduceStaticPrecedence & 
-                               ", dynamic: " & $r.reducePrecedence & ")\n"
-              conflictMsg &= "\nPossible resolutions:\n\n"
-              conflictMsg &= "  1:  Specify different precedence levels for conflicting rules\n"
-              conflictMsg &= "  2:  Restructure the grammar to avoid ambiguity\n"
-              
-              raise newException(BuildTablesError, conflictMsg)
             else:
-               # Expected conflict: Keep conflicting reduces (GLR)
-               for r in precedenceWinners:
+              # All resolved! Add winners
+              if keepShifts:
+                  # Keep highest precedence shift(s)
+                  var bestShiftPrec = int32.low
+                  for s in shiftActions:
+                    if s.shiftPrecedence > bestShiftPrec: bestShiftPrec = s.shiftPrecedence
+                  for s in shiftActions:
+                    if s.shiftPrecedence == bestShiftPrec:
+                      resolvedActions.add((sym: sym, action: s))
+              
+              for r in winningReduces:
                   resolvedActions.add((sym: sym, action: r))
-               processed = true
-          else:
-             # Winner found by precedence
-             resolvedActions.add((sym: sym, action: precedenceWinners[0]))
-             processed = true
-      
-      if not processed:
-          # Single action or multiple shifts (ambiguity? or just duplicates?)
-          # If multiple shifts, they should be identical due to deduplication during add
-          # unless we added shifts with different precedences but no reduces?
-          # If multiple shifts with different precedences but SAME state/sym, deduplication preserved only one? 
-          # No, I removed deduplication. So we might have multiple shifts.
-          # If we have multiple shifts, we should pick best one?
-          # Actually multiple shifts for same symbol usually implies different precedence or dynamic prec?
-          # If reduces.len == 0, and shiftActions.len > 1:
-          if shiftActions.len > 1:
-             # Pick best shift
-             var bestShiftPrec = int32.low
-             for s in shiftActions:
-                if s.shiftPrecedence > bestShiftPrec: bestShiftPrec = s.shiftPrecedence
-             for s in shiftActions:
-                if s.shiftPrecedence == bestShiftPrec:
-                  resolvedActions.add((sym: sym, action: s))
-          elif shiftActions.len == 1:
-             resolvedActions.add((sym: sym, action: shiftActions[0]))
-          elif reduces.len == 1:
-             resolvedActions.add((sym: sym, action: reduces[0]))
-          else:
-             # 0 actions? Should not happen as we loop over map
-             for a in actions: resolvedActions.add((sym: sym, action: a))
+              processed = true
 
-    # Update actions
-    entries[stateId].actionMap = resolvedActions
+        elif reduces.len > 1:
+            # Reduce/Reduce conflict
+            var bestPrecedence = int32.low
+            var bestCount = 0
+            
+            # Find max precedence
+            for r in reduces:
+                let currentPrec = r.reduceStaticPrecedence
+                if currentPrec > bestPrecedence:
+                  bestPrecedence = currentPrec
+                  bestCount = 1
+                elif currentPrec == bestPrecedence:
+                  bestCount += 1
+            
+            # Identify winners based on precedence
+            var precedenceWinners: seq[BuildParseAction] = @[]
+            for r in reduces:
+                if r.reduceStaticPrecedence == bestPrecedence:
+                    precedenceWinners.add(r)
+
+            if precedenceWinners.len > 1:
+              var isExpected = false
+              
+              var allPairsExpected = true
+              if precedenceWinners.len > 1:
+                for idx1 in 0 ..< precedenceWinners.len:
+                  for idx2 in (idx1 + 1) ..< precedenceWinners.len:
+                    let sym1 = precedenceWinners[idx1].reduceSymbol
+                    let sym2 = precedenceWinners[idx2].reduceSymbol
+                    
+                    var pairFound = false
+                    for conflictSet in augmentedGrammar.expectedConflicts:
+                        if sym1 in conflictSet and sym2 in conflictSet:
+                          pairFound = true
+                          break
+                    if not pairFound:
+                      allPairsExpected = false
+                      break
+                  if not allPairsExpected: break
+              
+              if allPairsExpected:
+                isExpected = true
+                
+              if not isExpected:
+                # --- Path Reconstruction for Context ---
+                let path = findPathToState(stateId)
+                var contextStr = ""
+                for s in path:
+                  contextStr &= getSymbolName(s) & " "
+                contextStr &= " •  " & getSymbolName(sym) & "  ..."
+
+                var conflictMsg = "Unresolved conflict for symbol sequence:\n\n"
+                conflictMsg &= "  " & contextStr & "\n\n"
+                conflictMsg &= "Possible interpretations:\n\n"
+                for i, r in reduces:
+                  conflictMsg &= "  " & $(i+1) & ":  REDUCE using rule " & getSymbolName(r.reduceSymbol) & 
+                                " (precedence: " & $r.reduceStaticPrecedence & 
+                                ", dynamic: " & $r.reducePrecedence & ")\n"
+                conflictMsg &= "\nPossible resolutions:\n\n"
+                conflictMsg &= "  1:  Specify different precedence levels for conflicting rules\n"
+                conflictMsg &= "  2:  Restructure the grammar to avoid ambiguity\n"
+                
+                raise newException(BuildTablesError, conflictMsg)
+              else:
+                # Expected conflict: Keep conflicting reduces (GLR)
+                for r in precedenceWinners:
+                    resolvedActions.add((sym: sym, action: r))
+                processed = true
+            else:
+              # Winner found by precedence
+              resolvedActions.add((sym: sym, action: precedenceWinners[0]))
+              processed = true
+        
+        if not processed:
+            # Single action or multiple shifts (ambiguity? or just duplicates?)
+            # If multiple shifts, they should be identical due to deduplication during add
+            # unless we added shifts with different precedences but no reduces?
+            # If multiple shifts with different precedences but SAME state/sym, deduplication preserved only one? 
+            # No, I removed deduplication. So we might have multiple shifts.
+            # If we have multiple shifts, we should pick best one?
+            # Actually multiple shifts for same symbol usually implies different precedence or dynamic prec?
+            # If reduces.len == 0, and shiftActions.len > 1:
+            if shiftActions.len > 1:
+              # Pick best shift
+              var bestShiftPrec = int32.low
+              for s in shiftActions:
+                  if s.shiftPrecedence > bestShiftPrec: bestShiftPrec = s.shiftPrecedence
+              for s in shiftActions:
+                  if s.shiftPrecedence == bestShiftPrec:
+                    resolvedActions.add((sym: sym, action: s))
+            elif shiftActions.len == 1:
+              resolvedActions.add((sym: sym, action: shiftActions[0]))
+            elif reduces.len == 1:
+              resolvedActions.add((sym: sym, action: reduces[0]))
+            else:
+              # 0 actions? Should not happen as we loop over map
+              for a in actions: resolvedActions.add((sym: sym, action: a))
+
+      # Update actions
+      entries[stateId].actionMap = resolvedActions
+  
+  else:
+    echo "[Treestand] Skip detecting conflicts in the parse table"
   
   var resultTable = BuildParseTable(
     entries: entries,

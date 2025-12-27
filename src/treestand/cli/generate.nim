@@ -2,7 +2,7 @@ import std/[ os]
 import ../[js_exec, parse_grammar, prepare_grammar, build_tables, codegen]
 import common
 
-proc generateParser*(grammarPath: string, outputDir: string, dslPath: string = "", name: string = "") =
+proc generateParser*(grammarPath: string, outputDir: string, dslPath: string = "", name: string = "", skipConflictDetection: bool = false) =
   ## Generate a parser from a `grammar.js` file (CLI-oriented interface).
   ##
   ## This procedure provides a complete end-to-end parser generation workflow, from
@@ -62,7 +62,7 @@ proc generateParser*(grammarPath: string, outputDir: string, dslPath: string = "
   
   # 4. Build tables
   echo "[Treestand] Building tables ..."
-  let tables = buildTables(syntaxGrammar, lexicalGrammar)
+  let tables = buildTables(syntaxGrammar, lexicalGrammar, skipConflictDetection)
   
   # 5. Generate parser
   echo "[Treestand] Generating parser ..."

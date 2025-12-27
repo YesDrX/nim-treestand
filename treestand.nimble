@@ -1,11 +1,13 @@
 # Package
 
-version       = "0.3.0"
+version       = "0.3.1"
 author        = "Treestand Contributors"
 description   = "Tree-sitter parser generator for Nim"
 license       = "MIT"
 srcDir        = "src"
 bin           = @["treestand"]
+installExt    = @["nim", "js"]
+installDirs   = @["src"]
 
 # Dependencies
 

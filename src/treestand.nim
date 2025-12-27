@@ -36,7 +36,8 @@ proc main(
   dslPath     : string = "",
   outputDir   : string = "",
   parserName  : string = "",
-  fixtureDir  : string = ""
+  fixtureDir  : string = "",
+  skipConflictDetection : bool = false
 ) {.used.} =
   if cmd notin ["generate", "test"]:
     echo "Error: Unknown command '", cmd, "'"
@@ -51,7 +52,7 @@ proc main(
     quit(1)
 
   if cmd == "generate":
-    generateParser(grammarPath, outputDir, dslPath, parserName)
+    generateParser(grammarPath, outputDir, dslPath, parserName, skipConflictDetection)
   elif cmd == "test":
     testCommand(fixtureDir)
 
