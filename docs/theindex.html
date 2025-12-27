@@ -330,6 +330,10 @@
 <li><a class="reference external"
           data-doc-search-tag="parser_types: proc err(): ParseAction" href="treestand/parser_types.html#err">parser_types: proc err(): ParseAction</a></li>
           </ul></dd>
+<dt><a name="errSymbol" href="#errSymbol"><span>errSymbol:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="parser_types: proc errSymbol(): Symbol" href="treestand/parser_types.html#errSymbol">parser_types: proc errSymbol(): Symbol</a></li>
+          </ul></dd>
 <dt><a name="excl" href="#excl"><span>excl:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="bitset: proc excl(bs: var BitSet; bitIndex: int)" href="treestand/bitset.html#excl%2CBitSet%2Cint">bitset: proc excl(bs: var BitSet; bitIndex: int)</a></li>
@@ -539,6 +543,8 @@
           data-doc-search-tag="grammar: proc hash(r: Rule): Hash" href="treestand/grammar.html#hash%2CRule">grammar: proc hash(r: Rule): Hash</a></li>
           <li><a class="reference external"
           data-doc-search-tag="parser_types: proc hash(node: ParseNode): Hash" href="treestand/parser_types.html#hash%2CParseNode">parser_types: proc hash(node: ParseNode): Hash</a></li>
+          <li><a class="reference external"
+          data-doc-search-tag="parser_types: proc hash(s: Symbol): Hash" href="treestand/parser_types.html#hash%2CSymbol">parser_types: proc hash(s: Symbol): Hash</a></li>
           </ul></dd>
 <dt><a name="importGrammar" href="#importGrammar"><span>importGrammar:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -918,7 +924,7 @@
           </ul></dd>
 <dt><a name="Parser" href="#Parser"><span>Parser:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="parser_types: object Parser" href="treestand/parser_types.html#Parser">parser_types: object Parser</a></li>
+          data-doc-search-tag="parser_types: type Parser" href="treestand/parser_types.html#Parser">parser_types: type Parser</a></li>
           </ul></dd>
 <dt><a name="parseRuleJson" href="#parseRuleJson"><span>parseRuleJson:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1218,7 +1224,7 @@
           </ul></dd>
 <dt><a name="runGenericGLR" href="#runGenericGLR"><span>runGenericGLR:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="sexp_parser: proc runGenericGLR(parser: var Parser): ParseNode" href="treestand/sexp_parser.html#runGenericGLR%2CParser">sexp_parser: proc runGenericGLR(parser: var Parser): ParseNode</a></li>
+          data-doc-search-tag="sexp_parser: proc runGenericGLR(parser: var Parser; raiseOnFail: bool = false): ParseNode" href="treestand/sexp_parser.html#runGenericGLR%2CParser%2Cbool">sexp_parser: proc runGenericGLR(parser: var Parser; raiseOnFail: bool = false): ParseNode</a></li>
           </ul></dd>
 <dt><a name="s" href="#s"><span>s:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1231,6 +1237,10 @@
 <dt><a name="setStates" href="#setStates"><span>setStates:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nfa: proc setStates(cursor: var NfaCursor; bucket: seq[uint32])" href="treestand/nfa.html#setStates%2CNfaCursor%2Cseq%5Buint32%5D">nfa: proc setStates(cursor: var NfaCursor; bucket: seq[uint32])</a></li>
+          </ul></dd>
+<dt><a name="skError" href="#skError"><span>skError:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="parser_types: SymbolKind.skError" href="treestand/parser_types.html#skError">parser_types: SymbolKind.skError</a></li>
           </ul></dd>
 <dt><a name="skNonTerminal" href="#skNonTerminal"><span>skNonTerminal:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1482,7 +1492,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-26 21:37:25 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-27 01:58:47 UTC</small>
       </div>
     </div>
   </div>

@@ -4,45 +4,49 @@ nim	GotoEntry	treestand/parser_types.html#GotoEntry	tuple GotoEntry		18
 nim	TableIndex	treestand/parser_types.html#TableIndex	tuple TableIndex		22
 nim	skTerminal	treestand/parser_types.html#skTerminal	SymbolKind.skTerminal		29
 nim	skNonTerminal	treestand/parser_types.html#skNonTerminal	SymbolKind.skNonTerminal		29
+nim	skError	treestand/parser_types.html#skError	SymbolKind.skError		29
 nim	SymbolKind	treestand/parser_types.html#SymbolKind	enum SymbolKind		29
-nim	Symbol	treestand/parser_types.html#Symbol	object Symbol		33
-nim	terminal	treestand/parser_types.html#terminal,int	proc terminal(idx: int): Symbol		40
-nim	nonTerminal	treestand/parser_types.html#nonTerminal,int	proc nonTerminal(idx: int): Symbol		43
-nim	`==`	treestand/parser_types.html#==,Symbol,Symbol	proc `==`(a, b: Symbol): bool		46
-nim	SymbolMetadata	treestand/parser_types.html#SymbolMetadata	object SymbolMetadata		54
-nim	assocNone	treestand/parser_types.html#assocNone	Associativity.assocNone		60
-nim	assocLeft	treestand/parser_types.html#assocLeft	Associativity.assocLeft		60
-nim	assocRight	treestand/parser_types.html#assocRight	Associativity.assocRight		60
-nim	Associativity	treestand/parser_types.html#Associativity	enum Associativity		60
-nim	pakShift	treestand/parser_types.html#pakShift	ParseActionKind.pakShift		65
-nim	pakReduce	treestand/parser_types.html#pakReduce	ParseActionKind.pakReduce		65
-nim	pakAccept	treestand/parser_types.html#pakAccept	ParseActionKind.pakAccept		65
-nim	pakError	treestand/parser_types.html#pakError	ParseActionKind.pakError		65
-nim	pakShiftExtra	treestand/parser_types.html#pakShiftExtra	ParseActionKind.pakShiftExtra		65
-nim	pakSplit	treestand/parser_types.html#pakSplit	ParseActionKind.pakSplit		65
-nim	ParseActionKind	treestand/parser_types.html#ParseActionKind	enum ParseActionKind		65
-nim	ParseAction	treestand/parser_types.html#ParseAction	object ParseAction		73
-nim	ParseTableEntry	treestand/parser_types.html#ParseTableEntry	object ParseTableEntry		89
-nim	findAction	treestand/parser_types.html#findAction,ParseTableEntry,Symbol	proc findAction(entry: ParseTableEntry; lookahead: Symbol): ParseAction		94
-nim	findGoto	treestand/parser_types.html#findGoto,ParseTableEntry,Symbol	proc findGoto(entry: ParseTableEntry; symbol: Symbol): int		100
-nim	ProductionInfo	treestand/parser_types.html#ProductionInfo	object ProductionInfo		108
-nim	LexTransition	treestand/parser_types.html#LexTransition	object LexTransition		116
-nim	LexState	treestand/parser_types.html#LexState	object LexState		122
-nim	Point	treestand/parser_types.html#Point	object Point		128
-nim	InputEdit	treestand/parser_types.html#InputEdit	object InputEdit		132
-nim	Token	treestand/parser_types.html#Token	object Token		140
-nim	LexerObj	treestand/parser_types.html#LexerObj	object LexerObj		148
-nim	Lexer	treestand/parser_types.html#Lexer	type Lexer		156
-nim	`=destroy`	treestand/parser_types.html#=destroy,LexerObj	proc `=destroy`(lexer: var LexerObj)		158
-nim	ParseNode	treestand/parser_types.html#ParseNode	type ParseNode		169
-nim	Parser	treestand/parser_types.html#Parser	object Parser		178
-nim	TSSymbol	treestand/parser_types.html#TSSymbol	type TSSymbol		185
-nim	TSLexer	treestand/parser_types.html#TSLexer	object TSLexer		187
-nim	s	treestand/parser_types.html#s,uint32	proc s(state: uint32): ParseAction		198
-nim	r	treestand/parser_types.html#r,Symbol,uint32,int32,int32,Option[Associativity],int32	proc r(sym: Symbol; count: uint32; prec: int32; staticPrec: int32;\n  assoc: Option[Associativity]; dynPrec: int32): ParseAction		201
-nim	acc	treestand/parser_types.html#acc	proc acc(): ParseAction		204
-nim	err	treestand/parser_types.html#err	proc err(): ParseAction		205
-nim	t	treestand/parser_types.html#t,int	proc t(i: int): Symbol		207
-nim	nt	treestand/parser_types.html#nt,int	proc nt(i: int): Symbol		208
-nim	hash	treestand/parser_types.html#hash,ParseNode	proc hash(node: ParseNode): Hash		210
-nim	debugEchoMsg	treestand/parser_types.html#debugEchoMsg.m,varargs[untyped]	macro debugEchoMsg(msg: varargs[untyped]): untyped		219
+nim	Symbol	treestand/parser_types.html#Symbol	object Symbol		34
+nim	terminal	treestand/parser_types.html#terminal,int	proc terminal(idx: int): Symbol		43
+nim	nonTerminal	treestand/parser_types.html#nonTerminal,int	proc nonTerminal(idx: int): Symbol		46
+nim	errSymbol	treestand/parser_types.html#errSymbol	proc errSymbol(): Symbol		49
+nim	`==`	treestand/parser_types.html#==,Symbol,Symbol	proc `==`(a, b: Symbol): bool		51
+nim	hash	treestand/parser_types.html#hash,Symbol	proc hash(s: Symbol): Hash		58
+nim	SymbolMetadata	treestand/parser_types.html#SymbolMetadata	object SymbolMetadata		66
+nim	assocNone	treestand/parser_types.html#assocNone	Associativity.assocNone		72
+nim	assocLeft	treestand/parser_types.html#assocLeft	Associativity.assocLeft		72
+nim	assocRight	treestand/parser_types.html#assocRight	Associativity.assocRight		72
+nim	Associativity	treestand/parser_types.html#Associativity	enum Associativity		72
+nim	pakShift	treestand/parser_types.html#pakShift	ParseActionKind.pakShift		77
+nim	pakReduce	treestand/parser_types.html#pakReduce	ParseActionKind.pakReduce		77
+nim	pakAccept	treestand/parser_types.html#pakAccept	ParseActionKind.pakAccept		77
+nim	pakError	treestand/parser_types.html#pakError	ParseActionKind.pakError		77
+nim	pakShiftExtra	treestand/parser_types.html#pakShiftExtra	ParseActionKind.pakShiftExtra		77
+nim	pakSplit	treestand/parser_types.html#pakSplit	ParseActionKind.pakSplit		77
+nim	ParseActionKind	treestand/parser_types.html#ParseActionKind	enum ParseActionKind		77
+nim	ParseAction	treestand/parser_types.html#ParseAction	object ParseAction		85
+nim	ParseTableEntry	treestand/parser_types.html#ParseTableEntry	object ParseTableEntry		101
+nim	findAction	treestand/parser_types.html#findAction,ParseTableEntry,Symbol	proc findAction(entry: ParseTableEntry; lookahead: Symbol): ParseAction		106
+nim	findGoto	treestand/parser_types.html#findGoto,ParseTableEntry,Symbol	proc findGoto(entry: ParseTableEntry; symbol: Symbol): int		112
+nim	ProductionInfo	treestand/parser_types.html#ProductionInfo	object ProductionInfo		120
+nim	LexTransition	treestand/parser_types.html#LexTransition	object LexTransition		128
+nim	LexState	treestand/parser_types.html#LexState	object LexState		134
+nim	Point	treestand/parser_types.html#Point	object Point		140
+nim	InputEdit	treestand/parser_types.html#InputEdit	object InputEdit		144
+nim	Token	treestand/parser_types.html#Token	object Token		152
+nim	LexerObj	treestand/parser_types.html#LexerObj	object LexerObj		160
+nim	Lexer	treestand/parser_types.html#Lexer	type Lexer		168
+nim	`=destroy`	treestand/parser_types.html#=destroy,LexerObj	proc `=destroy`(lexer: var LexerObj)		170
+nim	ParseNode	treestand/parser_types.html#ParseNode	type ParseNode		181
+nim	Parser	treestand/parser_types.html#Parser	type Parser		190
+nim	TSSymbol	treestand/parser_types.html#TSSymbol	type TSSymbol		197
+nim	TSLexer	treestand/parser_types.html#TSLexer	object TSLexer		199
+nim	s	treestand/parser_types.html#s,uint32	proc s(state: uint32): ParseAction		210
+nim	r	treestand/parser_types.html#r,Symbol,uint32,int32,int32,Option[Associativity],int32	proc r(sym: Symbol; count: uint32; prec: int32; staticPrec: int32;\n  assoc: Option[Associativity]; dynPrec: int32): ParseAction		213
+nim	acc	treestand/parser_types.html#acc	proc acc(): ParseAction		216
+nim	err	treestand/parser_types.html#err	proc err(): ParseAction		217
+nim	t	treestand/parser_types.html#t,int	proc t(i: int): Symbol		219
+nim	nt	treestand/parser_types.html#nt,int	proc nt(i: int): Symbol		220
+nim	hash	treestand/parser_types.html#hash,ParseNode	proc hash(node: ParseNode): Hash		222
+nim	debugEchoMsg	treestand/parser_types.html#debugEchoMsg.m,varargs[untyped]	macro debugEchoMsg(msg: varargs[untyped]): untyped		231
+nimgrp	hash	treestand/parser_types.html#hash-procs-all	proc		58
