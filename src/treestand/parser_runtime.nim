@@ -450,6 +450,16 @@ proc runGenericGLR*(parser: var Parser, raiseOnFail: bool = false): ParseNode =
       # ============================================================
       # If Unwinding didn't help (or wasn't possible), consume the garbage.
       
+      # Check for EOF - if we hit EOF and can't process it, we're done
+      if badToken.text.len == 0:
+        debugEchoMsg "[Recovery] Hit EOF that cannot be processed, forcing accept"
+        # Force an accept by creating a minimal success tree
+        if activeStacks.len > 0 and activeStacks[0].len > 0:
+          let rootNode = activeStacks[0][0].node
+          if rootNode != nil:
+            successes.add(rootNode)
+        break
+      
       debugEchoMsg fmt"[Recovery] Skipping unexpected token: {badToken.text}"
       
       let errorNode = ParseNode(
