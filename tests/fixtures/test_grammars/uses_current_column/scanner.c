@@ -122,17 +122,10 @@ bool tree_sitter_uses_current_column_external_scanner_scan(
 
       if (dedent_count > 0 && valid_symbols[DEDENT]) {
         lexer->result_symbol = DEDENT;
-        // Don't consume newline for DEDENT (allow next scanner call to see it for NEWLINE/more DEDENTs)
         return true;
       } else if (valid_symbols[NEWLINE]) {
         self->queued_dedent_count += dedent_count;
         lexer->result_symbol = NEWLINE;
-        // Consume the newline ONLY if no dedents are queued/processed this time
-        // If we found dedents, we treat NEWLINE as zero-width (shared with DEDENTS)
-        // The final token (after all dedents) will see the newline again and consume it
-        if (dedent_count == 0) {
-          lexer->mark_end(lexer); 
-        }
         return true;
       }
     }

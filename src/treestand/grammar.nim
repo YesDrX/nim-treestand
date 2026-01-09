@@ -30,6 +30,7 @@ type
     name*: string
     kind*: VariableType
     rule*: Rule
+    originalSymbol*: Option[GrammarSymbol] ## Points to the original user-defined symbol for aux rules
 
   InputGrammar* = object
     ## The raw grammar definition provided by the user (or DSL).
@@ -60,6 +61,7 @@ type
     ## Consists of Regex/String rules converted to NFA.
     nfa*: Nfa
     variables*: seq[LexicalVariable]
+    separators*: seq[Rule]  ## Patterns to consume between tokens (e.g., /\s/)
 
   ReservedWordSetId* = distinct uint
 
@@ -90,6 +92,7 @@ type
     kind*: VariableType
     productions*: seq[Production]
     isNullable*: bool
+    originalSymbol*: Option[GrammarSymbol] ## Points to the original user-defined symbol for aux rules
 
   ExternalToken* = object
     name*: string

@@ -212,8 +212,11 @@ proc generateSymbolEnum*(syntaxGrammar: SyntaxGrammar, lexicalGrammar: LexicalGr
   
   lines.add("const nonTerminalSymbolMetadata* = [")
   for variable in syntaxGrammar.variables:
-    # Non-terminals are always named
-    lines.add(&"  parser_types.SymbolMetadata(named: true),  # {variable.name}")
+    # Non-terminals can be named or hidden/auxiliary
+    # If it's vtHidden (_) or vtAuxiliary, it should be named: false
+    let isNamed = if variable.kind == vtHidden or variable.kind == vtAuxiliary: "false" else: "true"
+    lines.add(&"  parser_types.SymbolMetadata(named: {isNamed}),  # {variable.name}")
+
   lines.add("]")
   lines.add("")
   
@@ -496,12 +499,17 @@ proc generateLexerRuntime*(lexTable: BuildLexTable, lexicalGrammar: LexicalGramm
     lines.add("var g_scannerLexer {.threadvar.}: Lexer")
     lines.add("var g_scannerPos {.threadvar.}: int")
     lines.add("var g_scannerMarkedPos {.threadvar.}: int")
+    lines.add("var g_scannerTokenStart {.threadvar.}: int")
     lines.add("")
     lines.add("# C callbacks for TSLexer (must be module-level for {.cdecl.})")
     lines.add("proc scannerAdvance(self: ptr TSLexer, skip: bool) {.cdecl.} =")
     lines.add("  if g_scannerPos < g_scannerLexer.input.len:")
     lines.add("    let len = runeLenAt(g_scannerLexer.input, g_scannerPos)")
     lines.add("    g_scannerPos += len")
+    lines.add("    ")
+    lines.add("    if skip:")
+    lines.add("       g_scannerTokenStart = g_scannerPos")
+    lines.add("    ")
     lines.add("    if g_scannerPos < g_scannerLexer.input.len:")
     lines.add("      self.lookahead = runeAt(g_scannerLexer.input, g_scannerPos).int32")
     lines.add("    else:")
@@ -550,6 +558,7 @@ proc generateLexerRuntime*(lexTable: BuildLexTable, lexicalGrammar: LexicalGramm
     lines.add("    g_scannerLexer = lexer")
     lines.add("    g_scannerPos = lexer.pos")
     lines.add("    g_scannerMarkedPos = lexer.pos")
+    lines.add("    g_scannerTokenStart = lexer.pos") # Track token start separately
     lines.add("    ")
     lines.add("    # Setup valid symbols array")
     lines.add("    var validSymbolsArray: array[256, bool]")
@@ -621,7 +630,7 @@ proc generateLexerRuntime*(lexTable: BuildLexTable, lexicalGrammar: LexicalGramm
     lines.add("          if not (nameUp.contains(\"INDENT\") or nameUp.contains(\"DEDENT\") or nameUp.contains(\"NEWLINE\")):")
     lines.add("            endPos = g_scannerPos")
     lines.add("        ")
-    lines.add("        let text = if endPos > lexer.pos: lexer.input[lexer.pos..<endPos] else: \"\"")
+    lines.add("        let text = if endPos > g_scannerTokenStart: lexer.input[g_scannerTokenStart..<endPos] else: \"\"")
     lines.add("        ")
     lines.add("        # Update row/col for external scanner consumption")
     lines.add("        # We must scan the consumed text to update row/col")
@@ -630,7 +639,7 @@ proc generateLexerRuntime*(lexTable: BuildLexTable, lexicalGrammar: LexicalGramm
     lines.add("        ")
     lines.add("        let endPoint = Point(row: lexer.row, column: lexer.col)")
     lines.add("        ")
-    lines.add("        return Token(kind: terminal(actualSymbol), text: text, startPos: lexer.pos - text.len, endPos: endPos, startPoint: startPoint, endPoint: endPoint)")
+    lines.add("        return Token(kind: terminal(actualSymbol), text: text, startPos: g_scannerTokenStart, endPos: endPos, startPoint: startPoint, endPoint: endPoint)")
     lines.add("  ")
 
   lines.add("  # Skip whitespace and extras (preserve start for scanning)")
@@ -655,6 +664,9 @@ proc generateLexerRuntime*(lexTable: BuildLexTable, lexicalGrammar: LexicalGramm
     lines.add("    ")
     lines.add("    # Try to match each extra symbol")
     for extra in extras:
+      # Only try to match INTERNAL terminals here. Externals are handled by parser loop (pakShiftExtra) or not supported as implicit skips
+      if extra.kind != stTerminal: continue
+      
       let extraTerminalId = extra.index + 1
       lines.add(&"    # Try to skip extra: terminal({extraTerminalId})")
       lines.add("    block tryExtra" & $extraTerminalId & ":")
@@ -695,7 +707,7 @@ proc generateLexerRuntime*(lexTable: BuildLexTable, lexicalGrammar: LexicalGramm
       lines.add("        extraAcceptCol = lexer.col")
       lines.add("      ")
       lines.add(&"      if extraLastAccept == {extra.index}:")
-      lines.add("        debugEchoMsg \"Matched extra {extra.index}: \" & lexer.input[startPosBeforeSkip..<extraAcceptPos]")
+      lines.add(&"        debugEchoMsg \"Matched extra {extra.index}: startPosBeforeSkip=\", startPosBeforeSkip, \" extraAcceptPos=\", extraAcceptPos")
       lines.add("        lexer.pos = extraAcceptPos")
       lines.add("        lexer.row = extraAcceptRow")
       lines.add("        lexer.col = extraAcceptCol")
@@ -813,7 +825,7 @@ proc generateParserRuntime*(lexicalGrammar: LexicalGrammar, extras: seq[GrammarS
   lines.add("")
   
   lines.add("proc parse*(parser: var Parser): ParseNode =")
-  lines.add("  return runGenericGLR(parser)")
+  lines.add("  return runGenericGLR(parser, raiseOnFail = true)")
   lines.add("")
   result = lines.join("\n")
 

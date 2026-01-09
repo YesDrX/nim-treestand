@@ -1,17 +1,14 @@
-Error: Error when generating parser
+Unresolved conflict for symbol sequence:
 
-Caused by:
-    Unresolved conflict for symbol sequence:
-    
-      'word'  •  EOF  …
-    
-    Possible interpretations:
-    
-      1:  (rule_a  'word')  •  EOF  …
-      2:  (rule_b  'word')  •  EOF  …
-    
-    Possible resolutions:
-    
-      1:  Specify a higher precedence in `rule_a` than in the other rules.
-      2:  Specify a higher precedence in `rule_b` than in the other rules.
-      3:  Add a conflict for these rules: `rule_a`, `rule_b`
+    'word'  •  EOF  …
+
+Possible interpretations:
+
+    1:  (rule_a  'word')  •  EOF  …
+    2:  (rule_b  'word')  •  EOF  …
+
+Possible resolutions:
+
+    1:  Specify a higher precedence in `rule_a` than in the other rules.
+    2:  Specify a higher precedence in `rule_b` than in the other rules.
+    3:  Add a conflict for these rules: `rule_a`, `rule_b`

@@ -12,7 +12,7 @@
 ## The algorithm reduces parse table size significantly (e.g., JSON: 54 -> 41 states)
 ## while preserving correctness.
 
-import std/[tables, sets, options, hashes]
+import std/[tables, sets, options]
 import grammar
 
 type
@@ -218,7 +218,7 @@ proc mergeCompatibleStates(parseTable: var BuildParseTable) =
   var changed = true
   while changed:
     changed = splitPartition(p, parseTable)
-
+  
   # Merge states based on final partition
   var newEntries = newSeq[BuildParseTableEntry]()
   var oldToNewState = newSeq[uint32](parseTable.entries.len)
@@ -258,7 +258,7 @@ proc mergeCompatibleStates(parseTable: var BuildParseTable) =
     for j in 0 ..< newEntries[i].gotoMap.len:
       let old = newEntries[i].gotoMap[j].state
       newEntries[i].gotoMap[j].state = oldToNewState[old]
-      
+  
   parseTable.entries = newEntries
 
 # --- Unit Reduction Removal ---
@@ -454,6 +454,7 @@ proc minimizeParseTable*(
   ##
   ## The algorithm mirrors Tree-sitter's approach and is similar to LALR(1)
   ## state merging, but adapted for GLR-capable parse tables.
+  
   removeUnitReductions(parseTable, syntaxGrammar)
   mergeCompatibleStates(parseTable)
   removeUnusedStates(parseTable)

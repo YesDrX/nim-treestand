@@ -21,8 +21,8 @@ proc prepareExternalScanner(fixtureDir: string, expectError: bool): tuple[succes
   setCurrentDir(originalCwd)
   
   if not expectError and exitCode != 0:
-    echo "[TEST] Warning: tree-sitter generate failed."
-    return (false, output)
+    echo "[TEST] Warning: tree-sitter generate failed (ignoring as we test treestand)."
+    return (true, output)
 
   if expectError and exitCode == 0:
     echo "[TEST] Warning: tree-sitter generate succeeded but expected failure."
@@ -42,6 +42,10 @@ proc testCommand*(fixtureDir: string) =
   let errorPath = fixtureDir / "expected_error.txt"
   let grammarPath = fixtureDir / "grammar.js"
   let expectParserGenerationFailure = fileExists(errorPath)
+  let hasCorpus = fileExists(corpusPath)
+  if hasCorpus and expectParserGenerationFailure:
+    echo "[TEST Error]: corpus.txt and expected_error.txt found in fixture"
+    quit(1)
   
   if not fileExists(grammarPath):
     echo "[TEST Error]: grammar.js not found in fixture"

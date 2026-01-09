@@ -1,5 +1,5 @@
-import std/[ os]
-import ../[js_exec, parse_grammar, prepare_grammar, build_tables, codegen]
+import std/[os]
+import ../[js_exec, parse_grammar, prepare_grammar, build_tables, codegen, grammar]
 import common
 
 proc generateParser*(grammarPath: string, outputDir: string, dslPath: string = "", name: string = "", skipConflictDetection: bool = false) =

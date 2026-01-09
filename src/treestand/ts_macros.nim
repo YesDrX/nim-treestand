@@ -356,6 +356,7 @@ macro tsGrammarImpl(name: static string, userdata: untyped, body: untyped): unty
   
   # echo "Variables: " & variables.repr
 
+  var keys = ""; for k in ruleActions.keys: keys.add(k & " "); echo "[MACRO] Actions: ", keys
   let grammarProcName = ident(name)
   let buildCall = quote do:
     proc `grammarProcName`*(): InputGrammar =
@@ -381,19 +382,23 @@ macro tsGrammarImpl(name: static string, userdata: untyped, body: untyped): unty
          userDataType = userdata[1]
      
      # Generate case statement for actions
-     var caseStmt = newNimNode(nnkCaseStmt)
+     # Generate case statements for actions
      let treeSym = ident("tree")
      let inputSym = ident("input")
      let userdataSym = ident("userdata")
      let nodeSym = ident("node") 
 
-     # Cast node.symbol.nonTerminalIndex to NonTerminalSymbol
-     caseStmt.add quote do:
-        NonTerminalSymbol(node.symbol.nonTerminalIndex)
+     # Generate dispatch logic using linear checks (to avoid CaseStmt/WhenStmt AST issues)
+     var ntDispatch = newStmtList()
+     var tDispatch = newStmtList()
+     
+     # Create temp var for index to avoid repeated access
+     let idxSym = ident("idx")
      
      var hasActions = false
      for ruleName, actionBody in ruleActions:
-        let ntName = ident("nt" & ruleName.capitalizeAscii()) # Assumes enum naming follows this
+        let ntName = ident("nt" & ruleName.capitalizeAscii()) 
+        let tName = ident("ts" & ruleName.capitalizeAscii())
         
         # Inject standard helpers
         let nodeSym = ident("node")
@@ -418,30 +423,50 @@ macro tsGrammarImpl(name: static string, userdata: untyped, body: untyped): unty
            var branchCase = newNimNode(nnkCaseStmt)
            branchCase.add ident("n")
            for idx, fname in fields:
-              branchCase.add newTree(nnkOfBranch, newLit(fname), newLit(idx + 1)) # 1-based index? No fields map to specific children.
+              branchCase.add newTree(nnkOfBranch, newLit(fname), newLit(idx + 1)) 
         
         # Expose standard symbols to user action block
-        # We need to use `template` or `let` to alias the hygienic symbols to user-friendly names
         injectedAction.add quote do:
            let node = `nodeSym`
            var userdata = `userdataSym`
            let input = `inputSym`
         
         injectedAction.add actionBody
-        caseStmt.add newTree(nnkOfBranch, ntName, injectedAction)
+        
+        # Add to NonTerminal Dispatch
+        # when declared(ntName): if idx == ord(ntName): injectedAction
+        let condNT = newCall(ident("declared"), ntName)
+        let checkNT = quote do:
+           if `idxSym` == int(`ntName`):
+              `injectedAction`
+        let whenBranchNT = newTree(nnkElifBranch, condNT, newStmtList(checkNT))
+        let ntWhenStmt = newTree(nnkWhenStmt, whenBranchNT)
+        ntDispatch.add ntWhenStmt
+
+        # Add to Terminal Dispatch
+        let actionCopy = injectedAction.copyNimTree()
+        let condT = newCall(ident("declared"), tName)
+        let checkT = quote do:
+           if `idxSym` == int(`tName`):
+              `actionCopy`
+        let whenBranchT = newTree(nnkElifBranch, condT, newStmtList(checkT))
+        let tWhenStmt = newTree(nnkWhenStmt, whenBranchT)
+        tDispatch.add tWhenStmt
+
         hasActions = true
      
      if hasActions:
-       let discardStmt = quote do: discard
-       caseStmt.add newTree(nnkElse, newStmtList(discardStmt))
-       
        let traverseBody = quote do:
           proc traverse(`nodeSym`: ParseNode, `userdataSym`: var `userDataType`, `inputSym`: string) =
              if `nodeSym` == nil: return
              for child in `nodeSym`.children: traverse(child, `userdataSym`, `inputSym`)
              
              if `nodeSym`.symbol.kind == skNonTerminal:
-                `caseStmt`
+                let `idxSym` = int(`nodeSym`.symbol.nonTerminalIndex)
+                `ntDispatch`
+             elif `nodeSym`.symbol.kind == skTerminal:
+                let `idxSym` = int(`nodeSym`.symbol.terminalIndex)
+                `tDispatch`
           
           traverse(`treeSym`, `userdataSym`, `inputSym`)
           return true

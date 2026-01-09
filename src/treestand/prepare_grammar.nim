@@ -36,6 +36,9 @@ proc internSymbols*(input: InputGrammar): InternedGrammar =
   var stringToExternal = stdtables.initTable[string, GrammarSymbol]()
   var symbolIndex: uint16 = 0
   
+  # DEBUG: Check InputGrammar structure for _type_identifier
+  # (Removed)
+
   # Create symbols for all variables
   for variable in input.variables:
     let symbol = GrammarSymbol(kind: stNonTerminal, index: symbolIndex)
@@ -249,7 +252,7 @@ proc isLexical(rule: Rule): bool =
   of rkRepeat: isLexical(rule.repeatContent[])
   else: false
 
-proc extractTokens(interned: InternedGrammar): tuple[syntaxVars: seq[Variable], lexicalVars: seq[LexicalVariable], varToLex: stdtables.Table[int, GrammarSymbol]] =
+proc extractTokens(interned: InternedGrammar): tuple[syntaxVars: seq[Variable], lexicalVars: seq[LexicalVariable], varToLex: stdtables.Table[int, GrammarSymbol], separators: seq[Rule]] =
   var syntaxVars: seq[Variable] = @[]
   var lexicalVars: seq[LexicalVariable] = @[]
   var lexicalMap = stdtables.initTable[Rule, GrammarSymbol]() 
@@ -363,9 +366,8 @@ proc extractTokens(interned: InternedGrammar): tuple[syntaxVars: seq[Variable], 
     else:
       rule
 
-  # First, process extras to ensure inline patterns/strings are extracted
-  for extra in interned.extraSymbols:
-    discard processRule(extra)
+  # DEBUG: Check specific variable names
+  # (Removed)
 
   for i, variable in interned.variables:
     let processedRule = processRule(variable.rule, some(variable.name))
@@ -381,7 +383,36 @@ proc extractTokens(interned: InternedGrammar): tuple[syntaxVars: seq[Variable], 
       rule: processedRule
     ))
 
-  (syntaxVars, lexicalVars, variableToLexicalSymbol)
+  # Tree-sitter approach: At this point lexicalVars contains only grammar-derived tokens
+  # Now check extras to see which ones are "separators" (don't match existing lex vars)
+  var separatorRules: seq[Rule] = @[]
+  
+  for extra in interned.extraSymbols:
+    # Check if this extra Rule matches any existing lexical variable
+    var matchesLexVar = false
+    
+    if extra.kind == rkSymbol:
+      # If extra is a symbol reference, check if it points to a variable that became lexical
+      # extra.symbol.index is index into interned.variables
+      let varIdx = extra.symbol.index.int
+      if variableToLexicalSymbol.hasKey(varIdx):
+          matchesLexVar = true
+    else:
+      # If extra is a literal/pattern, check if any lexical var has specific identical rule content
+      for lexVar in lexicalVars:
+        if lexVar.rule == extra:
+          matchesLexVar = true
+          break
+    
+    if not matchesLexVar and extra.kind != rkSymbol:
+      # This is a separator - doesn't match any grammar lex var, and is not a named symbol
+      separatorRules.add(extra)
+
+  # Now process extras - they'll be added to lexicalVars if they don't already exist
+  for extra in interned.extraSymbols:
+    discard processRule(extra)
+
+  (syntaxVars, lexicalVars, variableToLexicalSymbol, separatorRules)
 
 proc expandRepeats(syntaxVars: seq[Variable]): seq[Variable] =
   ## Expand repeat rules into auxiliary variables using binary tree structure.
@@ -390,6 +421,11 @@ proc expandRepeats(syntaxVars: seq[Variable]): seq[Variable] =
   
   # Track existing repeats for deduplication - reuse aux variables for identical content
   var existingRepeats = stdtables.initTable[Rule, GrammarSymbol]()
+  
+  # Pre-compute name to symbol map for originalSymbol lookup
+  var nameToSymbol = stdtables.initTable[string, GrammarSymbol]()
+  for i, v in resultVars:
+    nameToSymbol[v.name] = GrammarSymbol(kind: stNonTerminal, index: i.uint16)
   
   proc toRef(r: Rule): ref Rule =
     new(result)
@@ -406,29 +442,39 @@ proc expandRepeats(syntaxVars: seq[Variable]): seq[Variable] =
     let seqRule = Rule(kind: rkSeq, seqMembers: @[symRef, content])
     Rule(kind: rkChoice, choiceMembers: @[seqRule, content])
 
-  proc process(rule: Rule, baseName: string): Rule =
+  proc process(rule: Rule, baseName: string, inheritedParams: Option[MetadataParams] = none(MetadataParams)): Rule =
     case rule.kind
     of rkChoice:
       var members: seq[Rule] = @[]
       for m in rule.choiceMembers:
-        members.add(process(m, baseName))
+        members.add(process(m, baseName, inheritedParams))
       Rule(kind: rkChoice, choiceMembers: members)
     of rkSeq:
       var members: seq[Rule] = @[]
       for m in rule.seqMembers:
-        members.add(process(m, baseName))
+        members.add(process(m, baseName, inheritedParams))
       Rule(kind: rkSeq, seqMembers: members)
     of rkMetadata:
-      let inner = process(rule.metadataRule[], baseName)
+      var nextParams = rule.metadataParams
+      # If parent had values and child doesn't, maybe inherit? 
+      # Tree-sitter usually treats `prec` as overriding. 
+      # We just pass the current rule's metadata down.      
+      let inner = process(rule.metadataRule[], baseName, some(nextParams))
       Rule(kind: rkMetadata, metadataParams: rule.metadataParams, metadataRule: toRef(inner))
     of rkRepeat:
       # Recursively process the repeat content first
-      let content = process(rule.repeatContent[], baseName)
+      # We pass inheritedParams down as well
+      let content = process(rule.repeatContent[], baseName, inheritedParams)
       
       # Check if we've already created an auxiliary for this exact content (deduplication)
       if content in existingRepeats:
         # Reuse existing auxiliary variable
-        return Rule(kind: rkSymbol, symbol: existingRepeats[content])
+        let auxSym = existingRepeats[content]
+        var refRule = Rule(kind: rkSymbol, symbol: auxSym)
+        return Rule(kind: rkChoice, choiceMembers: @[
+          refRule,
+          Rule(kind: rkBlank)
+        ])
       
       # Create new auxiliary variable for this repeat
       inc repeatCountInVariable
@@ -438,15 +484,47 @@ proc expandRepeats(syntaxVars: seq[Variable]): seq[Variable] =
       let auxSymbol = GrammarSymbol(kind: stNonTerminal, index: auxIndex)
       
       # Binary tree structure using helper function
-      let choiceRule = wrapInBinaryTree(auxSymbol, content)
+      var choiceRule = wrapInBinaryTree(auxSymbol, content)
       
+      # Apply inherited metadata to the auxiliary rule definition!
+      if inheritedParams.isSome:
+        let params = inheritedParams.get()
+        # Only wrap if it carries meaningful precedence info
+        if params.precedence.kind != pkNone or params.dynamicPrecedence != 0:
+           # Wrap the entire body of the aux rule in metadata
+           var wrappedChoice = new(Rule)
+           wrappedChoice[] = choiceRule
+           choiceRule = Rule(kind: rkMetadata, metadataParams: params, metadataRule: wrappedChoice)
+
       # Register this repeat for deduplication
       existingRepeats[content] = auxSymbol
+      var origSym: Option[GrammarSymbol] = none(GrammarSymbol)
+      
+      # First, try to find baseName in the original nameToSymbol map (for top-level variables)
+      if baseName in nameToSymbol:
+        origSym = some(nameToSymbol[baseName])
+      else:
+        # baseName might be an auxiliary variable that was just created
+        # Search resultVars for a variable with this name and follow its originalSymbol
+        for i in 0 ..< resultVars.len:
+          if resultVars[i].name == baseName:
+            if resultVars[i].originalSymbol.isSome:
+              # Follow the chain: if foo_repeat1 points to foo, we want foo
+              origSym = resultVars[i].originalSymbol
+            else:
+              # This variable has no originalSymbol, so it IS the original
+              origSym = some(GrammarSymbol(kind: stNonTerminal, index: i.uint16))
+            break
+      
+      when defined(debug):
+        if baseName == "sized_type_specifier" or baseName.contains("sized_type"):
+          echo "Creating aux ", auxName, " for baseName ", baseName, " -> origSym: ", origSym
       
       newVars.add(Variable(
         name: auxName,
         kind: vtAuxiliary,
-        rule: choiceRule
+        rule: choiceRule,
+        originalSymbol: origSym
       ))
       
       # Return choice of the new aux variable (1+) or blank (epsilon)
@@ -455,7 +533,7 @@ proc expandRepeats(syntaxVars: seq[Variable]): seq[Variable] =
         Rule(kind: rkBlank)
       ])
     of rkReserved:
-      let inner = process(rule.reservedRule[], baseName)
+      let inner = process(rule.reservedRule[], baseName, inheritedParams)
       Rule(kind: rkReserved, reservedRule: toRef(inner), reservedContextName: rule.reservedContextName)
     else:
       rule
@@ -474,6 +552,7 @@ proc expandRepeats(syntaxVars: seq[Variable]): seq[Variable] =
       # Binary tree structure for the hidden variable itself
       resultVars[i].rule = wrapInBinaryTree(auxSymbol, content)
       resultVars[i].kind = vtAuxiliary  # Convert to auxiliary
+      resultVars[i].originalSymbol = some(auxSymbol)
       
     else:
       # Normal processing
@@ -675,11 +754,17 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
   let interned = internSymbols(input)
   
   # Step 2: Extract tokens
-  let (initialSyntaxVars, lexicalVars, variableToLexicalSymbol) = extractTokens(interned)
+  let (initialSyntaxVars, lexicalVars, variableToLexicalSymbol, separatorRules) = extractTokens(interned)
   
   # Step 3: Process inlines
   # Must be done BEFORE expanding nested choices, because inlining can introduce new nested choices
   let (inlinedSyntaxVars, indexMap) = processInlines(initialSyntaxVars, interned.variablesToInline)
+  
+  # Remap variableToLexicalSymbol keys to match the new variable indices after inlining
+  var remappedVariableToLexicalSymbol = stdtables.initTable[int, GrammarSymbol]()
+  for oldIdx, sym in variableToLexicalSymbol:
+    if oldIdx in indexMap:
+      remappedVariableToLexicalSymbol[indexMap[oldIdx]] = sym
   
   # Step 4: Expand repeats
   # Must be done BEFORE expanding nested choices, because repeat expansion generates new sequences that may contain choices
@@ -714,13 +799,6 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
       elif r.symbol.kind == stNonTerminal:
          # First check if this non-terminal maps to a lexical symbol (token-wrapped)
          let nonTermIdx = r.symbol.index.int
-         # IMPORTANT: The nonTermIdx here refers to the ORIGINAL index (from extractTokens), 
-         # but variableToLexicalSymbol is keyed by original index.
-         # BUT we need to be careful if extra symbols refer to syntax variables that got shifted?
-         # Extras are usually terminals or token-wrapped. If token-wrapped, they are processed 
-         # in extractTokens before inlining. So indexMap shouldn't affect variableToLexicalSymbol lookup keys
-         # IF we used the original index. But wait, `extraSymbols` in `interned` use original indices.
-         # We haven't remapped `interned.extraSymbols`.
          if nonTermIdx in variableToLexicalSymbol:
            # This non-terminal is actually a token-wrapped rule, use its lexical symbol
            extraSymbols.add(variableToLexicalSymbol[nonTermIdx])
@@ -775,10 +853,31 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
        echo "[WARNING] Unexpected seq in extras: ", r
     else:
       discard
+  # Check if a symbol is used in a rule
+  proc isSymbolUsed(rule: Rule, targetSym: GrammarSymbol, definingVars: HashSet[uint16]): bool =
+    case rule.kind
+    of rkSymbol:
+      if rule.symbol == targetSym: return true
+      if rule.symbol.kind == stNonTerminal and rule.symbol.index in definingVars: return true
+      return false
+    of rkChoice:
+      for m in rule.choiceMembers:
+        if isSymbolUsed(m, targetSym, definingVars): return true
+    of rkSeq:
+      for m in rule.seqMembers:
+        if isSymbolUsed(m, targetSym, definingVars): return true
+    of rkMetadata:
+      return isSymbolUsed(rule.metadataRule[], targetSym, definingVars)
+    of rkRepeat:
+      return isSymbolUsed(rule.repeatContent[], targetSym, definingVars)
+    of rkReserved:
+      return isSymbolUsed(rule.reservedRule[], targetSym, definingVars)
+    else:
+      return false
 
   for extraRule in interned.extraSymbols:
     collectExtras(extraRule)
-
+  
   # Smart Extras: Resolve conflicts between default extras and user tokens
   # If the user is using the default extras ([\s]), and they also define a token
   # that matches whitespace (e.g. `space: $ => / /`), we should remove the default extra
@@ -788,28 +887,47 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
   # whitespace skipping (e.g., regex_pattern: token(/[^/\n]+/) needs to match spaces).
   proc detectAndResolveExtrasConflicts(extras: var seq[GrammarSymbol], lexicalVars: seq[LexicalVariable]) =
     # 1. Check if extras is exactly the default `[\s]`
-    if extras.len != 1: return
+    if extras.len != 1: 
+       return
     
     let extraSym = extras[0]
     if extraSym.kind != stTerminal: return
     
     let extraVar = lexicalVars[extraSym.index.int]
     
-    # Check if this extra is `/\s/`
+    # Check if this extra is `/\s/` (or common whitespace patterns)
     var isDefaultExtra = false
-    if extraVar.rule.kind == rkPattern and extraVar.rule.patternValue == "\\s":
+    if extraVar.rule.kind == rkPattern and 
+       (extraVar.rule.patternValue == "\\s" or extraVar.rule.patternValue == "[\\s]"):
       isDefaultExtra = true
     
-    if not isDefaultExtra: return
+    # Also forgiving heuristic for strings like " "
+    if extraVar.rule.kind == rkString and extraVar.rule.stringValue == " ":
+       isDefaultExtra = true
+       
+    if not isDefaultExtra: 
+       return
     
-    # 2. Check for conflicting user tokens (excluding token-wrapped patterns)
-    # Token-wrapped patterns (indicated by implicitPrecedence != 0 or name containing certain patterns)
-    # are allowed to match whitespace without conflicting
-    for i, lexVar in lexicalVars:
-      # Skip the extra itself
-      if i.uint16 == extraSym.index: continue
-      discard
+    # Identify variables that are just wrappers for this extra
+    var definingVars = initHashSet[uint16]()
     
+    for i, v in finalSyntaxVars:
+       if v.rule.kind == rkSymbol and v.rule.symbol == extraSym:
+          definingVars.incl(i.uint16)
+
+    # Check if extra is used in any syntax rule
+    var isUsed = false
+    
+    for i, v in finalSyntaxVars:
+       if i.uint16 in definingVars: continue
+       
+       if isSymbolUsed(v.rule, extraSym, definingVars):
+          isUsed = true
+          break
+    
+    if isUsed:
+         extras.setLen(0)
+         
   detectAndResolveExtrasConflicts(extraSymbols, lexicalVars)
   
   # Resolve named precedences
@@ -893,6 +1011,7 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
   # Convert variables to syntax variables (simplified)
   for variable in finalSyntaxVars:
     var productions: seq[Production] = @[]
+    
     let choices = extractChoices(variable.rule)
     
     for choice in choices:
@@ -977,8 +1096,12 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
           return didPush
         
         of rkSymbol:
+          var finalSym = r.symbol
+          if finalSym.kind == stNonTerminal and finalSym.index.int in remappedVariableToLexicalSymbol:
+             finalSym = remappedVariableToLexicalSymbol[finalSym.index.int]
+
           steps.add(ProductionStep(
-            symbol: r.symbol,
+            symbol: finalSym,
             precedence: if precedenceStack.len > 0: 
               precedenceStack[^1]
             else:
@@ -1029,13 +1152,16 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
     syntaxGrammar.variables.add(SyntaxVariable(
       name: variable.name,
       kind: variable.kind,
-      productions: productions
+      productions: productions,
+      isNullable: false, # Will be computed later
+      originalSymbol: variable.originalSymbol
     ))
   
   # Create lexical grammar
   var lexicalGrammar = LexicalGrammar(
     nfa: newNfa(),
-    variables: lexicalVars
+    variables: lexicalVars,
+    separators: separatorRules
   )
   
   # Validate: Check for epsilon rules (rules that match empty string)

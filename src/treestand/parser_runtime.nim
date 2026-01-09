@@ -47,33 +47,44 @@ proc `$`*(node: ParseNode): string =
     let indent = repeat("  ", level)
     let name = symbolName(n.symbol)
     
+    let isHidden = not isNamed(n.symbol) or name.startsWith("_")
+    
     if n.children.len == 0:
       # Leaf node
-      # Hide regex patterns (starting with /) as they are noise
-      let showName = not name.startsWith("/")
-      
-      var line = indent
-      if showName:
-        line.add(name)
-        
-      if n.token.text.len > 0:
-        if showName: line.add(" ")
-        line.add(n.token.text.escape)
-      elif not showName:
-        # If we hid the name and there's no text, show name anyway to avoid empty line?
-        # Typically regex tokens match something, so text > 0.
-        # But if it's epsilon or empty match?
-        line.add(name) 
-      
-      line.add(" [" & $n.token.startPos & "-" & $n.token.endPos & "]\n")
-      result = line
+      var line = ""
+      if not isHidden:
+         line.add(indent)
+         line.add(name)
+         if n.token.text.len > 0:
+            line.add(" " & n.token.text.escape)
+         line.add(" [" & $n.token.startPos & "-" & $n.token.endPos & "]\n")
+         return line
+      else:
+         # Hidden leaf
+         if n.token.text.len > 0:
+            # Check literal heuristic
+            let isLiteral = name.startsWith("'") or name.startsWith("\"") or name.startsWith("p_")
+            if isLiteral:
+               return indent & name & " " & n.token.text.escape & " [" & $n.token.startPos & "-" & $n.token.endPos & "]\n"
+            else:
+               # Hidden token (e.g. external token starting with _)
+               # Show text, but hide name.
+               return indent & n.token.text.escape & " [" & $n.token.startPos & "-" & $n.token.endPos & "]\n"
+         return "" # Hidden empty leaf
     else:
       # Non-leaf node
-      result = indent & name & "\n"
-      for child in n.children:
-        result.add(internalRec(child, level + 1))
+      if isHidden:
+        # Flatten
+        result = ""
+        for child in n.children:
+          result.add(internalRec(child, level))
+      else:
+        result = indent & name & "\n"
+        for child in n.children:
+          result.add(internalRec(child, level + 1))
         
   internalRec(node, 0)
+
 
 proc toSExpr*(node: ParseNode, indent: int = 0): string =
   ## Convert parse node to pretty S-expression format
@@ -136,6 +147,8 @@ proc runGenericGLR*(parser: var Parser, raiseOnFail: bool = false): ParseNode =
   # Limit iterations to prevent infinite loops in bad grammars
   # But infinite loop detection should happen via state logic ideally.
   
+  var excludedExternals: set[int16] = {}
+
   while true:
     # Update recovery point when we're at state 0 with a valid stack
     if activeStacks.len > 0 and activeStacks[0].len > 0:
@@ -167,7 +180,7 @@ proc runGenericGLR*(parser: var Parser, raiseOnFail: bool = false): ParseNode =
       let state = currentStack[^1].state
       if state >= parseTableIndex.len: continue
 
-      debugEchoMsg fmt"queue.len: {queue.len}, i: {i}, currentStack.len: {currentStack.len}"
+      debugEchoMsg fmt"queue.len: {queue.len}, i: {i}, currentStack.len: {currentStack.len}, pos: {parser.lexer.pos}, row: {parser.lexer.row}, col: {parser.lexer.col}"
       debugEchoMsg fmt"Processing state: {state} with lookahead: (kind: {parser.lookahead.kind.kind}, terminalIndex: {parser.lookahead.kind.terminalIndex}, text: {parser.lookahead.text})"
       
       # Lookup actions (replacing findAction helper)
@@ -230,9 +243,28 @@ proc runGenericGLR*(parser: var Parser, raiseOnFail: bool = false): ParseNode =
                   gotoState = gs.int
                   break
             if gotoState >= 0:
-              newStack.add((gotoState, newNode))
-              # debugEchoMsg "    -> Reduced to state ", gotoState, ", adding back to queue"
-              queue.add(newStack) # Add back to queue to continue
+              
+              # Cycle Detection for Unit Reductions
+              # If we are reducing A -> B (unit reduction) and B eventually contains A as a single child descendant,
+              # we have a cycle A -> B -> ... -> A. We must prune this path.
+              var isCycle = false
+              if children.len == 1:
+                 var check = children[0]
+                 while check != nil:
+                    if check.symbol == act.reduceSymbol:
+                       isCycle = true
+                       debugEchoMsg fmt"[GLR] Cycle detected: {symbolName(act.reduceSymbol)} -> ... -> {symbolName(check.symbol)}. Pruning path."
+                       break
+                    
+                    if check.children.len == 1:
+                       check = check.children[0]
+                    else:
+                       break
+              
+              if not isCycle:
+                newStack.add((gotoState, newNode))
+                # debugEchoMsg "    -> Reduced to state ", gotoState, ", adding back to queue"
+                queue.add(newStack) # Add back to queue to continue
         of pakAccept:
           if currentStack.len > 1:
              successes.add(currentStack[^1].node)
@@ -290,6 +322,45 @@ proc runGenericGLR*(parser: var Parser, raiseOnFail: bool = false): ParseNode =
 
     # NEW: Skip garbage tokens and mark as an Error node
     if pendingShifts.len == 0:
+      
+      # ========================================================================
+      # RETRY STRATEGY: External Token exclusion
+      # ========================================================================
+      # If we have an external token that causes failure, try to exclude it and rescan.
+      # This handles cases where multiple external tokens are valid (e.g. string vs newline)
+      # but one is preferred by scanner yet causes parse failure.
+      
+      if parser.lookahead.kind.kind == skTerminal and parser.lookahead.kind.terminalIndex >= externalTokenBase:
+         let termIdx = parser.lookahead.kind.terminalIndex.int16
+         if termIdx notin excludedExternals:
+             debugEchoMsg fmt"[Recovery] Retrying with external token {symbolName(parser.lookahead.kind)} excluded"
+             excludedExternals.incl(termIdx)
+             
+             # Rewind
+             parser.lexer.pos = parser.lookahead.startPos
+             parser.lexer.row = parser.lookahead.startPoint.row
+             parser.lexer.col = parser.lookahead.startPoint.column
+             
+             # Re-scan with exclusion
+             # Recalculate valid external symbols for current active stacks
+             var retryValidExternal: set[int16] = externalExtraTokens
+             for stack in activeStacks:
+                let s = stack[^1].state
+                if s < parseTableIndex.len:
+                   let idx = parseTableIndex[s]
+                   for k in 0 ..< idx.actionLen:
+                      let (sym, _) = parseTableActions[idx.actionStart + k]
+                      if sym.kind == skTerminal and sym.terminalIndex >= externalTokenBase:
+                         retryValidExternal.incl(sym.terminalIndex.int16)
+
+             let firstState = activeStacks[0][^1].state
+             let lexState = parseTableIndex[firstState].lexState
+             
+             let effectiveValid = retryValidExternal - excludedExternals
+             parser.lookahead = parser.lexer.nextToken(effectiveValid, lexState)
+             
+             continue # Retry loop with new lookahead
+
       # ========================================================================
       # Old behavior: Just die if no shifts
       # ========================================================================

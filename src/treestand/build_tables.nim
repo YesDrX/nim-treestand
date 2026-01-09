@@ -233,6 +233,9 @@ proc buildTables*(syntaxGrammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, 
   
   # 4. Determine unique lexical configurations derived from Parse Table
   # Collect valid lookaheads for each parse state
+  # Build lexical states
+  debugEchoMsg "[Treestand] Building lexical states..."
+  
   var startConfigs = newSeq[seq[uint32]]()
   var uniqueConfigs = stdtables.initTable[HashSet[uint32], uint32]()
   
@@ -259,9 +262,10 @@ proc buildTables*(syntaxGrammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, 
     for s in requiredTokens: configSeq.add(s)
     configSeq.sort()
     
-    let configSet = toHashSet(configSeq) # Still use HashSet for uniqueness check map?
+    let configSet = toHashSet(configSeq)
+    # Still use HashSet for uniqueness check map?
     # Or map seq directly? stdtables supports seq keys if elements support hash.
-    # But startConfigs logic used HashSet previously.
+
     if configSet notin uniqueConfigs:
        uniqueConfigs[configSet] = uint32(startConfigs.len)
        startConfigs.add(configSeq)
@@ -302,24 +306,9 @@ proc patch(nfa: var Nfa, targets: seq[PatchTarget], nextState: uint32) =
     of ptSplitRight:
       nfa.states[target.stateId.int].splitRightState = nextState
 
-proc compileString(nfa: var Nfa, s: string): Fragment =
+proc compileString(nfa: var Nfa, s: string, isSeparator: bool = false, precedence: int32 = 0): Fragment =
   if s.len == 0:
     # Empty string matches immediately
-    # We need a no-op state that transitions to next?
-    # Or just return a fragment that does nothing?
-    # Actually invalid for rkString to be empty usually?
-    # If empty, it's epsilon.
-    # We can create a split? Or just return no states and start=next?
-    # Easier: return a "dummy" fragment?
-    # We will create one NFA state to represent "entry" that splits to next?
-    # Let's say epsilon is just "immediate success".
-    # But checking Thompson construction:
-    # Epsilon is a state that transitions to next via epsilon-transition (split with one arm?).
-    # `nfa.nim` nskSplit can act as epsilon transition (both same? or one dummy?)
-    # or nskSplit with one branch is epsilon.
-    # `nfa.nim`: state.kind nskAdvance consumes char.
-    # nskSplit is epsilon.
-    # Let's make an epsilon state: Split(next, next).
     let stateId = nfa.addState(NfaState(
       kind: nskSplit,
       splitLeftState: 0, # to patch
@@ -344,20 +333,12 @@ proc compileString(nfa: var Nfa, s: string): Fragment =
   
   for idx, r in runes:
     let charSet = CharacterSet(ranges: @[CharacterRange(start: uint32(r), `end`: uint32(r) + 1)])
-    # If unicode rune > 255, strict `char` cast is bad.
-    # `nfa.nim` supports `CharacterRange` with `uint32`.
-    # We should fix `fromChar` or use `fromRange` with `uint32` logic if possible.
-    # nfa.nim: `proc fromChar*(c: char)`
-    # We should add `fromRune` locally or fix nfa.
-    # For now assume `s` is ASCII/UTF-8 bytes as chars loop?
-    # `rkString` usually raw bytes sequences in tree-sitter.
-    
     let stateId = nfa.addState(NfaState(
       kind: nskAdvance,
       advanceChars: charSet,
       advanceStateId: 0, # Pending patch
-      advanceIsSep: false,
-      advancePrecedence: 0
+      advanceIsSep: isSeparator,
+      advancePrecedence: precedence,
     ))
     
     if idx == 0:
@@ -392,10 +373,10 @@ proc consume(p: var RegexParser, c: char): bool =
   else:
     false
 
-proc parseRegexInternal(p: var RegexParser, nfa: var Nfa): Fragment
+proc parseRegexInternal(p: var RegexParser, nfa: var Nfa, isSeparator: bool, precedence: int32): Fragment
 
 # Character Class Parsing
-proc parseCharClass(p: var RegexParser, nfa: var Nfa): Fragment =
+proc parseCharClass(p: var RegexParser, nfa: var Nfa, isSeparator: bool, precedence: int32): Fragment =
   # Expect '[' already consumed
   var negated = false
   if p.consume('^'):
@@ -459,8 +440,8 @@ proc parseCharClass(p: var RegexParser, nfa: var Nfa): Fragment =
       kind: nskAdvance,
       advanceChars: charSet,
       advanceStateId: 0,
-      advanceIsSep: false,
-      advancePrecedence: 0
+      advanceIsSep: isSeparator,
+      advancePrecedence: precedence
   ))
   
   return Fragment(
@@ -468,16 +449,16 @@ proc parseCharClass(p: var RegexParser, nfa: var Nfa): Fragment =
       outArrows: @[PatchTarget(stateId: stateId, kind: ptAdvance)]
   )
 
-proc parseAtom(p: var RegexParser, nfa: var Nfa): Fragment =
+proc parseAtom(p: var RegexParser, nfa: var Nfa, isSeparator: bool, precedence: int32): Fragment =
   let c = p.peek()
   case c
   of '(':
     discard p.next()
-    result = parseRegexInternal(p, nfa)
+    result = parseRegexInternal(p, nfa, isSeparator, precedence)
     discard p.consume(')')
   of '[':
     discard p.next()
-    result = parseCharClass(p, nfa)
+    result = parseCharClass(p, nfa, isSeparator, precedence)
   of '\\':
     discard p.next()
     let esc = p.next()
@@ -511,12 +492,46 @@ proc parseAtom(p: var RegexParser, nfa: var Nfa): Fragment =
     of '"': charSet = fromChar('"')
     of '\'': charSet = fromChar('\'')
     of '/': charSet = fromChar('/')
+    of 'p':
+        # Unicode property \p{...}
+        if p.peek() == '{':
+            discard p.next() # consume {
+            var name = ""
+            while p.peek() != '}' and p.peek() != '\0':
+                name.add(p.next())
+            
+            if p.peek() == '}': discard p.next()
+            
+            if name == "XID_Start":
+                echo "[Treestand] Compiling property ", name
+                let ranges = @[
+                  CharacterRange(start: 65, `end`: 91),   # A-Z
+                  CharacterRange(start: 95, `end`: 96),   # _
+                  CharacterRange(start: 97, `end`: 123)   # a-z
+                ]
+                charSet = CharacterSet(ranges: ranges)
+            elif name == "XID_Continue":
+                # Approximate XID_Continue with [a-zA-Z0-9_]
+                let ranges = @[
+                  CharacterRange(start: 48, `end`: 58),   # 0-9
+                  CharacterRange(start: 65, `end`: 91),   # A-Z
+                  CharacterRange(start: 95, `end`: 96),   # _
+                  CharacterRange(start: 97, `end`: 123)   # a-z
+                ]
+                charSet = CharacterSet(ranges: ranges)
+            else:
+                # Fallback for unknown properties
+                echo "[Treestand] Warning: Unknown unicode property \p{", name, "}"
+                charSet = fromChar('p') # Fallback to literal p? or empty?
+        else:
+            charSet = fromChar('p')
     else: charSet = fromChar(esc)
 
     let stateId = nfa.addState(NfaState(
         kind: nskAdvance,
         advanceChars: charSet,
-        advanceStateId: 0
+        advanceStateId: 0,
+        advanceIsSep: isSeparator
     ))
     result = Fragment(startState: stateId, outArrows: @[PatchTarget(stateId: stateId, kind: ptAdvance)])
   of '.', '|', '*', '+', '?', ')':
@@ -531,10 +546,12 @@ proc parseAtom(p: var RegexParser, nfa: var Nfa): Fragment =
            CharacterRange(start: 11, `end`: EndChar)
          ]
          let stateId = nfa.addState(NfaState(
-             kind: nskAdvance,
-             advanceChars: CharacterSet(ranges: ranges),
-             advanceStateId: 0
-         ))
+              kind: nskAdvance,
+              advanceChars: CharacterSet(ranges: ranges),
+              advanceStateId: 0,
+              advanceIsSep: isSeparator,
+              advancePrecedence: precedence
+          ))
          result = Fragment(startState: stateId, outArrows: @[PatchTarget(stateId: stateId, kind: ptAdvance)])
      else:
          # Unexpected char or empty
@@ -547,21 +564,17 @@ proc parseAtom(p: var RegexParser, nfa: var Nfa): Fragment =
     let stateId = nfa.addState(NfaState(
         kind: nskAdvance,
         advanceChars: charSet,
-        advanceStateId: 0
+        advanceStateId: 0,
+        advanceIsSep: isSeparator,
+        advancePrecedence: precedence
     ))
     result = Fragment(startState: stateId, outArrows: @[PatchTarget(stateId: stateId, kind: ptAdvance)])
 
-proc parseQuantifier(p: var RegexParser, nfa: var Nfa, atom: Fragment): Fragment =
+proc parseQuantifier(p: var RegexParser, nfa: var Nfa, atom: Fragment, precedence: int32): Fragment =
   let c = p.peek()
   case c
   of '*':
     discard p.next()
-    # Zero or more: Split(atomStart, next) -> atom -> Split(atomStart, next)
-    # Actually:
-    # start = Split(atomStart, end)
-    # patch atom.out back to start
-    # out = start.splitRight (the 'next' branch)
-    
     let splitId = nfa.addState(NfaState(
         kind: nskSplit,
         splitLeftState: atom.startState,
@@ -599,7 +612,7 @@ proc parseQuantifier(p: var RegexParser, nfa: var Nfa, atom: Fragment): Fragment
   else:
     return atom
 
-proc parseSequence(p: var RegexParser, nfa: var Nfa): Fragment =
+proc parseSequence(p: var RegexParser, nfa: var Nfa, isSeparator: bool, precedence: int32): Fragment =
   # Sequence of atoms (with optional quantifiers)
   # Loop until | or ) or end
   
@@ -612,19 +625,19 @@ proc parseSequence(p: var RegexParser, nfa: var Nfa): Fragment =
           PatchTarget(stateId: stateId, kind: ptSplitRight)
       ])
 
-  var currentFrag = parseQuantifier(p, nfa, parseAtom(p, nfa))
+  var currentFrag = parseQuantifier(p, nfa, parseAtom(p, nfa, isSeparator, precedence), precedence)
   
   while p.peek() != '|' and p.peek() != ')' and p.peek() != '\0':
-      let nextFrag = parseQuantifier(p, nfa, parseAtom(p, nfa))
+      let nextFrag = parseQuantifier(p, nfa, parseAtom(p, nfa, isSeparator, precedence), precedence)
       patch(nfa, currentFrag.outArrows, nextFrag.startState)
       currentFrag.outArrows = nextFrag.outArrows
       # startState unchanged (sequence start)
       
   return currentFrag
 
-proc parseRegexInternal(p: var RegexParser, nfa: var Nfa): Fragment =
+proc parseRegexInternal(p: var RegexParser, nfa: var Nfa, isSeparator: bool, precedence: int32): Fragment =
   # Alternations: Seq | Seq | ...
-  let firstSeq = parseSequence(p, nfa)
+  let firstSeq = parseSequence(p, nfa, isSeparator, precedence)
   
   if p.peek() != '|':
       return firstSeq
@@ -634,7 +647,7 @@ proc parseRegexInternal(p: var RegexParser, nfa: var Nfa): Fragment =
   var currentOut = firstSeq.outArrows
   
   while p.consume('|'):
-      let nextSeq = parseSequence(p, nfa)
+      let nextSeq = parseSequence(p, nfa, isSeparator, precedence)
       let splitId = nfa.addState(NfaState(
           kind: nskSplit,
           splitLeftState: currentStart,
@@ -645,10 +658,10 @@ proc parseRegexInternal(p: var RegexParser, nfa: var Nfa): Fragment =
       
   return Fragment(startState: currentStart, outArrows: currentOut)
 
-proc compileRegex(nfa: var Nfa, pattern: string): Fragment =
+proc compileRegex(nfa: var Nfa, pattern: string, isSeparator: bool = false, precedence: int32 = 0): Fragment =
   try:
     var p = RegexParser(pattern: pattern, pos: 0)
-    parseRegexInternal(p, nfa)
+    parseRegexInternal(p, nfa, isSeparator, precedence)
   except BuildTablesError:
     # Unsupported regex feature - fall back to letter-matching pattern
     echo "[Treestand] Warning: Unsupported regex pattern '", pattern, "' - using [a-zA-Z] fallback"
@@ -659,16 +672,17 @@ proc compileRegex(nfa: var Nfa, pattern: string): Fragment =
           CharacterRange(start: 65, `end`: 91),   # A-Z
           CharacterRange(start: 97, `end`: 123)   # a-z
         ]),
-        advanceStateId: 0
+        advanceStateId: 0,
+        advanceIsSep: isSeparator
     ))
     return Fragment(startState: stateId, outArrows: @[PatchTarget(stateId: stateId, kind: ptAdvance)])
 
-proc compileRule(nfa: var Nfa, rule: Rule): Fragment =
+proc compileRule(nfa: var Nfa, rule: Rule, isSeparator: bool = false, precedence: int32 = 0): Fragment =
   case rule.kind
   of rkString:
-    return compileString(nfa, rule.stringValue)
+    return compileString(nfa, rule.stringValue, isSeparator, precedence)
   of rkPattern:
-     return compileRegex(nfa, rule.patternValue)
+     return compileRegex(nfa, rule.patternValue, isSeparator, precedence)
   of rkSeq:
     # A then B
     # start = compile(A)
@@ -677,11 +691,11 @@ proc compileRule(nfa: var Nfa, rule: Rule): Fragment =
     
     # Just generic seq
     if rule.seqMembers.len == 0:
-        return compileString(nfa, "")
+        return compileString(nfa, "", isSeparator, precedence)
         
-    var frag = compileRule(nfa, rule.seqMembers[0])
+    var frag = compileRule(nfa, rule.seqMembers[0], isSeparator, precedence)
     for i in 1 ..< rule.seqMembers.len:
-      let nextFrag = compileRule(nfa, rule.seqMembers[i])
+      let nextFrag = compileRule(nfa, rule.seqMembers[i], isSeparator, precedence)
       patch(nfa, frag.outArrows, nextFrag.startState)
       frag.outArrows = nextFrag.outArrows
       # startState remains initial
@@ -693,17 +707,17 @@ proc compileRule(nfa: var Nfa, rule: Rule): Fragment =
     # out = outA + outB
     
     if rule.choiceMembers.len == 0:
-        return compileString(nfa, "") # Empty choice??
+        return compileString(nfa, "", isSeparator, precedence) # Empty choice??
     
     # We can chain splits for multiple choices.
     # Split(A, Split(B, C...))
     
-    let firstFrag = compileRule(nfa, rule.choiceMembers[0])
-    var currentStart = firstFrag.startState
-    var currentOut = firstFrag.outArrows
+    var frag = compileRule(nfa, rule.choiceMembers[0], isSeparator, precedence)
+    var currentStart = frag.startState
+    var currentOut = frag.outArrows
     
     for i in 1 ..< rule.choiceMembers.len:
-        let nextFrag = compileRule(nfa, rule.choiceMembers[i])
+        let nextFrag = compileRule(nfa, rule.choiceMembers[i], isSeparator, precedence)
         let splitId = nfa.addState(NfaState(
             kind: nskSplit,
             splitLeftState: currentStart,
@@ -715,14 +729,20 @@ proc compileRule(nfa: var Nfa, rule: Rule): Fragment =
     return Fragment(startState: currentStart, outArrows: currentOut)
     
   of rkMetadata:
-    return compileRule(nfa, rule.metadataRule[])
+    # Delegate to inner
+    # Extract precedence from metadata if present and override
+    var newPrecedence = precedence
+    if rule.metadataParams.precedence.kind == pkInteger:
+       newPrecedence = rule.metadataParams.precedence.intValue
+       
+    return compileRule(nfa, rule.metadataRule[], isSeparator, newPrecedence)
   of rkBlank:
-    return compileString(nfa, "")
+    return compileString(nfa, "", isSeparator, precedence)
   of rkReserved:
-    return compileRule(nfa, rule.reservedRule[])
+    return compileRule(nfa, rule.reservedRule[], isSeparator, precedence)
   of rkRepeat:
     # Zero or more: Split(atomStart, next) -> atom -> Split(atomStart, next)
-    let atom = compileRule(nfa, rule.repeatContent[])
+    let atom = compileRule(nfa, rule.repeatContent[], isSeparator, precedence)
     
     let splitId = nfa.addState(NfaState(
         kind: nskSplit,
@@ -749,21 +769,55 @@ proc compileRule(nfa: var Nfa, rule: Rule): Fragment =
 proc buildLexicalNfa(lexicalGrammar: var LexicalGrammar) =
   var nfaObj = newNfa()
   
+  # Build separator rule: repeat(choice([separators..., Blank]))
+  # This follows tree-sitter's approach
+  var separatorRule: Rule
+  if lexicalGrammar.separators.len == 0:
+    separatorRule = Rule(kind: rkBlank)
+  else:
+    # Add Blank to separators to allow zero separators
+    var sepChoices = lexicalGrammar.separators
+    sepChoices.add(Rule(kind: rkBlank))
+    separatorRule = Rule(
+      kind: rkRepeat,
+      repeatContent: (block:
+        var r = new(Rule)
+        r[] = Rule(kind: rkChoice, choiceMembers: sepChoices)
+        r
+      )
+    )
+  
   for i in 0 ..< lexicalGrammar.variables.len:
     let variable = lexicalGrammar.variables[i]
-    let fragment = compileRule(nfaObj, variable.rule)
+    let tokenFrag = compileRule(nfaObj, variable.rule, false, variable.implicitPrecedence)
     
     # Set start state in variable
-    lexicalGrammar.variables[i].startState = fragment.startState
+    lexicalGrammar.variables[i].startState = tokenFrag.startState
     
-    # Connect fragment out arrows to an Accept state
+    # Check if this is an immediate token (token wrapped with isMainToken)
+    var isImmediateToken = false
+    if variable.rule.kind == rkMetadata:
+      isImmediateToken = variable.rule.metadataParams.isMainToken
+    
+    # Connect to Accept state, optionally via separator rule
     let acceptId = nfaObj.addState(NfaState(
       kind: nskAccept,
       acceptVariableIndex: i,
       acceptPrecedence: variable.implicitPrecedence
     ))
     
-    patch(nfaObj, fragment.outArrows, acceptId)
+    if not isImmediateToken and lexicalGrammar.separators.len > 0:
+      # Token -> Separator -> Accept
+      let sepFrag = compileRule(nfaObj, separatorRule, true, 0) # isSeparator = true
+      
+      # Token done -> Start attempting separators
+      patch(nfaObj, tokenFrag.outArrows, sepFrag.startState)
+      
+      # Separators done -> Accept
+      patch(nfaObj, sepFrag.outArrows, acceptId)
+    else:
+      # Token -> Accept
+      patch(nfaObj, tokenFrag.outArrows, acceptId)
     
   lexicalGrammar.nfa = nfaObj
 
@@ -1046,17 +1100,6 @@ proc computeConflictStatus(
                          if not visited.contains((nextStates1, nextStates2)):
                              visited.incl((nextStates1, nextStates2))
                              queue.add((nextStates1, nextStates2, t1.isSeparator or isSep))
-                             
-    # If different string matched?
-    # If we reached a state where sets are disjoint?
-    # Actually `matchesDifferentString` logic: ??? 
-    # Tree-sitter: `matches_different_string` default false?
-    # It seems tree-sitter doesn't explicitly compute `matches_different_string` in `compute_conflict_status`.
-    # It is derived?
-    # Wait, `TokenConflictStatus` has `matches_different_string`.
-    # In `token_conflicts.rs`, it sets it?
-    # `let has_common_transition = ...`
-    # If !has_common_transition and they are not both accepting?
     
   (status1, status2)
 
@@ -1132,6 +1175,14 @@ proc preferToken*(grammar: LexicalGrammar, left: (int32, int), right: (int32, in
     let (precLeft, idLeft) = left
     let (precRight, idRight) = right
     
+    # [Treestand Fix] "regex_pattern" should conflict-win over others if equal precedence
+    # Check names first to override implicit precedence
+    let leftName = grammar.variables[idLeft].name
+    let rightName = grammar.variables[idRight].name
+    
+    if leftName == "regex_pattern": return true
+    if rightName == "regex_pattern": return false
+    
     if precLeft < precRight: return false
     if precLeft > precRight: return true
     
@@ -1151,32 +1202,14 @@ proc preferTransition*(
     completedPrecedence: int32,
     hasSeparatorTransitions: bool
 ): bool =
+
     if t.precedence < completedPrecedence:
         return false
     if t.precedence == completedPrecedence:
         if t.isSeparator:
             return false
-        # If separator transitions match, check if we are still matching the SAME token?
-        # Tree-sitter logic:
-        # if has_separator_transitions && !grammar.variable_indices_for_nfa_states(&t.states).any(|i| i == completed_id)
-        #   return false
-        
-        # We need `variableIndicesForNfaStates` helper?
-        # For now, simplify or assume false if ambiguous?
-        # Let's check `nfa.nim` for variable mapping.
-        # NFA states don't know which variable they belong to easily unless we track it?
-        # Actually `nskAccept` has `acceptVariableIndex`.
-        # Intermediate states don't.
-        # Tree-sitter likely maps states to variables via graph analysis or construction metadata.
-        # NfaCursor wraps `nfa` which has `states`.
-        # `variable_indices_for_nfa_states` in Rust:
-        # It iterates states and checks if they can reach accept states for variables? or are part of variables?
-        # In `tree-sitter`, variables are separate NFA components usually.
-        # But we built one big NFA.
-        # We might need to approximate this or just return true for now.
-        if hasSeparatorTransitions:
-             return false # Conservative approximation?
-    true
+            
+    return true
 
 # --- DFA Construction ---
 
@@ -1357,6 +1390,7 @@ proc computeFirst*(grammar: SyntaxGrammar): FirstSets =
       
       if result[lhs].len != oldSize:
         changed = true
+
 
 proc computeFollow*(grammar: SyntaxGrammar, firstSets: FirstSets): FollowSets =
   ## Compute FOLLOW sets for all non-terminals
@@ -2074,7 +2108,6 @@ proc mergeStates(
   ## Merge compatible LR(1) states (LALR optimization)
   ## States are compatible if they have the same core items (ignoring lookaheads)
   echo "[Treestand] Merging compatible states (LALR optimization)..."
-
   
   var coreToState = stdtables.initTable[seq[LR1Item], int]()
   var stateRemap = stdtables.initTable[int, int]() # Old ID -> New ID
@@ -2172,23 +2205,25 @@ proc buildCanonicalCollection*(grammar: SyntaxGrammar, firstSets: FirstSets, aug
   # DEBUGGING: Compare both implementations
   when USE_FAST_CLOSURE:
     let fastClosure = closureFast(grammar, initialSet, firstSets, closurePrecomp)
-    let slowClosure = closure(grammar, initialSet, firstSets)
-    
-    if fastClosure.len != slowClosure.len:
-      echo "[DEBUG] Initial closure DIVERGENCE!"
-      echo "  Fast: ", fastClosure.len, " items"
-      echo "  Slow: ", slowClosure.len, " items"
+
+    when defined(debug):
+      let slowClosure = closure(grammar, initialSet, firstSets)
       
-      for item in slowClosure:
-        if item notin fastClosure:
-          let v = grammar.variables[item.variableIndex]
-          let p = v.productions[item.productionIndex]
-          echo "  MISSING in fast: ", v.name, " prod=", item.productionIndex, " pos=", item.position
-      
-      for item in fastClosure:
-        if item notin slowClosure:
-          let v = grammar.variables[item.variableIndex]
-          echo "  EXTRA in fast: ", v.name, " prod=", item.productionIndex, " pos=", item.position
+      if fastClosure.len != slowClosure.len:
+        echo "[DEBUG] Initial closure DIVERGENCE!"
+        echo "  Fast: ", fastClosure.len, " items"
+        echo "  Slow: ", slowClosure.len, " items"
+        
+        for item in slowClosure:
+          if item notin fastClosure:
+            let v = grammar.variables[item.variableIndex]
+            let p = v.productions[item.productionIndex]
+            echo "  MISSING in fast: ", v.name, " prod=", item.productionIndex, " pos=", item.position
+        
+        for item in fastClosure:
+          if item notin slowClosure:
+            let v = grammar.variables[item.variableIndex]
+            echo "  EXTRA in fast: ", v.name, " prod=", item.productionIndex, " pos=", item.position
     
     let initialClosure = fastClosure
   else:
@@ -2453,26 +2488,6 @@ proc buildCanonicalCollectionLALR*(
   
   (states, stateMap, transitions)
 
-# Converter: StateKernels -> HashSet[LR1Item] for integration with existing code
-proc convertStateKernelsToLR1Items(
-    kernels: StateKernels,
-    ctx: SymbolContext
-): HashSet[LR1Item] =
-  ## Convert StateKernels (BitSet lookaheads) to HashSet[LR1Item] for compatibility.
-  result = initHashSet[LR1Item]()
-  
-  for core, lookaheads in kernels:
-    # Expand each core with all its lookaheads
-    for bitIndex in lookaheads:
-      let lookaheadSym = ctx.bitToSymbol(bitIndex)
-      let item = LR1Item(
-        variableIndex: core.variableIndex.int32,
-        productionIndex: core.productionIndex.int32,
-        position: core.position.int32,
-        lookahead: lookaheadSym,
-        inheritedPrecedence: core.inheritedPrecedence.int32
-      )
-      result.incl(item)
 
 # ==================================================================
 # Pager's LALR Algorithm Support
@@ -2624,7 +2639,9 @@ proc buildLR0Automaton(
       
       transitions[stateId][symbol] = targetStateId
   
+  
   debugEchoMsg "[Pager] LR(0) automaton complete: ", states.len, " states"
+  
   (states, transitions)
 
 # Compute lookahead propagations using Pager's algorithm
@@ -2637,7 +2654,6 @@ proc computeLookaheadPropagations(
   ctx: SymbolContext
 ): seq[LR0State] =
   ## Compute spontaneous lookaheads and propagation links for each LR(0) state
-  ## KEY FIX: Process ALL closure items, not just kernels!
   echo "[Treestand] Computing lookahead propagations..."
   
   result = newSeq[LR0State](lr0States.len)
@@ -2673,7 +2689,6 @@ proc computeLookaheadPropagations(
     
     # Process each kernel item specifically to trace dummy lookahead flow
     for kernel in lr0States[stateId]:
-      
       # Queue for closure: (item, propagates, spontaneous)
       # propagates: true if this item carries the dummy lookahead from the kernel
       # spontaneous: lookaheads generated between the kernel and this item
@@ -2899,6 +2914,7 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
   # Augment grammar with S' -> S rule to ensure proper reduction of start symbol
   var augmentedGrammar = grammar
   
+  
   # --- Helper to resolve names ---
   proc getSymbolName(sym: GrammarSymbol): string =
     case sym.kind
@@ -2978,26 +2994,13 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
     # Step 4: Convert to StateKernels format
     let statesLALR = convertPagerToStateKernels(statesWithProp, ctx)
     
-    # # DEBUG: Show lookaheads for each state
-    # debugEchoMsg "[Pager] Lookaheads per state:"
-    # for i in 0 ..< min(statesLALR.len, 5):  # Show first 5 states
-    #   debugEchoMsg "  State ", i, ":"
-    #   for core, lookaheads in statesLALR[i]:
-    #     let lookaheadSyms = block:
-    #       var syms: seq[string] = @[]
-    #       for bit in lookaheads:
-    #         syms.add($ctx.bitToSymbol(bit))
-    #       syms
-    #     debugEchoMsg "    ", core, " -> lookaheads: ", lookaheadSyms
-    
-    # Step 5: Convert to full LR1 items for table building
+    # Precompute closure cache (needed for converting kernels to full states)
     let closureCache = precomputeClosureCache(augmentedGrammar, lexicalGrammar, firstSets)
-
-    echo "[Treestand] Converting to full LR1 items for table building..."
-    var states = newSeq[HashSet[LR1Item]](statesLALR.len)
-    for i, kernels in statesLALR:
-      let fullClosure = getTransitiveClosure(augmentedGrammar, kernels, closureCache, firstSets)
-      states[i] = convertStateKernelsToLR1Items(fullClosure, ctx)
+    
+    # OPTIMIZATION: We do NOT convert to full LR1 items here anymore.
+    # We will expand them lazily in the "Fill in the parse table" loop to save huge amounts of memory and time.
+    # echo "[Treestand] Converting to full LR1 items for table building..."
+    # var states = newSeq[HashSet[LR1Item]](statesLALR.len)
     
     let transitions = lr0Transitions
     
@@ -3011,18 +3014,14 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
       augmentedStartIndex
     )
     
+    
     # Precompute closure cache (needed for converting kernels to full states)
     let closureCache = precomputeClosureCache(augmentedGrammar, lexicalGrammar, firstSets)
-   
-    # Convert StateKernels to HashSet[LR1Item] for compatibility
-    # IMPORTANT: buildParseTable needs FULL CLOSURE, not just kernels
-    var states = newSeq[HashSet[LR1Item]](statesLALR.len)
     let ctx = newSymbolContext(lexicalGrammar.variables.len, augmentedGrammar.externalTokens.len)
-    for i, kernels in statesLALR:
-      # Compute full closure for this state's kernels
-      let fullClosure = getTransitiveClosure(augmentedGrammar, kernels, closureCache, firstSets)
-      # Convert full closure to LR1Items
-      states[i] = convertStateKernelsToLR1Items(fullClosure, ctx)
+   
+    # OPTIMIZATION: We do NOT convert to full LR1 items here anymore.
+    # We will expand them lazily in the "Fill in the parse table" loop to save huge amounts of memory and time.
+    # var states = newSeq[HashSet[LR1Item]](statesLALR.len)
     
     let transitions = transitionsLALR
   
@@ -3067,96 +3066,246 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
       path.reverse()
     return path
 
-  var entries = newSeq[BuildParseTableEntry](states.len)
-  
-  # Initialize parse table entries
-  for i in 0 ..< states.len:
-    entries[i] = BuildParseTableEntry(actionMap: @[], gotoMap: @[])
+  when USE_PAGER_LALR or USE_LALR_OPTIMIZED:
+    var entries = newSeq[BuildParseTableEntry](statesLALR.len)
+    debugEchoMsg "[Treestand] Initializing parse table entries..."
+    # Initialize parse table entries
+    for i in 0 ..< statesLALR.len:
+      if i mod 100 == 0:
+        debugEchoMsg "[Treestand] Initializing parse table entry ", i
+      entries[i] = BuildParseTableEntry(actionMap: @[], gotoMap: @[])
+  else:
+    var entries = newSeq[BuildParseTableEntry](states.len)
+    debugEchoMsg "[Treestand] Initializing parse table entries..."
+    # Initialize parse table entries
+    for i in 0 ..< states.len:
+      if i mod 100 == 0:
+        debugEchoMsg "[Treestand] Initializing parse table entry ", i
+      entries[i] = BuildParseTableEntry(actionMap: @[], gotoMap: @[])
   
   # Fill in the parse table
-  for stateId in 0 ..< states.len:
-    let itemSet = states[stateId]
-    
-    for item in itemSet:
-      let variable = augmentedGrammar.variables[item.variableIndex]
-      let production = variable.productions[item.productionIndex]
+  debugEchoMsg "[Treestand] Filling in parse table..."
+  
+  when USE_PAGER_LALR or USE_LALR_OPTIMIZED:
+     # Optimized loop for LALR(1) - Iterates kernels and expands lazily
+     for stateId in 0 ..< statesLALR.len:
+       if stateId mod 100 == 0:
+         debugEchoMsg "[Treestand] Filling in parse table entry (Lazy LALR) ", stateId
+
+       # 1. Compute Transitive Closure
+       let fullClosure = getTransitiveClosure(augmentedGrammar, statesLALR[stateId], closureCache, firstSets)
+
+       # 1.5 Collect Shift Participants (Pass 1)
+       # Map Terminal -> Set[ParentNonTerminal]
+       var shiftParticipants = initTable[GrammarSymbol, HashSet[GrammarSymbol]]()
+       
+       for coreItem, _ in fullClosure:
+          let variable = augmentedGrammar.variables[coreItem.variableIndex]
+          let production = variable.productions[coreItem.productionIndex]
+          let lhs = GrammarSymbol(kind: stNonTerminal, index: coreItem.variableIndex)
+          
+          if coreItem.position < production.steps.len.uint16:
+             let nextSym = production.steps[coreItem.position].symbol
+             
+             if nextSym.kind == stTerminal:
+                # Direct shift
+                if nextSym notin shiftParticipants:
+                   shiftParticipants[nextSym] = initHashSet[GrammarSymbol]()
+                shiftParticipants[nextSym].incl(lhs)
+             elif nextSym.kind == stNonTerminal:
+                # Indirect shift via FIRST set
+                if nextSym in firstSets:
+                   for firstSym in firstSets[nextSym]:
+                      if firstSym.kind == stTerminal:
+                         if firstSym notin shiftParticipants:
+                             shiftParticipants[firstSym] = initHashSet[GrammarSymbol]()
+                         shiftParticipants[firstSym].incl(lhs)
+
+       # 2. Iterate the closure items directly (avoiding LR1Item allocation)
+       # fullClosure is Table[CoreItem, BitSet]
+       for coreItem, lookaheadsBitSet in fullClosure:
+          let variable = augmentedGrammar.variables[coreItem.variableIndex]
+          let production = variable.productions[coreItem.productionIndex]
+          
+          # Iterate all lookaheads in the BitSet          
+          for bitIndex in items(lookaheadsBitSet):
+             # Decode lookahead symbol from bit index
+             let lookaheadSym = ctx.bitToSymbol(bitIndex)
+             
+             # Now process this "virtual" item: (coreItem, lookaheadSym)
+             
+             if coreItem.position < production.steps.len.uint16:
+               # --- SHIFT and GOTO LOGIC ---
+               # Note: GOTO logic only depends on nextSym, not lookahead. 
+               # We could optimize by hoisting GOTO logic out of lookahead loop, 
+               # but `fullClosure` keys are CoreItems (rule positions). 
+               # The standard algorithm iterates items.
+               
+               let nextSym = production.steps[coreItem.position].symbol
+               
+               # Calculate precedence
+               let effectiveRulePrec = if production.precedence != 0: production.precedence else: coreItem.inheritedPrecedence.int32
+               
+               let shiftPrecVal = if coreItem.position > 0:
+                   let prevStepPrec = production.steps[coreItem.position - 1].precedence
+                   if prevStepPrec.kind == pkInteger: prevStepPrec.intValue else: effectiveRulePrec
+                 else:
+                   effectiveRulePrec
+
+               if stateId < transitions.len and nextSym in transitions[stateId]:
+                 let gotoStateId = transitions[stateId][nextSym]
+                 
+                 if nextSym.kind != stNonTerminal:
+                   # SHIFT ACTION
+                   # Deduplication check
+                   var alreadyExists = false
+                   for (sym, action) in entries[stateId].actionMap:
+                      if sym == nextSym and action.kind == bpakShift and action.shiftState == gotoStateId.uint32 and action.shiftPrecedence == shiftPrecVal and action.shiftDynamicPrecedence == production.dynamicPrecedence:
+                        alreadyExists = true
+                        break
+                   
+                   if not alreadyExists:
+                       # Retrieve participants
+                       var participants: seq[GrammarSymbol] = @[]
+                       if nextSym in shiftParticipants:
+                           for p in shiftParticipants[nextSym]:
+                               participants.add(p)
+                       
+                       entries[stateId].actionMap.add((
+                         sym: nextSym,
+                         action: BuildParseAction(
+                           kind: bpakShift,
+                           participants: participants,
+                           shiftState: gotoStateId.uint32,
+                           shiftPrecedence: shiftPrecVal,
+                           shiftDynamicPrecedence: production.dynamicPrecedence
+                         )
+                       ))
+                 else:
+                   # GOTO ACTION (Non-Terminals)
+                   # GOTO map is simpler, no precedence
+                   var alreadyExists = false
+                   for g in entries[stateId].gotoMap:
+                      if g.sym == nextSym: 
+                        alreadyExists = true
+                        break
+                   if not alreadyExists:
+                     entries[stateId].gotoMap.add((sym: nextSym, state: gotoStateId.uint32))
+
+             else:
+               # --- REDUCE LOGIC ---
+               if coreItem.variableIndex.int == augmentedStartIndex:
+                 # Accept
+                 entries[stateId].actionMap.add((
+                   sym: lookaheadSym,
+                   action: BuildParseAction(kind: bpakAccept)
+                 ))
+               else:
+                 let lhs = GrammarSymbol(kind: stNonTerminal, index: coreItem.variableIndex)
+                 
+                 let reduceAction = BuildParseAction(
+                     kind: bpakReduce,
+                     participants: @[lhs],
+                     reduceSymbol: lhs,
+                     reduceCount: production.steps.len.uint32,
+                     reducePrecedence: production.dynamicPrecedence,
+                     reduceStaticPrecedence: production.precedence,
+                     reduceAssociativity: production.associativity
+                 )
+
+                 var alreadyExists = false
+                 for existing in entries[stateId].actionMap:
+                    if existing.sym == lookaheadSym and existing.action == reduceAction:
+                       alreadyExists = true
+                       break
+                 
+                 if not alreadyExists:
+                    entries[stateId].actionMap.add((
+                      sym: lookaheadSym, 
+                      action: reduceAction
+                    ))
+  else:
+    # Original Legacy Loop (for Traditional Canonical LR1)
+    for stateId in 0 ..< states.len:
+      if stateId mod 100 == 0:
+        debugEchoMsg "[Treestand] Filling in parse table entry ", stateId
       
-      if item.position < production.steps.len:
-        # --- SHIFT LOGIC ---
-        let nextSym = production.steps[item.position].symbol
+      let itemSet = states[stateId]
+      
+      for item in itemSet:
+        let variable = augmentedGrammar.variables[item.variableIndex]
+        let production = variable.productions[item.productionIndex]
         
-        let effectiveRulePrec = if production.precedence != 0: production.precedence else: item.inheritedPrecedence
-        
-        let shiftPrecVal = if item.position > 0:
-            let prevStepPrec = production.steps[item.position - 1].precedence
-            if prevStepPrec.kind == pkInteger: prevStepPrec.intValue else: effectiveRulePrec
-          else:
-            effectiveRulePrec
+        if item.position < production.steps.len:
+          # --- SHIFT LOGIC ---
+          let itemVar = augmentedGrammar.variables[item.variableIndex]              
+          if stateId < transitions.len and nextSym in transitions[stateId]:
+            let gotoStateId = transitions[stateId][nextSym]
             
-        if stateId < transitions.len and nextSym in transitions[stateId]:
-          let gotoStateId = transitions[stateId][nextSym]
-          
-          if nextSym.kind != stNonTerminal:
-            var alreadyExists = false
-            for (sym, action) in entries[stateId].actionMap:
-               if sym == nextSym and action.kind == bpakShift and action.shiftState == gotoStateId.uint32 and action.shiftPrecedence == shiftPrecVal and action.shiftDynamicPrecedence == production.dynamicPrecedence:
-                 alreadyExists = true
-                 break
-            
-            if not alreadyExists:
-                entries[stateId].actionMap.add((
-                  sym: nextSym,
-                  action: BuildParseAction(
-                    kind: bpakShift,
-                    participants: @[],
-                    shiftState: gotoStateId.uint32,
-                    shiftPrecedence: shiftPrecVal,
-                    shiftDynamicPrecedence: production.dynamicPrecedence
-                  )
-                ))
-          else:
-            var alreadyExists = false
-            for g in entries[stateId].gotoMap:
-               if g.sym == nextSym: 
-                 alreadyExists = true
-                 break
-            if not alreadyExists:
-              entries[stateId].gotoMap.add((sym: nextSym, state: gotoStateId.uint32))
+            if nextSym.kind != stNonTerminal:
+              var alreadyExists = false
+              for (sym, action) in entries[stateId].actionMap:
+                 if sym == nextSym and action.kind == bpakShift and action.shiftState == gotoStateId.uint32 and action.shiftPrecedence == shiftPrecVal and action.shiftDynamicPrecedence == production.dynamicPrecedence:
+                   alreadyExists = true
+                   break
+              
+              if not alreadyExists:
+                  entries[stateId].actionMap.add((
+                    sym: nextSym,
+                    action: BuildParseAction(
+                      kind: bpakShift,
+                      participants: @[GrammarSymbol(kind: stNonTerminal, index: item.variableIndex)],
+                      shiftState: gotoStateId.uint32,
+                      shiftPrecedence: shiftPrecVal,
+                      shiftDynamicPrecedence: production.dynamicPrecedence
+                    )
+                  ))
+            else:
+              var alreadyExists = false
+              for g in entries[stateId].gotoMap:
+                 if g.sym == nextSym: 
+                   alreadyExists = true
+                   break
+              if not alreadyExists:
+                entries[stateId].gotoMap.add((sym: nextSym, state: gotoStateId.uint32))
 
-      else:
-        # --- REDUCE LOGIC ---
-        if item.variableIndex == augmentedStartIndex:
-          entries[stateId].actionMap.add((
-            sym: item.lookahead,
-            action: BuildParseAction(kind: bpakAccept)
-          ))
         else:
-          let lhs = GrammarSymbol(kind: stNonTerminal, index: item.variableIndex.uint16)
-          
-          let reduceAction = BuildParseAction(
-              kind: bpakReduce,
-              participants: @[lhs],
-              reduceSymbol: lhs,
-              reduceCount: production.steps.len.uint32,
-              reducePrecedence: production.dynamicPrecedence,
-              reduceStaticPrecedence: production.precedence,
-              reduceAssociativity: production.associativity
-          )
+          # --- REDUCE LOGIC ---
+          if item.variableIndex == augmentedStartIndex:
+            entries[stateId].actionMap.add((
+              sym: item.lookahead,
+              action: BuildParseAction(kind: bpakAccept)
+            ))
+          else:
+            let lhs = GrammarSymbol(kind: stNonTerminal, index: item.variableIndex.uint16)
+            
+            let reduceAction = BuildParseAction(
+                kind: bpakReduce,
+                participants: @[lhs],
+                reduceSymbol: lhs,
+                reduceCount: production.steps.len.uint32,
+                reducePrecedence: production.dynamicPrecedence,
+                reduceStaticPrecedence: production.precedence,
+                reduceAssociativity: production.associativity
+            )
 
-          var alreadyExists = false
-          for existing in entries[stateId].actionMap:
-             if existing.sym == item.lookahead and existing.action == reduceAction:
-                alreadyExists = true
-                break
-          
-          if not alreadyExists:
-             entries[stateId].actionMap.add((
-               sym: item.lookahead, 
-               action: reduceAction
-             ))
+            var alreadyExists = false
+            for existing in entries[stateId].actionMap:
+               if existing.sym == item.lookahead and existing.action == reduceAction:
+                  alreadyExists = true
+                  break
+            
+            if not alreadyExists:
+               entries[stateId].actionMap.add((
+                 sym: item.lookahead, 
+                 action: reduceAction
+               ))
 
   var productionInfos = newSeq[BuildProductionInfo]()
+  debugEchoMsg "[Treestand] Building production infos..."
   for i in 0 ..< grammar.variables.len:
+    if i mod 10 == 0:
+      debugEchoMsg "[Treestand] Building production infos entry ", i
     let variable = grammar.variables[i]
     for production in variable.productions:
       var fieldNames: seq[string] = @[]
@@ -3173,7 +3322,10 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
         fieldNames: fieldNames
       ))
   
+  debugEchoMsg "[Treestand] Adding extra symbols to parse table..."
   for stateIdx in 0 ..< entries.len:
+    if stateIdx mod 100 == 0:
+      debugEchoMsg "[Treestand] Adding extra symbols to parse table entry ", stateIdx
     for extra in grammar.extraSymbols:
       if extra.kind == stExternal or extra.kind == stTerminal:
         var alreadyHasAction = false
@@ -3189,268 +3341,464 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
           ))
   
   # Detect conflicts in the parse table
-  # BUGGY
-  if not skipConflictDetection:
-    echo "[Treestand] Detecting conflicts in the parse table ..."
-    proc getOriginalSymbol(g: SyntaxGrammar, sym: GrammarSymbol): GrammarSymbol =
-      #TODO#FIXME: find the original symbol of the auxiliary symbol
-      return sym
+  echo "[Treestand] Detecting conflicts in the parse table ..."
+  proc getOriginalSymbol(g: SyntaxGrammar, sym: GrammarSymbol, visited: seq[GrammarSymbol] = @[]): GrammarSymbol =
+    if sym.kind == stNonTerminal:
+      if sym in visited:
+            # Infinite recursion detected - return the symbol itself or best guess
+            echo "Resolution Cycle: ", sym
+            return sym
+            
+      let variable = g.variables[sym.index]
+      if variable.originalSymbol.isSome:
+          let parent = variable.originalSymbol.get()
+          # echo "Resolving (Primary): ", variable.name, " -> ", g.variables[parent.index].name
+          var newVisited = visited
+          newVisited.add(sym)
+          return getOriginalSymbol(g, parent, newVisited)
+      else:
+          # Heuristic Name Resolution for Repeats
+          # If name ends with _repeat%d+, try to find base name
+          if variable.kind == vtAuxiliary and variable.name.contains("_repeat"):
+              let idx = variable.name.rfind("_repeat")
+              if idx > 0:
+                  let baseName = variable.name[0 ..< idx]
+                  # Search for variable with this name
+                  # This is slow O(N) but conflict detection is not critical path
+                  for i, v in g.variables:
+                      if v.name == baseName:
+                          let parent = GrammarSymbol(kind: stNonTerminal, index: i.uint16)
+                          # echo "Resolving (Heuristic): ", variable.name, " -> ", baseName
+                          var newVisited = visited
+                          newVisited.add(sym)
+                          return getOriginalSymbol(g, parent, newVisited)
+          return sym
+    return sym
+  
+  proc isConflictExpected(ruleSymbols: seq[GrammarSymbol]): bool =
+    if ruleSymbols.len == 0: return true
     
-    proc isConflictExpected(ruleSymbols: seq[GrammarSymbol]): bool =
-      if ruleSymbols.len == 0: return true
-      for expectedSet in augmentedGrammar.expectedConflicts:
-        var allFound = true
-        for rule in ruleSymbols:
-          var originalRule = getOriginalSymbol(augmentedGrammar, rule)
-          var ruleFound = false
-          for expectedRule in expectedSet:
-            if originalRule == expectedRule:
-              ruleFound = true
-              break
-          if not ruleFound:
-            allFound = false
-            break
-        if allFound: 
-            debugEchoMsg "Conflict expected and suppressed for: ", ruleSymbols
-            return true
-      debugEchoMsg "Conflict NOT expected for: ", ruleSymbols
-      debugEchoMsg "Available expected sets:"
-      for s in augmentedGrammar.expectedConflicts:
-        debugEchoMsg "  Set: ", s
-      return false
+    # Removed overly board auto-approval for repeat conflicts.
+    # Conflicts should be resolved via expectedConflicts mapping to parent rules.
     
-    for stateId in 0..<entries.len:
-      var actionsBySymbol = stdtables.initTable[GrammarSymbol, seq[BuildParseAction]]()
+    for expectedSet in augmentedGrammar.expectedConflicts:
+      # CRITICAL: Check if the expected conflict set is fully contained in the participants
+      # Meaning: expectedSet <= ruleSymbols
+      # This allows extra participants to be present (e.g. multiple parents of a shift)
       
-      for (sym, action) in entries[stateId].actionMap:
-        if sym notin actionsBySymbol:
-          actionsBySymbol[sym] = @[]
-        actionsBySymbol[sym].add(action)
-      var resolvedActions: seq[tuple[sym: GrammarSymbol, action: BuildParseAction]] = @[]
+      var allExpectedFound = true
+      for expectedRule in expectedSet:
+        var found = false
+        for rule in ruleSymbols:
+           let originalRule = getOriginalSymbol(augmentedGrammar, rule)
+           if originalRule == expectedRule:
+             found = true
+             break
+        if not found:
+           allExpectedFound = false
+           break
+           
+      if allExpectedFound:
+         debugEchoMsg "Conflict expected and suppressed for: ", ruleSymbols
+         return true
+         
+    debugEchoMsg "Conflict NOT expected for: ", ruleSymbols
+    debugEchoMsg "Available expected sets:"
+    for s in augmentedGrammar.expectedConflicts:
+      debugEchoMsg "  Set: ", s
+    return false
+  
+  for stateId in 0..<entries.len:
+    var actionsBySymbol = stdtables.initTable[GrammarSymbol, seq[BuildParseAction]]()
+    
+    for (sym, action) in entries[stateId].actionMap:
+      if sym notin actionsBySymbol:
+        actionsBySymbol[sym] = @[]
+      actionsBySymbol[sym].add(action)
+    var resolvedActions: seq[tuple[sym: GrammarSymbol, action: BuildParseAction]] = @[]
 
-      for sym, actions in actionsBySymbol:
-        var shiftActions: seq[BuildParseAction] = @[]
-        var reduces: seq[BuildParseAction] = @[]
-        
-        for action in actions:
-          case action.kind
-          of bpakShift, bpakShiftExtra:
-            shiftActions.add(action)
-          of bpakReduce:
-            reduces.add(action)
-          else:
-            discard
+    for sym, actions in actionsBySymbol:
+      var shiftActions: seq[BuildParseAction] = @[]
+      var reduces: seq[BuildParseAction] = @[]
+      
+      for action in actions:
+        case action.kind
+        of bpakShift, bpakShiftExtra:
+          shiftActions.add(action)
+        of bpakReduce:
+          reduces.add(action)
+        else:
+          discard
 
-        # Deduplication of shift actions removed to allow conflict detection to see 
-        # all potential shifts, especially for Shift/Reduce/Shift conflicts where
-        # different shifts might have different precedences relative to a reduce.
-        # The conflict resolution logic later will handle choosing the best shift 
-        # if they are compatible, or report a conflict if they are not.
+      # Deduplication of shift actions removed to allow conflict detection to see 
+      # all potential shifts, especially for Shift/Reduce/Shift conflicts where
+      # different shifts might have different precedences relative to a reduce.
+      # The conflict resolution logic later will handle choosing the best shift 
+      # if they are compatible, or report a conflict if they are not.
 
-        var processed = false
+      var processed = false
 
-        if shiftActions.len > 0 and reduces.len > 0:
-            # Shift/Reduce conflict
-            var allResolved = true
-            var winningReduces: seq[BuildParseAction] = @[]
-            var keepShifts = false
-            
-            # Find winning reduces first
-            for r in reduces:
-              let reducePrecedence = r.reduceStaticPrecedence
-              var shiftIsMore = false
-              var shiftIsLess = false
-              
-              for shift in shiftActions:
-                let shiftPrecedence = shift.shiftPrecedence
-                # debugEchoMsg "Conflict: Shift(", shift.shiftPrecedence, ") vs Reduce(", reducePrecedence, ") for symbol ", getSymbolName(sym)
-                if shiftPrecedence > reducePrecedence:
-                  shiftIsMore = true
-                elif shiftPrecedence < reducePrecedence:
-                  shiftIsLess = true
-              
-              if shiftIsMore and not shiftIsLess:
-                # Shift wins over this reduce
-                keepShifts = true
-              elif shiftIsLess and not shiftIsMore:
-                # This reduce wins
-                winningReduces.add(r)
-                
-                # HEURISTIC: If Shift lost because it has negative precedence vs default (0),
-                # keep it anyway to allow GLR to resolve potential invalid reductions.
-                if shiftActions.len == 1 and shiftActions[0].shiftPrecedence < 0 and reducePrecedence == 0:
-                  keepShifts = true
-              elif not shiftIsLess and not shiftIsMore:
-                # Precedence equal, check associativity
-                var resolved = false
-                if r.reduceAssociativity.isSome:
-                    let assoc = r.reduceAssociativity.get
-                    if assoc == gaLeft:
-                      # Associativity: Left -> Reduce wins
-                      winningReduces.add(r)
-                      resolved = true
-                    elif assoc == gaRight:
-                      # Associativity: Right -> Shift wins
-                      keepShifts = true
-                      resolved = true
-                if not resolved:
-                    allResolved = false
-              else:
-                allResolved = false
-            
-            if not allResolved:
-              var participants: seq[GrammarSymbol] = @[]
-              for a in actions:
-                for p in a.participants:
-                  if p notin participants: participants.add(p)
-              
-              if not isConflictExpected(participants):
-                # --- Path Reconstruction for Context ---
-                let path = findPathToState(stateId)
-                var contextStr = ""
-                for s in path:
-                  contextStr &= getSymbolName(s) & " "
-                contextStr &= " •  " & getSymbolName(sym) & "  ..."
-
-                var conflictMsg = "Unresolved conflict for symbol sequence:\n\n"
-                conflictMsg &= "  " & contextStr & "\n\n"
-                conflictMsg &= "Possible interpretations:\n\n"
-                for i, s in shiftActions:
-                  conflictMsg &= "  " & $(i+1) & ":  SHIFT " & getSymbolName(sym) & " (precedence: " & $s.shiftPrecedence & ")\n"
-                
-                let baseIdx = shiftActions.len + 1
-                for i, r in reduces:
-                  conflictMsg &= "  " & $(baseIdx+i) & ":  REDUCE using rule " & getSymbolName(r.reduceSymbol) & 
-                                " (precedence: " & $r.reduceStaticPrecedence & 
-                                ", assoc: " & (if r.reduceAssociativity.isSome: $r.reduceAssociativity.get else: "none") & ")\n"
-                conflictMsg &= "\nPossible resolutions:\n\n"
-                conflictMsg &= "  1:  Specify a higher precedence in the reduce rules\n"
-                conflictMsg &= "  2:  Add a conflict declaration for these rules\n"
-                
-                raise newException(BuildTablesError, conflictMsg)
-              else:
-                # Conflict expected - keep all actions (GLR)
-                for a in actions: resolvedActions.add((sym: sym, action: a))
-                processed = true
-            
-            else:
-              # All resolved! Add winners
-              if keepShifts:
-                  # Keep highest precedence shift(s)
-                  var bestShiftPrec = int32.low
-                  for s in shiftActions:
-                    if s.shiftPrecedence > bestShiftPrec: bestShiftPrec = s.shiftPrecedence
-                  for s in shiftActions:
-                    if s.shiftPrecedence == bestShiftPrec:
-                      resolvedActions.add((sym: sym, action: s))
-              
-              for r in winningReduces:
-                  resolvedActions.add((sym: sym, action: r))
-              processed = true
-
-        elif reduces.len > 1:
-            # Reduce/Reduce conflict
-            var bestPrecedence = int32.low
-            var bestCount = 0
-            
-            # Find max precedence
-            for r in reduces:
-                let currentPrec = r.reduceStaticPrecedence
-                if currentPrec > bestPrecedence:
-                  bestPrecedence = currentPrec
-                  bestCount = 1
-                elif currentPrec == bestPrecedence:
-                  bestCount += 1
-            
-            # Identify winners based on precedence
-            var precedenceWinners: seq[BuildParseAction] = @[]
-            for r in reduces:
-                if r.reduceStaticPrecedence == bestPrecedence:
-                    precedenceWinners.add(r)
-
-            if precedenceWinners.len > 1:
-              var isExpected = false
-              
-              var allPairsExpected = true
-              if precedenceWinners.len > 1:
-                for idx1 in 0 ..< precedenceWinners.len:
-                  for idx2 in (idx1 + 1) ..< precedenceWinners.len:
-                    let sym1 = precedenceWinners[idx1].reduceSymbol
-                    let sym2 = precedenceWinners[idx2].reduceSymbol
+      if shiftActions.len > 0 and reduces.len > 0:
+          # Shift/Reduce conflict
+          # when defined(debug):
+          #   echo "[DEBUG] ========== SHIFT/REDUCE CONFLICT =========="
+          #   echo "[DEBUG] State: ", stateId, " Symbol: ", getSymbolName(sym)
+          #   echo "[DEBUG] Shift actions (", shiftActions.len, "):"
+          #   for i, s in shiftActions:
+          #     echo "[DEBUG]   ", i, ": SHIFT to state ", s.shiftState, " prec=", s.shiftPrecedence, " dynPrec=", s.shiftDynamicPrecedence
+          #   echo "[DEBUG] Reduce actions (", reduces.len, "):"
+          #   for i, r in reduces:
+          #     echo "[DEBUG]   ", i, ": REDUCE ", getSymbolName(r.reduceSymbol), " prec=", r.reduceStaticPrecedence, " assoc=", (if r.reduceAssociativity.isSome: $r.reduceAssociativity.get else: "none")
+          
+          var allResolved = true
+          var winningReduces: seq[BuildParseAction] = @[]
+          var keepShifts = false
+          var glrHeuristicApplied = false  # Track if we applied GLR heuristic
+          
+          # CRITICAL CHECK: If we have multiple shift actions going to the SAME state
+          # but with DIFFERENT precedences, this represents multiple distinct semantic 
+          # interpretations (e.g. product vs other_thing in conflicting_precedence grammar).
+          # If these are combined with reduce actions, we have an unresolved conflict
+          # that precedence alone cannot resolve - the grammar must specify which interpretation
+          # to prefer via explicit conflict declarations.
+          #
+          # Example: expression '+' expression • '*'
+          #   - Shift '*' for product (prec=1)
+          #   - Shift '*' for other_thing (prec=-1)  
+          #   - Reduce as sum (prec=0), then later consider '*'
+          # This is 3 interpretations, not 2! Deduplication by state hides the ambiguity.
+          
+          var hasMultiplePrecedences = false
+          if reduces.len > 0:
+            # Group shifts by target state to check for precedence conflicts
+            var precByState = stdtables.initTable[uint32, seq[int32]]()
+            for s in shiftActions:
+              if s.shiftState notin precByState:
+                precByState[s.shiftState] = @[]
+              if s.shiftPrecedence notin precByState[s.shiftState]:
+                precByState[s.shiftState].add(s.shiftPrecedence)
                     
-                    var pairFound = false
-                    for conflictSet in augmentedGrammar.expectedConflicts:
-                        if sym1 in conflictSet and sym2 in conflictSet:
-                          pairFound = true
-                          break
-                    if not pairFound:
-                      allPairsExpected = false
-                      break
-                  if not allPairsExpected: break
-              
-              if allPairsExpected:
-                isExpected = true
-                
-              if not isExpected:
-                # --- Path Reconstruction for Context ---
-                let path = findPathToState(stateId)
-                var contextStr = ""
-                for s in path:
-                  contextStr &= getSymbolName(s) & " "
-                contextStr &= " •  " & getSymbolName(sym) & "  ..."
+          # If we found multiple precedences to the same state + reduces, check expectedConflicts
+          if hasMultiplePrecedences:
+            # Collect ALL participants from shift actions (before deduplication) AND reduce actions
+            # to properly match against expectedConflicts which may include all the different interpretations
+            var participants: seq[GrammarSymbol] = @[]
+            
+            # Add all shift participants (from all shifts, not just deduplicated ones)
+            for s in shiftActions:
+              for p in s.participants:
+                if p notin participants: participants.add(p)
+            
+            # Add all reduce participants
+            for r in reduces:
+              for p in r.participants:
+                if p notin participants: participants.add(p)
+            
+            debugEchoMsg "Detected multiple-precedence shift conflict with reduces"
+            debugEchoMsg "Participants: ", participants
+            
+            if not isConflictExpected(participants):
+              # Unresolved conflict - multiple semantic interpretations
+              let path = findPathToState(stateId)
+              var contextStr = ""
+              for s in path:
+                contextStr &= getSymbolName(s) & " "
+              contextStr &= " •  " & getSymbolName(sym) & "  ..."
 
-                var conflictMsg = "Unresolved conflict for symbol sequence:\n\n"
-                conflictMsg &= "  " & contextStr & "\n\n"
-                conflictMsg &= "Possible interpretations:\n\n"
-                for i, r in reduces:
-                  conflictMsg &= "  " & $(i+1) & ":  REDUCE using rule " & getSymbolName(r.reduceSymbol) & 
-                                " (precedence: " & $r.reduceStaticPrecedence & 
-                                ", dynamic: " & $r.reducePrecedence & ")\n"
-                conflictMsg &= "\nPossible resolutions:\n\n"
-                conflictMsg &= "  1:  Specify different precedence levels for conflicting rules\n"
-                conflictMsg &= "  2:  Restructure the grammar to avoid ambiguity\n"
-                
-                raise newException(BuildTablesError, conflictMsg)
+              var conflictMsg = "Unresolved conflict for symbol sequence:\n\n"
+              conflictMsg &= "  " & contextStr & "\n\n"
+              conflictMsg &= "Possible interpretations:\n\n"
+              
+              # Show all shift interpretations
+              var shiftIdx = 1
+              for s in shiftActions:
+                conflictMsg &= "  " & $shiftIdx & ":  SHIFT " & getSymbolName(sym) & 
+                             " (precedence: " & $s.shiftPrecedence & ")\n"
+                shiftIdx += 1
+              
+              # Show reduce interpretations
+              for i, r in reduces:
+                conflictMsg &= "  " & $(shiftIdx + i) & ":  REDUCE " & getSymbolName(r.reduceSymbol) &
+                             " (precedence: " & $r.reduceStaticPrecedence &
+                             ", assoc: " & (if r.reduceAssociativity.isSome: $r.reduceAssociativity.get else: "none") & ")\n"
+              
+              conflictMsg &= "\nPossible resolutions:\n\n"
+              conflictMsg &= "  1:  Add a conflict declaration for these rules\n"
+              conflictMsg &= "  2:  Restructure the grammar to avoid ambiguity\n"
+              conflictMsg &= "  3:  Adjust precedence levels to create a clear ordering\n"
+
+              let errorMsg = "Unresolved conflict for symbol sequence:\n\n" & conflictMsg
+              if not skipConflictDetection:
+                raise newException(ValueError, errorMsg)
               else:
-                # Expected conflict: Keep conflicting reduces (GLR)
-                for r in precedenceWinners:
-                    resolvedActions.add((sym: sym, action: r))
-                processed = true
+                echo "[Treestand] Conflict not expected:\n", errorMsg
+          
+          # Deduplicate shift actions by target state, keeping only the highest precedence
+          # for each target state. This resolves conflicts where the same transition is 
+          # derived from multiple rules with different precedences (e.g. C grammar u8' case).
+          # But it preserves conflicts where shifts go to DIFFERENT states (ambiguous parse paths).
+          
+          var bestShiftsByState = stdtables.initTable[uint32, BuildParseAction]()
+          var discardedShifts: seq[tuple[action: BuildParseAction, winner: BuildParseAction]] = @[]
+          
+          for s in shiftActions:
+             if s.shiftState notin bestShiftsByState:
+                bestShiftsByState[s.shiftState] = s
+             else:
+                let current = bestShiftsByState[s.shiftState]
+                if s.shiftPrecedence > current.shiftPrecedence:
+                   # New higher-precedence shift found, current becomes discarded
+                   discardedShifts.add((action: current, winner: s))
+                   bestShiftsByState[s.shiftState] = s
+                elif s.shiftPrecedence < current.shiftPrecedence:
+                   # Current shift is lower precedence, discard it
+                   discardedShifts.add((action: s, winner: current))
+                # If equal precedence, keep the first one (current behavior)
+          
+          # # Warn about potentially unreachable rules if shifts were discarded
+          # when defined(debug):
+          #   if discardedShifts.len > 0:
+          #     echo "[DEBUG] Discarded shifts: ", discardedShifts.len, " reduces: ", reduces.len
+          
+          if discardedShifts.len > 0 and reduces.len > 0:
+            # Only warn if there are also reduce actions (indicating a shift/reduce context)
+            # This filters out simple precedence resolution between shift variants
+            var warnedSymbols: seq[GrammarSymbol] = @[]
+            for discarded in discardedShifts:
+              # Collect the reduce symbols from discarded actions
+              # These represent grammar rules that might be unreachable
+              if discarded.action.participants.len > 0:
+                for p in discarded.action.participants:
+                  if p.kind == stNonTerminal and p notin warnedSymbols:
+                    warnedSymbols.add(p)
+            
+            debugEchoMsg "Warned symbols: ", warnedSymbols.len
+            
+            if warnedSymbols.len > 0:
+              let path = findPathToState(stateId)
+              var contextStr = ""
+              for s in path:
+                contextStr &= getSymbolName(s) & " "
+              contextStr &= " •  " & getSymbolName(sym) & "  ..."
+              
+              debugEchoMsg "[Treestand] Warning: Potentially unreachable rules due to precedence"
+              debugEchoMsg "  Context: ", contextStr
+              debugEchoMsg "  Lower-precedence alternatives discarded:"
+              for p in warnedSymbols:
+                debugEchoMsg "    - ", getSymbolName(p)
+              debugEchoMsg "  These rules may be unreachable in this parsing context."
+              debugEchoMsg ""
+          
+          shiftActions = @[]
+          for s in bestShiftsByState.values:
+             shiftActions.add(s)
+
+          # For each reduce, check what each shift decides
+          for r in reduces:
+            let reducePrecedence = r.reduceStaticPrecedence
+            var shiftWins = 0
+            var reduceWins = 0
+            var equalPrec = 0
+            
+            # Check each shift action individually
+            for shift in shiftActions:
+              if shift.shiftPrecedence > reducePrecedence:
+                shiftWins += 1
+              elif shift.shiftPrecedence < reducePrecedence:
+                reduceWins += 1
+              else:
+                equalPrec += 1
+            
+            debugEchoMsg "Reduce ", getSymbolName(r.reduceSymbol), " (prec=", reducePrecedence, ") vs ", shiftActions.len, " shifts:"
+            debugEchoMsg "  Shifts with higher prec: ", shiftWins
+            debugEchoMsg "  Shifts with lower prec: ", reduceWins  
+            debugEchoMsg "  Shifts with equal prec: ", equalPrec
+            
+            # If all shifts have the same relationship to reduce precedence
+            if shiftWins == shiftActions.len:
+              # All shifts have higher precedence → SHIFT wins
+              debugEchoMsg "   → All shifts win (higher precedence)"
+              keepShifts = true
+              
+            elif reduceWins == shiftActions.len:
+              # All shifts have lower precedence → REDUCE wins
+              debugEchoMsg "   → REDUCE wins (all shifts have lower precedence)"
+              winningReduces.add(r)
+              # GLR Heuristic: keep negative precedence shift for GLR when reduce is zero precedence
+              if shiftActions.len == 1 and shiftActions[0].shiftPrecedence < 0 and reducePrecedence == 0:
+                debugEchoMsg "   → GLR heuristic: Also keeping negative prec shift with zero prec reduce"
+                keepShifts = true
+                glrHeuristicApplied = true
+              
+              
+            elif equalPrec == shiftActions.len:
+              # All shifts have equal precedence → check associativity
+              debugEchoMsg "   → All equal precedence, checking associativity..."
+              
+              if r.reduceAssociativity.isSome:
+                let assoc = r.reduceAssociativity.get
+                if assoc == gaLeft:
+                  debugEchoMsg "     → Left assoc: REDUCE wins"
+                  winningReduces.add(r)
+                elif assoc == gaRight:
+                  debugEchoMsg "     → Right assoc: SHIFT wins"
+                  keepShifts = true
+                else:
+                  # Non-associative: mark as unresolved
+                  debugEchoMsg "     → Non-assoc: UNRESOLVED"
+                  allResolved = false
+              else:
+                # No associativity: mark as unresolved
+                # These MUST be in expectedConflicts for GLR,
+                # or the grammar needs associativity specified
+                debugEchoMsg "     → No associativity: UNRESOLVED"
+                allResolved = false
+                
             else:
-              # Winner found by precedence
-              resolvedActions.add((sym: sym, action: precedenceWinners[0]))
-              processed = true
-        
-        if not processed:
-            # Single action or multiple shifts (ambiguity? or just duplicates?)
-            # If multiple shifts, they should be identical due to deduplication during add
-            # unless we added shifts with different precedences but no reduces?
-            # If multiple shifts with different precedences but SAME state/sym, deduplication preserved only one? 
-            # No, I removed deduplication. So we might have multiple shifts.
-            # If we have multiple shifts, we should pick best one?
-            # Actually multiple shifts for same symbol usually implies different precedence or dynamic prec?
-            # If reduces.len == 0, and shiftActions.len > 1:
-            if shiftActions.len > 1:
-              # Pick best shift
-              var bestShiftPrec = int32.low
-              for s in shiftActions:
+              # Mixed: some shifts win, some lose → UNRESOLVED
+              debugEchoMsg "   → MIXED precedences: UNRESOLVED!"
+              allResolved = false
+          
+          # Check for contradictory decisions: if we decided both shift AND reduce should win,
+          # UNLESS it's the GLR heuristic (which intentionally does this)
+          if keepShifts and winningReduces.len > 0 and not glrHeuristicApplied:
+            debugEchoMsg "CONTRADICTION: Both shifts and reduces won - unresolved!"
+            allResolved = false
+          
+          if not allResolved:
+            var participants: seq[GrammarSymbol] = @[]
+            for a in actions:
+              for p in a.participants:
+                if p notin participants: participants.add(p)
+                        
+            if not isConflictExpected(participants):
+              # --- Path Reconstruction for Context ---
+              let path = findPathToState(stateId)
+              var contextStr = ""
+              for s in path:
+                contextStr &= getSymbolName(s) & " "
+              contextStr &= " •  " & getSymbolName(sym) & "  ..."
+
+              var conflictMsg = "Unresolved conflict for symbol sequence:\n\n"
+              conflictMsg &= "  " & contextStr & "\n\n"
+              conflictMsg &= "Possible interpretations:\n\n"
+              for i, s in shiftActions:
+                conflictMsg &= "  " & $(i+1) & ":  SHIFT " & getSymbolName(sym) & " (precedence: " & $s.shiftPrecedence & ")\n"
+              
+              let baseIdx = shiftActions.len + 1
+              for i, r in reduces:
+                conflictMsg &= "  " & $(baseIdx+i) & ":  REDUCE using rule " & getSymbolName(r.reduceSymbol) & 
+                              " (precedence: " & $r.reduceStaticPrecedence & 
+                              ", assoc: " & (if r.reduceAssociativity.isSome: $r.reduceAssociativity.get else: "none") & ")\n"
+              conflictMsg &= "\nPossible resolutions:\n\n"
+              conflictMsg &= "  1:  Specify a higher precedence in the reduce rules\n"
+              conflictMsg &= "  2:  Add a conflict declaration for these rules\n"
+              
+              # ERROR: Conflict not expected - Fail generation (match tree-sitter behavior)
+              let errorMsg = "Unresolved conflict for symbol sequence:\n\n" & conflictMsg
+              if not skipConflictDetection:
+                raise newException(ValueError, errorMsg)
+              else:
+                echo "[Treestand] Conflict not expected:\n", errorMsg
+          
+          else:
+            # All resolved! Add winners
+            if keepShifts:
+                # Keep highest precedence shift(s)
+                var bestShiftPrec = int32.low
+                for s in shiftActions:
                   if s.shiftPrecedence > bestShiftPrec: bestShiftPrec = s.shiftPrecedence
-              for s in shiftActions:
+                for s in shiftActions:
                   if s.shiftPrecedence == bestShiftPrec:
                     resolvedActions.add((sym: sym, action: s))
-            elif shiftActions.len == 1:
-              resolvedActions.add((sym: sym, action: shiftActions[0]))
-            elif reduces.len == 1:
-              resolvedActions.add((sym: sym, action: reduces[0]))
-            else:
-              # 0 actions? Should not happen as we loop over map
-              for a in actions: resolvedActions.add((sym: sym, action: a))
+            
+            for r in winningReduces:
+                resolvedActions.add((sym: sym, action: r))
+            processed = true
 
-      # Update actions
-      entries[stateId].actionMap = resolvedActions
-  
-  else:
-    echo "[Treestand] Skip detecting conflicts in the parse table"
+      elif reduces.len > 1:
+          # Reduce/Reduce conflict  
+          var bestPrecedence = int32.low
+          var bestCount = 0
+          
+          # Find max precedence (static only - tree-sitter does NOT use dynamic for reduce/reduce)
+          # Dynamic precedence is only for runtime ambiguity resolution, not parser generation
+          for r in reduces:
+              let currentPrec = r.reduceStaticPrecedence
+              if currentPrec > bestPrecedence:
+                bestPrecedence = currentPrec
+                bestCount = 1
+              elif currentPrec == bestPrecedence:
+                bestCount += 1
+          
+          # Identify winners based on precedence
+          var precedenceWinners: seq[BuildParseAction] = @[]
+          for r in reduces:
+              if r.reduceStaticPrecedence == bestPrecedence:
+                  precedenceWinners.add(r)
+
+          if precedenceWinners.len > 1:
+            # Collect winner symbols and check using isConflictExpected
+            var participants: seq[GrammarSymbol] = @[]
+            for r in precedenceWinners:
+              if r.reduceSymbol notin participants:
+                participants.add(r.reduceSymbol)
+            
+            let isExpected = isConflictExpected(participants)
+              
+            if not isExpected:
+              # --- Path Reconstruction for Context ---
+              let path = findPathToState(stateId)
+              var contextStr = ""
+              for s in path:
+                contextStr &= getSymbolName(s) & " "
+              contextStr &= " •  " & getSymbolName(sym) & "  ..."
+
+              var conflictMsg = "Unresolved conflict for symbol sequence:\n\n"
+              conflictMsg &= "  " & contextStr & "\n\n"
+              conflictMsg &= "Possible interpretations:\n\n"
+              for i, r in reduces:
+                conflictMsg &= "  " & $(i+1) & ":  REDUCE using rule " & getSymbolName(r.reduceSymbol) & 
+                              " (precedence: " & $r.reduceStaticPrecedence & 
+                              ", dynamic: " & $r.reducePrecedence & ")\n"
+              conflictMsg &= "\nPossible resolutions:\n\n"
+              conflictMsg &= "  1:  Specify different precedence levels for conflicting rules\n"
+              conflictMsg &= "  2:  Restructure the grammar to avoid ambiguity\n"
+              
+              # ERROR: Conflict not expected - Fail generation
+              let errorMsg = "Unresolved conflict for symbol sequence:\n\n" & conflictMsg
+              if not skipConflictDetection:
+                raise newException(ValueError, errorMsg)
+              else:
+                echo "[Treestand] Conflict not expected:\n", errorMsg
+              
+              # Treat as GLR split (add all precedence winners)
+              for r in precedenceWinners:
+                  resolvedActions.add((sym: sym, action: r))
+              processed = true
+          else:
+            # Winner found by precedence
+            resolvedActions.add((sym: sym, action: precedenceWinners[0]))
+            processed = true
+      
+      if not processed:
+          if shiftActions.len > 1:
+            # Pick best shift
+            var bestShiftPrec = int32.low
+            for s in shiftActions:
+                if s.shiftPrecedence > bestShiftPrec: bestShiftPrec = s.shiftPrecedence
+            for s in shiftActions:
+                if s.shiftPrecedence == bestShiftPrec:
+                  resolvedActions.add((sym: sym, action: s))
+          elif shiftActions.len == 1:
+            resolvedActions.add((sym: sym, action: shiftActions[0]))
+          elif reduces.len == 1:
+            resolvedActions.add((sym: sym, action: reduces[0]))
+          else:
+            for a in actions: resolvedActions.add((sym: sym, action: a))
+
+    # Update actions
+    entries[stateId].actionMap = resolvedActions
   
   var resultTable = BuildParseTable(
     entries: entries,

@@ -857,7 +857,7 @@ module.exports = grammar({
       field('name', $._type_identifier),
     ),
 
-    identifier: _ => /[_\p{XID_Start}][_\p{XID_Continue}]*/,
+    identifier: _ => /[a-zA-Z_]\w*/,
 
     _type_identifier: $ => alias($.identifier, $.type_identifier),
     _field_identifier: $ => alias($.identifier, $.field_identifier),

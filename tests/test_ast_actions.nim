@@ -105,7 +105,7 @@ test "Build AST using actions - simple":
   
   if matchMath(input, builder):
     echo "Parsed successfully!"
-    echo "Root AST: ", builder.rootAst
+    echo "Root AST: ", builder
     
     # Now we can directly access the root AST!
     check builder.rootAst != nil

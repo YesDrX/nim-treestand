@@ -231,7 +231,6 @@ import macros
 macro debugEchoMsg*(msg: varargs[untyped]): untyped =
   result = quote do:
     when defined(debug):
-      # echo fmt"""[DEBUG][{now().format("yyyyMMdd HH:mm:ss")}] """, `msg`
       echo fmt"""[DEBUG] """, `msg`
     else:
       discard

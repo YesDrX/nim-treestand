@@ -22,7 +22,7 @@ type
     of nskAdvance:
       advanceChars*: CharacterSet
       advanceStateId*: uint32
-      advanceIsSep*: bool
+      advanceIsSep*: bool  ## True if this transition is for separator patterns (extras)
       advancePrecedence*: int32
     of nskSplit:
       splitLeftState*: uint32
