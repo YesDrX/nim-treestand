@@ -97,14 +97,13 @@ tsGrammar "my_lang":
   # Lexical Tokens
   # Use token() wrapper for lexical rules
   # String literals and regex patterns are auto-wrapped with str() or patt()
-  identifier  <- token(re"\w+")
-  number      <- token(re"\\d+")
-  eq          <- token("=")
-  semi        <- token(";")
+  identifier  <- re"\w+"
+  number      <- re"\d+"
+  eq          <- "="
+  semi        <- ";"
   
   # Configuration·
-  extras      = token(re"\s+")
-  # word        = "identifier"
+  extras      = re"\s+"
 
 when isMainModule:
   echo parseMyLang("a = 1; b=a;")
@@ -128,14 +127,15 @@ type Env = object
   vars: Table[string, int]
 
 tsGrammar "calc", userdata: Env:
+  prog   <- +assign
   assign <- ident * eq * number * semi:
     # Access matched node via `node`
     let varName = node.child("ident").text
     let value = parseInt(node.child("number").text)
     userdata.vars[varName] = value
-  
-  ident  <- token(re"[a-zA-Z_]\\w*")
-  number <- token(re"\\d+")
+    
+  ident  <- token(re"[a-zA-Z_]\w*")
+  number <- token(re"\d+")
   eq     <- token("=")
   semi   <- token(";")
 
@@ -192,7 +192,7 @@ proc createMathGrammar(): InputGrammar =
                rule: choice(sym("number"), sym("binary_op"))),
       Variable(name: "binary_op", kind: vtNamed,
                rule: prec_left(1, seq(sym("expression"), sym("op"), sym("expression")))),
-      Variable(name: "number", kind: vtNamed, rule: token(patt("\\d+"))),
+      Variable(name: "number", kind: vtNamed, rule: token(patt("\d+"))),
       Variable(name: "op", kind: vtNamed, rule: token(patt("[+\\-*/]")))
     ],
     extraSymbols: @[token(patt("\\s+"))]

@@ -64,6 +64,10 @@ proc collectExpressions(node: ParseNode, list: var seq[PatternNode]) =
   ## (e.g., `ntProgram_repeat1`). This function traverses these structures
   ## and collects semantic `Expression` nodes into a flat list.
   
+  if node == nil: return
+  
+  # debugEchoMsg fmt"Visit node: kind={node.symbol.kind}"
+  
   if node.symbol.kind == skNonTerminal:
     let idx = node.symbol.nonTerminalIndex
     if idx == sexp_parser.ntExpression.int:
@@ -127,7 +131,26 @@ proc parsePatternListContent(items: seq[PatternNode]): seq[PatternNode] =
 
 proc parseExpression(expr: ParseNode): PatternNode =
   ## Converts a parsed S-expression node into a `PatternNode`.
+  if expr.children.len == 0: return nil
+  
   let content = expr.children[0]
+  
+  if content.symbol.kind == skTerminal:
+    let idx = content.symbol.terminalIndex
+    
+    if idx == sexp_parser.tsAtom.int:
+       return PatternNode(kind: pkSymbol, value: content.token.text, children: @[])
+    elif idx == sexp_parser.tsWildcard.int:
+       return PatternNode(kind: pkWildcard, value: "_", children: @[])
+    elif idx == sexp_parser.tsCapture.int:
+       return PatternNode(kind: pkSymbol, value: content.token.text, children: @[])
+    elif idx == sexp_parser.tsField.int:
+       return PatternNode(kind: pkSymbol, value: content.token.text, children: @[])
+    elif idx == sexp_parser.tsAnchor.int:
+       return PatternNode(kind: pkWildcard, value: ".", children: @[])
+    
+    return nil
+
   let idx = content.symbol.nonTerminalIndex
   
   if idx == sexp_parser.ntList.int:
@@ -137,11 +160,10 @@ proc parseExpression(expr: ParseNode): PatternNode =
     let processedChildren = parsePatternListContent(items)
     
     if processedChildren.len > 0 and processedChildren[0].kind == pkSymbol:
-      let head = processedChildren[0]
-      head.children = processedChildren[1 .. ^1]
-      return head
+       let head = processedChildren[0]
+       head.children = processedChildren[1 .. ^1]
+       return head
     else:
-      # Anonymous grouping or invalid list
       return nil
 
   elif idx == sexp_parser.ntAtom.int:
@@ -149,25 +171,28 @@ proc parseExpression(expr: ParseNode): PatternNode =
     return PatternNode(kind: pkSymbol, value: val, children: @[])
     
   elif idx == sexp_parser.ntString.int:
+    # String literal in query: "foo"
+    # Content of string rule
     let val = getInnerToken(content).text
     # strip quotes "..."
-    return PatternNode(kind: pkLiteral, value: val[1 .. ^2], children: @[])
+    if val.len >= 2:
+      return PatternNode(kind: pkLiteral, value: val[1 .. ^2], children: @[])
+    return PatternNode(kind: pkLiteral, value: val, children: @[])
     
   elif idx == sexp_parser.ntWildcard.int:
     return PatternNode(kind: pkWildcard, value: "_", children: @[])
     
   elif idx == sexp_parser.ntCapture.int:
-    # return symbol with @ name, handled by list processor
     let val = getInnerToken(content).text
     return PatternNode(kind: pkSymbol, value: val, children: @[])
     
   elif idx == sexp_parser.ntField.int:
     let val = getInnerToken(content).text
     return PatternNode(kind: pkSymbol, value: val, children: @[])
-
+    
   elif idx == sexp_parser.ntAnchor.int:
     return PatternNode(kind: pkWildcard, value: ".", children: @[])
-
+    
   return nil
 
 proc traverseSexp(node: ParseNode): seq[PatternNode] =

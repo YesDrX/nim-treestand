@@ -55,6 +55,10 @@ proc generateParser*(grammarPath: string, outputDir: string, dslPath: string = "
   let absGrammarPath = expandFilename(grammarPath)
   let grammarJson = executeGrammarJs(absGrammarPath, actualDslPath)
   let inputGrammar = parseGrammar(grammarJson)
+
+  # echo "DEBUG"
+  # echo repr(inputGrammar)
+  # echo "DEBUG_END"  
   
   # 3. Prepare grammar
   echo "[Treestand] Preparing grammar ..."

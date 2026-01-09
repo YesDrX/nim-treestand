@@ -141,6 +141,9 @@ macro buildGrammar*(createGrammarFunction: untyped): untyped =
         inputGrammar.externalScanner  # Pass external scanner path
       )
       # echo parserCode
+      # echo "DEBUG"
+      # echo repr(inputGrammar)
+      # echo "DEBUG_END"
       return parserCode.parseStmt()
     buildGrammarImpl()
   # echo result.repr
@@ -154,8 +157,21 @@ proc transformRule(n: NimNode): NimNode =
     let right = transformRule(n[2])
     case op
     of "*": # Sequence
-      result = quote do:
-        seq(`left`, `right`)
+      var members: seq[NimNode] = @[]
+      
+      proc collect(x: NimNode) =
+        if x.kind == nnkInfix and x[0].strVal == "*":
+           collect(x[1])
+           collect(x[2])
+        else:
+           members.add(transformRule(x))
+      
+      collect(n[1])
+      collect(n[2])
+      
+      result = newCall("seq")
+      for m in members:
+        result.add m
     of "|": # Choice
       result = quote do:
         choice(`left`, `right`)
@@ -193,6 +209,27 @@ proc transformRule(n: NimNode): NimNode =
   of nnkCall:
     # Function call like token(...), prec(...)
     # We preserve the call but transform arguments
+    
+    # Optimization: token(re"...") or token("...") -> just the re/str
+    # This matches grammar.js behavior where /.../ is implicitly a token
+    # Optimization: token(re"...") or token("...") -> just the re/str
+    # This matches grammar.js behavior where /.../ is implicitly a token
+    if n[0].kind == nnkIdent and n[0].strVal == "token" and n.len == 2:
+       let arg = transformRule(n[1])
+       
+       # Unwrap potential StmtList from quote do
+       var check = arg
+       while check.kind == nnkStmtList and check.len > 0:
+         check = check[^1]
+                  
+       # Check if arg is a call to `str` or `patt`
+       if check.kind == nnkCall and check.len > 0:
+          let opNode = check[0]
+          # Check for "str" or "patt" identifier
+          if (opNode.kind == nnkIdent or opNode.kind == nnkSym) and (opNode.strVal == "str" or opNode.strVal == "patt"):
+             result = arg
+             return
+
     var newCall = newCall(n[0])
     for i in 1 ..< n.len:
       newCall.add transformRule(n[i])

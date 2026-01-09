@@ -269,38 +269,63 @@ proc extractTokens(interned: InternedGrammar): tuple[syntaxVars: seq[Variable], 
   proc processRule(rule: Rule, varName: Option[string] = none(string)): Rule =
     if rule.kind == rkString or rule.kind == rkPattern:
       # This is a lexical token.
-      # Check if we already have it
-      if rule in lexicalMap:
-        return Rule(kind: rkSymbol, symbol: lexicalMap[rule])
       
-      # Create new lexical variable
-      let name = case rule.kind
-        of rkString: "'" & rule.stringValue & "'"
-        of rkPattern: "/" & rule.patternValue & "/"
-        else: "token_" & $nextLexicalIdx
+      # Priority 1: Named Token (from Variable)
+      if varName.isSome:
+         let name = varName.get()
+         
+         # NOTE: We do NOT deduplicate named tokens against anonymous ones.
+         # A named token "ident" /[a-z]/ is distinct from an anonymous /[a-z]/.
+         
+         let sym = GrammarSymbol(kind: stTerminal, index: nextLexicalIdx)
+         lexicalVars.add(LexicalVariable(
+            name: name,
+            kind: variableTypeForName(name),
+            implicitPrecedence: 0,
+            startState: 0,
+            rule: rule
+         ))
+         inc nextLexicalIdx
+         
+         if rule notin lexicalMap:
+            lexicalMap[rule] = sym
+            
+         return Rule(kind: rkSymbol, symbol: sym)
       
-      let sym = GrammarSymbol(kind: stTerminal, index: nextLexicalIdx)
-      lexicalVars.add(LexicalVariable(
-        name: name,
-        kind: vtAnonymous,
-        implicitPrecedence: 0,
-        startState: 0, # To be set by build_tables
-        rule: rule
-      ))
-      lexicalMap[rule] = sym
-      inc nextLexicalIdx
-      return Rule(kind: rkSymbol, symbol: sym)
+      # Priority 2: Anonymous Token
+      else:
+        # Check if we already have it
+        if rule in lexicalMap:
+          return Rule(kind: rkSymbol, symbol: lexicalMap[rule])
+        
+        # Create new lexical variable
+        let name = case rule.kind
+          of rkString: "'" & rule.stringValue & "'"
+          of rkPattern: "/" & rule.patternValue & "/"
+          else: "token_" & $nextLexicalIdx
+        
+        let sym = GrammarSymbol(kind: stTerminal, index: nextLexicalIdx)
+        lexicalVars.add(LexicalVariable(
+          name: name,
+          kind: vtAnonymous,
+          implicitPrecedence: 0,
+          startState: 0,
+          rule: rule
+        ))
+        lexicalMap[rule] = sym
+        inc nextLexicalIdx
+        return Rule(kind: rkSymbol, symbol: sym)
       
     case rule.kind
     of rkChoice:
       var members: seq[Rule] = @[]
       for m in rule.choiceMembers:
-        members.add(processRule(m, varName))
+        members.add(processRule(m, none(string))) # Don't propagate name to children
       Rule(kind: rkChoice, choiceMembers: members)
     of rkSeq:
       var members: seq[Rule] = @[]
       for m in rule.seqMembers:
-        members.add(processRule(m, varName))
+        members.add(processRule(m, none(string))) # Don't propagate name to children
       Rule(kind: rkSeq, seqMembers: members)
     of rkMetadata:
       if rule.metadataParams.isToken:
@@ -361,7 +386,8 @@ proc extractTokens(interned: InternedGrammar): tuple[syntaxVars: seq[Variable], 
         let inner = processRule(rule.metadataRule[], varName)
         Rule(kind: rkMetadata, metadataParams: rule.metadataParams, metadataRule: toRef(inner))
     of rkRepeat:
-      let inner = processRule(rule.repeatContent[], varName)
+      # Don't propagate name to children of repeat
+      let inner = processRule(rule.repeatContent[], none(string))
       Rule(kind: rkRepeat, repeatContent: toRef(inner))
     else:
       rule

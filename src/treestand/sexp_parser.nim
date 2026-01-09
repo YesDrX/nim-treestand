@@ -16,15 +16,15 @@ type
     tsEOF = 0
     tsLParen = 1
     tsRParen = 2
-    tsIdentifier = 3
+    tsAtom = 3
     tsGrammarSymbol = 4
     tsPattern = 5
     tsPattern_6 = 6
-    tsGrammarSymbol_7 = 7
-    tsPattern_8 = 8
-    tsPattern_9 = 9
-    tsDot = 10
-    tsPattern_11 = 11
+    tsWildcard = 7
+    tsCapture = 8
+    tsField = 9
+    tsAnchor = 10
+    tsComment = 11
     tsPattern_12 = 12
 
   NonTerminalSymbol* = enum
@@ -46,15 +46,15 @@ const terminalSymbolNames* = [
   "EOF",
   "\'(\'",
   "\')\'",
-  "/[a-zA-Z_][a-zA-Z0-9_\\-\\.]*/",
+  "atom",
   "\'\"\'",
   "/[^\"\\\\\\n]+/",
   "/\\\\./",
-  "\'_\'",
-  "/@[a-zA-Z0-9_\\-\\.]+/",
-  "/[a-zA-Z0-9_\\-]+:/",
-  "\'.\'",
-  "/;.*/",
+  "wildcard",
+  "capture",
+  "field",
+  "anchor",
+  "comment",
   "/\\s/",
 ]
 
@@ -77,15 +77,15 @@ const terminalSymbolMetadata* = [
   parser_types.SymbolMetadata(named: false),  # EOF
   parser_types.SymbolMetadata(named: false),  # "\'(\'"
   parser_types.SymbolMetadata(named: false),  # "\')\'"
-  parser_types.SymbolMetadata(named: true),  # "/[a-zA-Z_][a-zA-Z0-9_\\-\\.]*/"
+  parser_types.SymbolMetadata(named: true),  # "atom"
   parser_types.SymbolMetadata(named: false),  # "\'\"\'"
   parser_types.SymbolMetadata(named: true),  # "/[^\"\\\\\\n]+/"
   parser_types.SymbolMetadata(named: true),  # "/\\\\./"
-  parser_types.SymbolMetadata(named: false),  # "\'_\'"
-  parser_types.SymbolMetadata(named: true),  # "/@[a-zA-Z0-9_\\-\\.]+/"
-  parser_types.SymbolMetadata(named: true),  # "/[a-zA-Z0-9_\\-]+:/"
-  parser_types.SymbolMetadata(named: false),  # "\'.\'"
-  parser_types.SymbolMetadata(named: true),  # "/;.*/"
+  parser_types.SymbolMetadata(named: true),  # "wildcard"
+  parser_types.SymbolMetadata(named: true),  # "capture"
+  parser_types.SymbolMetadata(named: true),  # "field"
+  parser_types.SymbolMetadata(named: true),  # "anchor"
+  parser_types.SymbolMetadata(named: true),  # "comment"
   parser_types.SymbolMetadata(named: true),  # "/\\s/"
 ]
 
