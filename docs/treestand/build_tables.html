@@ -159,11 +159,15 @@
 
 </ul>
 <ul class="simple nested-toc-section">buildParseTable
-  <li><a class="reference" href="#buildParseTable%2CSyntaxGrammar%2CLexicalGrammar" title="buildParseTable(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar): BuildParseTable">buildParseTable(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar): BuildParseTable</a></li>
+  <li><a class="reference" href="#buildParseTable%2CSyntaxGrammar%2CLexicalGrammar%2Cbool" title="buildParseTable(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;
+                skipConflictDetection: bool = false): BuildParseTable">buildParseTable(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;
+                skipConflictDetection: bool = false): BuildParseTable</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">buildTables
-  <li><a class="reference" href="#buildTables%2CSyntaxGrammar%2CLexicalGrammar" title="buildTables(syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar): Tables">buildTables(syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar): Tables</a></li>
+  <li><a class="reference" href="#buildTables%2CSyntaxGrammar%2CLexicalGrammar%2Cbool" title="buildTables(syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;
+            skipConflictDetection: bool = false): Tables">buildTables(syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;
+            skipConflictDetection: bool = false): Tables</a></li>
 
 </ul>
 <ul class="simple nested-toc-section">closure
@@ -308,8 +312,8 @@
   <dd>
     
     The &quot;core&quot; of an LR item: just the rule position, without lookaheads. This is the key for LALR(1) state merging.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1460" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1460" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1494" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1494" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -321,8 +325,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1831" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1831" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1867" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1867" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -406,8 +410,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1426" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1426" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1460" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1460" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -428,8 +432,8 @@
   <dd>
     
     Maps each core item to its set of lookaheads. This is the new state representation for LALR(1).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1468" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1468" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1502" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1502" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -488,8 +492,8 @@
   <dd>
     
     Ordering for CoreItem (for sorted sequences as map keys).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1488" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1488" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1522" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1522" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -498,8 +502,8 @@
   <dd>
     
     Ordering for sorting LR0Items
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L2493" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L2493" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L2510" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L2510" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -508,8 +512,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1449" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1449" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1483" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1483" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -521,8 +525,8 @@
   <dd>
     
     Equality for CoreItem.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1481" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1481" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1515" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1515" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -531,8 +535,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1442" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1442" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1476" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1476" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -548,8 +552,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L2142" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L2142" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L2177" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L2177" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -572,17 +576,18 @@
 <li>Propagates lookahead changes back through the worklist</li>
 </ol>
 
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L2275" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L2275" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L2312" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L2312" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 
 </div>
 <div id="buildParseTable-procs-all">
-  <div id="buildParseTable,SyntaxGrammar,LexicalGrammar">
-  <dt><pre><span class="Keyword">proc</span> <a href="#buildParseTable%2CSyntaxGrammar%2CLexicalGrammar"><span class="Identifier">buildParseTable</span></a><span class="Other">(</span><span class="Identifier">grammar</span><span class="Other">:</span> <a href="grammar.html#SyntaxGrammar"><span class="Identifier">SyntaxGrammar</span></a><span class="Other">;</span> <span class="Identifier">lexicalGrammar</span><span class="Other">:</span> <a href="grammar.html#LexicalGrammar"><span class="Identifier">LexicalGrammar</span></a><span class="Other">)</span><span class="Other">:</span> <a href="grammar.html#BuildParseTable"><span class="Identifier">BuildParseTable</span></a> {.
-    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">BuildTablesError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
+  <div id="buildParseTable,SyntaxGrammar,LexicalGrammar,bool">
+  <dt><pre><span class="Keyword">proc</span> <a href="#buildParseTable%2CSyntaxGrammar%2CLexicalGrammar%2Cbool"><span class="Identifier">buildParseTable</span></a><span class="Other">(</span><span class="Identifier">grammar</span><span class="Other">:</span> <a href="grammar.html#SyntaxGrammar"><span class="Identifier">SyntaxGrammar</span></a><span class="Other">;</span> <span class="Identifier">lexicalGrammar</span><span class="Other">:</span> <a href="grammar.html#LexicalGrammar"><span class="Identifier">LexicalGrammar</span></a><span class="Other">;</span>
+                     <span class="Identifier">skipConflictDetection</span><span class="Other">:</span> <span class="Identifier">bool</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <a href="grammar.html#BuildParseTable"><span class="Identifier">BuildParseTable</span></a> {.
+    <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">KeyError</span><span class="Other">,</span> <span class="Identifier">ValueError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
     
@@ -594,8 +599,9 @@
 
 </div>
 <div id="buildTables-procs-all">
-  <div id="buildTables,SyntaxGrammar,LexicalGrammar">
-  <dt><pre><span class="Keyword">proc</span> <a href="#buildTables%2CSyntaxGrammar%2CLexicalGrammar"><span class="Identifier">buildTables</span></a><span class="Other">(</span><span class="Identifier">syntaxGrammar</span><span class="Other">:</span> <a href="grammar.html#SyntaxGrammar"><span class="Identifier">SyntaxGrammar</span></a><span class="Other">;</span> <span class="Identifier">lexicalGrammar</span><span class="Other">:</span> <a href="grammar.html#LexicalGrammar"><span class="Identifier">LexicalGrammar</span></a><span class="Other">)</span><span class="Other">:</span> <a href="build_tables.html#Tables"><span class="Identifier">Tables</span></a> {.
+  <div id="buildTables,SyntaxGrammar,LexicalGrammar,bool">
+  <dt><pre><span class="Keyword">proc</span> <a href="#buildTables%2CSyntaxGrammar%2CLexicalGrammar%2Cbool"><span class="Identifier">buildTables</span></a><span class="Other">(</span><span class="Identifier">syntaxGrammar</span><span class="Other">:</span> <a href="grammar.html#SyntaxGrammar"><span class="Identifier">SyntaxGrammar</span></a><span class="Other">;</span> <span class="Identifier">lexicalGrammar</span><span class="Other">:</span> <a href="grammar.html#LexicalGrammar"><span class="Identifier">LexicalGrammar</span></a><span class="Other">;</span>
+                 <span class="Identifier">skipConflictDetection</span><span class="Other">:</span> <span class="Identifier">bool</span> <span class="Other">=</span> <span class="Identifier">false</span><span class="Other">)</span><span class="Other">:</span> <a href="build_tables.html#Tables"><span class="Identifier">Tables</span></a> {.
     <span><span class="Other pragmadots">...</span></span><span class="pragmawrap"><span class="Identifier">raises</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">Exception</span><span class="Other">,</span> <span class="Identifier">KeyError</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">tags</span><span class="Other">:</span> <span class="Other">[</span><span class="Identifier">RootEffect</span><span class="Other">]</span><span class="Other">,</span> <span class="Identifier">forbids</span><span class="Other">:</span> <span class="Other">[</span><span class="Other">]</span></span>.}</pre></dt>
   <dd>
     
@@ -626,8 +632,8 @@
   <dd>
     
     Compute closure using a Worklist Algorithm (O(N) instead of O(N^2))
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1843" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1843" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1879" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1879" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -641,8 +647,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1949" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1949" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1985" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1985" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -669,8 +675,8 @@
   <dd>
     
     Compute FOLLOW sets for all non-terminals
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1361" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1361" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1395" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1395" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -683,8 +689,8 @@
   <dd>
     
     Analyzes the grammar and sets the .isNullable flag on all variables
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L771" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L771" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L825" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L825" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -697,8 +703,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1124" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1124" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1167" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1167" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -711,8 +717,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1128" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1128" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1171" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1171" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -728,8 +734,8 @@
     <p>Compute the transitive closure of a kernel set using the precomputed cache. Input: Kernel items (rule positions with their lookahead BitSets) Output: Full closure (kernels + all recursive expansions)</p>
 <p>This is the key LALR(1) optimization: we only store kernels in states, and compute closure on-the-fly when needed (during GOTO transitions).</p>
 
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1708" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1708" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1744" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1744" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -743,8 +749,8 @@
   <dd>
     
     Compute GOTO(items, symbol)
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L2039" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L2039" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L2075" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L2075" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -757,8 +763,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1836" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1836" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1872" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1872" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -767,8 +773,8 @@
   <dd>
     
     Efficient hash for CoreItem using combined field hashing.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1472" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1472" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1506" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1506" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -777,8 +783,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1433" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1433" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1467" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1467" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -807,8 +813,8 @@
   <dd>
     
     Precompute closure expansions using BitSet for efficient lookahead operations. This is the optimized version for LALR(1) with kernel-only storage.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1605" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1605" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1639" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1639" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -821,8 +827,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1131" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1131" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1174" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1174" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -837,8 +843,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1147" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1147" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/build_tables.nim#L1198" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/build_tables.nim#L1198" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -854,7 +860,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-27 01:58:46 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-01-09 00:05:52 UTC</small>
       </div>
     </div>
   </div>

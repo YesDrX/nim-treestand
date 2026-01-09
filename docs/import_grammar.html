@@ -189,13 +189,45 @@
 <span class="Keyword">const</span> <span class="Identifier">projectRoot</span> <span class="Operator">=</span> <span class="Identifier">currentSourcePath</span><span class="Operator">.</span><span class="Identifier">parentDir</span><span class="Operator">.</span><span class="Identifier">parentDir</span><span class="Operator">.</span><span class="Identifier">parentDir</span>
 <span class="Identifier">importGrammar</span><span class="Punctuation">(</span><span class="Identifier">projectRoot</span> <span class="Operator">/</span> <span class="StringLit">&quot;grammars&quot;</span> <span class="Operator">/</span> <span class="StringLit">&quot;json&quot;</span> <span class="Operator">/</span> <span class="StringLit">&quot;grammar.js&quot;</span><span class="Punctuation">)</span></pre></p>
 
-<h2 id="external-scanners">External Scanners</h2><p>Some Tree-sitter grammars use external scanners (written in C) for complex tokenization. Treestand supports these through external tokens:</p>
-<p><pre class="listing"><span class="Comment"># The grammar.js defines external tokens</span>
-<span class="Comment"># Treestand will generate hooks for them</span>
-<span class="Identifier">importGrammar</span><span class="Punctuation">(</span><span class="StringLit">&quot;grammar.js&quot;</span><span class="Punctuation">)</span>
+<h2 id="external-scanners">External Scanners</h2><p>Some Tree-sitter grammars use external scanners for complex tokenization tasks (e.g., Python indentation, string interpolation). Treestand supports both <strong>Nim</strong> and <strong>C/C++</strong> external scanners.</p>
 
-<span class="Comment"># automatically generate the following</span>
-<span class="Comment"># {.compile: &quot;path/to/scanner.c&quot;.}</span>
+<h3 id="autominusdetection">Auto-Detection</h3><p>When a grammar defines external tokens, Treestand automatically searches for scanner files in the grammar directory:</p>
+<p><strong>Priority order:</strong></p>
+<ol class="simple"><li><tt class="docutils literal"><span class="pre">scanner.nim</span></tt> (Nim scanner)</li>
+<li><tt class="docutils literal"><span class="pre">scanner.c</span></tt> (C scanner)</li>
+<li><tt class="docutils literal"><span class="pre">scanner.cc</span></tt> (C++ scanner)</li>
+<li><tt class="docutils literal"><span class="pre">src/scanner.c</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">src/scanner.cc</span></tt></li>
+</ol>
+<p><pre class="listing"><span class="Comment"># If grammar.js defines external tokens and scanner.nim or scanner.c exists</span>
+<span class="Comment"># in the grammar directory, it will be automatically detected and used</span>
+<span class="Identifier">importGrammar</span><span class="Punctuation">(</span><span class="StringLit">&quot;path/to/grammar.js&quot;</span><span class="Punctuation">)</span></pre></p>
+
+<h3 id="nim-scanners">Nim Scanners</h3><p>If <tt class="docutils literal"><span class="pre">scanner.nim</span></tt> is found, Treestand imports it directly:</p>
+<p><strong>Generated code:</strong></p>
+<p><pre class="listing"><span class="Comment"># Import external Nim scanner</span>
+<span class="Keyword">import</span> <span class="Identifier">path</span><span class="Operator">/</span><span class="Identifier">to</span><span class="Operator">/</span><span class="Identifier">scanner</span></pre></p>
+<p><strong>Your scanner.nim must export these functions:</strong></p>
+<p><pre class="listing"><span class="Keyword">import</span> <span class="Identifier">treestand</span><span class="Operator">/</span><span class="Identifier">parser_types</span>
+
+<span class="Keyword">proc</span> <span class="Identifier">scanner_create</span><span class="Operator">*</span><span class="Punctuation">(</span><span class="Punctuation">)</span><span class="Punctuation">:</span> <span class="Identifier">pointer</span> <span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">exportc</span><span class="Punctuation">:</span> <span class="StringLit">&quot;tree_sitter_mylang_external_scanner_create&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
+<span class="Keyword">proc</span> <span class="Identifier">scanner_destroy</span><span class="Operator">*</span><span class="Punctuation">(</span><span class="Identifier">payload</span><span class="Punctuation">:</span> <span class="Identifier">pointer</span><span class="Punctuation">)</span> <span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">exportc</span><span class="Punctuation">:</span> <span class="StringLit">&quot;tree_sitter_mylang_external_scanner_destroy&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
+<span class="Keyword">proc</span> <span class="Identifier">scanner_scan</span><span class="Operator">*</span><span class="Punctuation">(</span><span class="Identifier">payload</span><span class="Punctuation">:</span> <span class="Identifier">pointer</span><span class="Punctuation">,</span> <span class="Identifier">lexer</span><span class="Punctuation">:</span> <span class="Keyword">ptr</span> <span class="Identifier">TSLexer</span><span class="Punctuation">,</span> <span class="Identifier">valid_symbols</span><span class="Punctuation">:</span> <span class="Keyword">ptr</span> <span class="Identifier">bool</span><span class="Punctuation">)</span><span class="Punctuation">:</span> <span class="Identifier">bool</span> <span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">exportc</span><span class="Punctuation">:</span> <span class="StringLit">&quot;tree_sitter_mylang_external_scanner_scan&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
+<span class="Keyword">proc</span> <span class="Identifier">scanner_serialize</span><span class="Operator">*</span><span class="Punctuation">(</span><span class="Identifier">payload</span><span class="Punctuation">:</span> <span class="Identifier">pointer</span><span class="Punctuation">,</span> <span class="Identifier">buffer</span><span class="Punctuation">:</span> <span class="Identifier">cstring</span><span class="Punctuation">)</span><span class="Punctuation">:</span> <span class="Identifier">cuint</span> <span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">exportc</span><span class="Punctuation">:</span> <span class="StringLit">&quot;tree_sitter_mylang_external_scanner_serialize&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
+<span class="Keyword">proc</span> <span class="Identifier">scanner_deserialize</span><span class="Operator">*</span><span class="Punctuation">(</span><span class="Identifier">payload</span><span class="Punctuation">:</span> <span class="Identifier">pointer</span><span class="Punctuation">,</span> <span class="Identifier">buffer</span><span class="Punctuation">:</span> <span class="Identifier">cstring</span><span class="Punctuation">,</span> <span class="Identifier">length</span><span class="Punctuation">:</span> <span class="Identifier">cuint</span><span class="Punctuation">)</span> <span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">exportc</span><span class="Punctuation">:</span> <span class="StringLit">&quot;tree_sitter_mylang_external_scanner_deserialize&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span></pre></p>
+<p><strong>Benefits of Nim scanners:</strong></p>
+<ul class="simple"><li>Zero FFI overhead</li>
+<li>Full Nim type safety</li>
+<li>Access to Nim's standard library</li>
+<li>Easier debugging</li>
+</ul>
+
+<h3 id="cslashcplusplus-scanners">C/C++ Scanners</h3><p>If <tt class="docutils literal"><span class="pre">scanner.c</span></tt> or <tt class="docutils literal"><span class="pre">scanner.cc</span></tt> is found, Treestand compiles it using Nim's FFI:</p>
+<p><strong>Generated code:</strong></p>
+<p><pre class="listing"><span class="Comment"># Compile external scanner</span>
+<span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">passC</span><span class="Punctuation">:</span> <span class="LongStringLit">&quot;&quot;&quot; -I&quot;grammar_dir&quot; &quot;&quot;&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
+<span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">passC</span><span class="Punctuation">:</span> <span class="LongStringLit">&quot;&quot;&quot; -I&quot;grammar_dir/src&quot; &quot;&quot;&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
+<span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">compile</span><span class="Punctuation">:</span> <span class="LongStringLit">&quot;&quot;&quot;grammar_dir/src/scanner.c&quot;&quot;&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
 
 <span class="Comment"># External scanner functions</span>
 <span class="Keyword">proc</span> <span class="Identifier">scanner_create</span><span class="Operator">*</span><span class="Punctuation">(</span><span class="Punctuation">)</span><span class="Punctuation">:</span> <span class="Identifier">pointer</span> <span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">importc</span><span class="Punctuation">:</span> <span class="StringLit">&quot;tree_sitter_simple_scanner_external_scanner_create&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
@@ -203,7 +235,7 @@
 <span class="Keyword">proc</span> <span class="Identifier">scanner_scan</span><span class="Operator">*</span><span class="Punctuation">(</span><span class="Identifier">payload</span><span class="Punctuation">:</span> <span class="Identifier">pointer</span><span class="Punctuation">,</span> <span class="Identifier">lexer</span><span class="Punctuation">:</span> <span class="Keyword">ptr</span> <span class="Identifier">TSLexer</span><span class="Punctuation">,</span> <span class="Identifier">valid_symbols</span><span class="Punctuation">:</span> <span class="Keyword">ptr</span> <span class="Identifier">bool</span><span class="Punctuation">)</span><span class="Punctuation">:</span> <span class="Identifier">bool</span> <span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">importc</span><span class="Punctuation">:</span> <span class="StringLit">&quot;tree_sitter_simple_scanner_external_scanner_scan&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
 <span class="Keyword">proc</span> <span class="Identifier">scanner_serialize</span><span class="Operator">*</span><span class="Punctuation">(</span><span class="Identifier">payload</span><span class="Punctuation">:</span> <span class="Identifier">pointer</span><span class="Punctuation">,</span> <span class="Identifier">buffer</span><span class="Punctuation">:</span> <span class="Identifier">cstring</span><span class="Punctuation">)</span><span class="Punctuation">:</span> <span class="Identifier">cuint</span> <span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">importc</span><span class="Punctuation">:</span> <span class="StringLit">&quot;tree_sitter_simple_scanner_external_scanner_serialize&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span>
 <span class="Keyword">proc</span> <span class="Identifier">scanner_deserialize</span><span class="Operator">*</span><span class="Punctuation">(</span><span class="Identifier">payload</span><span class="Punctuation">:</span> <span class="Identifier">pointer</span><span class="Punctuation">,</span> <span class="Identifier">buffer</span><span class="Punctuation">:</span> <span class="Identifier">cstring</span><span class="Punctuation">,</span> <span class="Identifier">length</span><span class="Punctuation">:</span> <span class="Identifier">cuint</span><span class="Punctuation">)</span> <span class="Punctuation">{</span><span class="Operator">.</span><span class="Identifier">importc</span><span class="Punctuation">:</span> <span class="StringLit">&quot;tree_sitter_simple_scanner_external_scanner_deserialize&quot;</span><span class="Operator">.</span><span class="Punctuation">}</span></pre></p>
-<p>The <tt class="docutils literal"><span class="pre">importGrammar</span></tt> macro automatically detects external tokens and generates the appropriate hooks.</p>
+<p>The C scanner is automatically compiled as part of your Nim project.</p>
 
 <h2 id="buildminustime-messages">Build-Time Messages</h2><p>When compiling, you'll see informative messages:</p>
 <p><pre class="listing">[Treestand] building from grammar: /path/to/grammar.js</pre></p>
@@ -252,7 +284,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-27 01:58:47 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-01-09 00:05:54 UTC</small>
       </div>
     </div>
   </div>

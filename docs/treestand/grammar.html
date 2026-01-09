@@ -133,10 +133,12 @@
   variablesToInline*: seq[string] ## Rules to inline into their callers.
   supertypeSymbols*: seq[string] ## Rules grouped as supertypes (for query API).
   wordToken*: Option[string] ## Keyword tokenizer optimization.
-  reservedWords*: seq[ReservedWordContext[Rule]]">InputGrammar</a></li>
+  reservedWords*: seq[ReservedWordContext[Rule]]
+  externalScanner*: string   ## Path to external scanner (scanner.nim or scanner.c).">InputGrammar</a></li>
 <li><a class="reference" href="#LexicalGrammar" title="LexicalGrammar = object
   nfa*: Nfa
-  variables*: seq[LexicalVariable]">LexicalGrammar</a></li>
+  variables*: seq[LexicalVariable]
+  separators*: seq[Rule]     ## Patterns to consume between tokens (e.g., /\s/)">LexicalGrammar</a></li>
 <li><a class="reference" href="#LexicalVariable" title="LexicalVariable = object
   name*: string
   kind*: VariableType
@@ -235,7 +237,8 @@
   name*: string
   kind*: VariableType
   productions*: seq[Production]
-  isNullable*: bool">SyntaxVariable</a></li>
+  isNullable*: bool
+  originalSymbol*: Option[GrammarSymbol] ## Points to the original user-defined symbol for aux rules">SyntaxVariable</a></li>
 <li><a class="reference" href="#TokenSet" title="TokenSet = object
   terminalBits*: seq[bool]
   externalBits*: seq[bool]
@@ -244,7 +247,8 @@
 <li><a class="reference" href="#Variable" title="Variable = object
   name*: string
   kind*: VariableType
-  rule*: Rule">Variable</a></li>
+  rule*: Rule
+  originalSymbol*: Option[GrammarSymbol] ## Points to the original user-defined symbol for aux rules">Variable</a></li>
 <li><a class="reference" href="#VariableType" title="VariableType = enum
   vtHidden,                 ## Internal rule, not exposed in the CST (prefixed with `_`).
   vtAuxiliary,              ## Generated helper rule (e.g. for repetition or sequences).
@@ -328,8 +332,8 @@
   <dd>
     
     Represents a renamed symbol in the parse tree (e.g., mapping &quot;unary_minus&quot; to &quot;-&quot;).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L124" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L124" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L128" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L128" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -338,8 +342,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L208" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L208" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L212" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L212" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -350,8 +354,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L257" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L257" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L261" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L261" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -361,8 +365,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L267" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L267" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L271" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L271" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -375,8 +379,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L261" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L261" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L265" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L265" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -401,8 +405,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L218" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L218" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L222" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L222" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -412,8 +416,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L210" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L210" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L214" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L214" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -425,8 +429,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L251" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L251" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L255" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L255" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -438,8 +442,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L236" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L236" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L240" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L240" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -452,8 +456,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L244" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L244" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L248" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L248" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -465,8 +469,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L93" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L93" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L97" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L97" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -477,8 +481,8 @@
   <dd>
     
     Specifies associativity for binary operations.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L119" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L119" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L123" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L123" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -489,8 +493,8 @@
   <dd>
     
     Represents a unique symbol in the grammar, identified by type and index. This is the build-time representation, distinct from <tt class="docutils literal"><span class="pre"><span class="Identifier">parser_types</span><span class="Operator">.</span><span class="Identifier">Symbol</span></span></tt>.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L154" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L154" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L158" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L158" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -504,8 +508,8 @@
   <dd>
     
     Distinguishes between different kinds of symbols in the grammar.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L111" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L111" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L115" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L115" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -516,8 +520,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L81" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L81" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L84" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L84" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -532,24 +536,26 @@
   <span class="Identifier">variablesToInline</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span> <span class="Comment">## Rules to inline into their callers.</span>
   <span class="Identifier">supertypeSymbols</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span> <span class="Comment">## Rules grouped as supertypes (for query API).</span>
   <span class="Identifier">wordToken</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span> <span class="Comment">## Keyword tokenizer optimization.</span>
-  <span class="Identifier">reservedWords</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#ReservedWordContext"><span class="Identifier">ReservedWordContext</span></a><span class="Other">[</span><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span><span class="Other">]</span></pre></dt>
+  <span class="Identifier">reservedWords</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#ReservedWordContext"><span class="Identifier">ReservedWordContext</span></a><span class="Other">[</span><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span><span class="Other">]</span>
+  <span class="Identifier">externalScanner</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>   <span class="Comment">## Path to external scanner (scanner.nim or scanner.c).</span></pre></dt>
   <dd>
     
     The raw grammar definition provided by the user (or DSL). This is the input to the <tt class="docutils literal"><span class="pre"><span class="Identifier">prepareGrammar</span></span></tt> phase.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L34" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L34" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L35" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L35" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
 <div id="LexicalGrammar">
   <dt><pre><a href="grammar.html#LexicalGrammar"><span class="Identifier">LexicalGrammar</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">nfa</span><span class="Operator">*</span><span class="Other">:</span> <a href="nfa.html#Nfa"><span class="Identifier">Nfa</span></a>
-  <span class="Identifier">variables</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#LexicalVariable"><span class="Identifier">LexicalVariable</span></a><span class="Other">]</span></pre></dt>
+  <span class="Identifier">variables</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#LexicalVariable"><span class="Identifier">LexicalVariable</span></a><span class="Other">]</span>
+  <span class="Identifier">separators</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#Rule"><span class="Identifier">Rule</span></a><span class="Other">]</span>     <span class="Comment">## Patterns to consume between tokens (e.g., /\s/)</span></pre></dt>
   <dd>
     
     The portion of the grammar handled by the Lexer. Consists of Regex/String rules converted to NFA.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L57" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L57" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L59" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L59" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -563,8 +569,8 @@
   <dd>
     
     A refined variable for the Lexical Grammar (Lexer). These are typically Terminals (tokens).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L48" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L48" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L50" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L50" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -580,8 +586,8 @@
   <dd>
     
     Stores metadata associated with a rule, affecting parsing behavior.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L144" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L144" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L148" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L148" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -597,8 +603,8 @@
   <dd>
     
     Encapsulates precedence information for a rule or production step.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L134" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L134" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L138" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L138" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -625,8 +631,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L129" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L129" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L133" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L133" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -639,8 +645,8 @@
   <dd>
     
     A single alternative in a Syntax Variable (e.g. one branch of a Choice).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L74" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L74" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L77" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L77" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -655,8 +661,8 @@
   <dd>
     
     A single element in a production sequence (RHS).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L65" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L65" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L68" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L68" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -677,8 +683,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L63" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L63" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L66" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L66" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -711,8 +717,8 @@
   <dd>
     
     The core recursive data structure representing a grammar rule expression. This AST is built via the DSL and processed to generate the parser.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L173" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L173" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L177" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L177" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -731,8 +737,8 @@
   <dd>
     
     Enumeration of all possible AST node types for the grammar DSL.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L160" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L160" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L164" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L164" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -750,8 +756,8 @@
   <dd>
     
     The processed grammar ready for Parse Table generation. Variables here are Non-Terminals composed of other Symbols (Terminals/Non-Terminals).
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L98" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L98" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L102" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L102" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -760,12 +766,13 @@
   <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#VariableType"><span class="Identifier">VariableType</span></a>
   <span class="Identifier">productions</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><a href="grammar.html#Production"><span class="Identifier">Production</span></a><span class="Other">]</span>
-  <span class="Identifier">isNullable</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span></pre></dt>
+  <span class="Identifier">isNullable</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">bool</span>
+  <span class="Identifier">originalSymbol</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span> <span class="Comment">## Points to the original user-defined symbol for aux rules</span></pre></dt>
   <dd>
     
     A variable in the Syntax Grammar (Parser). Typically Non-Terminals defined by sequences of ProductionSteps.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L85" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L85" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L88" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L88" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -778,8 +785,8 @@
   <dd>
     
     Bitset-like structure to track relevant tokens for Lexer state generation.
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L201" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L201" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L205" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L205" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -787,7 +794,8 @@
   <dt><pre><a href="grammar.html#Variable"><span class="Identifier">Variable</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
   <span class="Identifier">name</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">string</span>
   <span class="Identifier">kind</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#VariableType"><span class="Identifier">VariableType</span></a>
-  <span class="Identifier">rule</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#Rule"><span class="Identifier">Rule</span></a></pre></dt>
+  <span class="Identifier">rule</span><span class="Operator">*</span><span class="Other">:</span> <a href="grammar.html#Rule"><span class="Identifier">Rule</span></a>
+  <span class="Identifier">originalSymbol</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">Option</span><span class="Other">[</span><a href="grammar.html#GrammarSymbol"><span class="Identifier">GrammarSymbol</span></a><span class="Other">]</span> <span class="Comment">## Points to the original user-defined symbol for aux rules</span></pre></dt>
   <dd>
     
     Represents a high-level rule definition from the user's input grammar.
@@ -821,8 +829,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L271" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L271" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L275" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L275" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -838,8 +846,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L302" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L302" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L306" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L306" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -852,8 +860,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L368" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L368" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L372" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L372" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -862,8 +870,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L296" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L296" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L300" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L300" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -872,8 +880,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L284" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L284" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L288" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L288" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -882,8 +890,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L342" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L342" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L346" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L346" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -896,8 +904,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L390" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L390" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L394" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L394" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -906,8 +914,8 @@
   <dd>
     
     Structural hash for Rule
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L312" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L312" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L316" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L316" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -916,8 +924,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L299" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L299" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L303" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L303" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -930,8 +938,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L293" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L293" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L297" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L297" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -943,8 +951,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L278" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L278" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L282" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L282" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -953,8 +961,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L275" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L275" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L279" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L279" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -966,8 +974,8 @@
   <dd>
     
     
-    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L281" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
-<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L281" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
+    <a href="https://github.com/YesDrX/nim-treestand/tree/master/src/treestand/grammar.nim#L285" class="link-seesrc" target="_blank">Source</a>&nbsp;&nbsp;
+<a href="https://github.com/YesDrX/nim-treestand/edit/devel/src/treestand/grammar.nim#L285" class="link-seesrc" target="_blank" >Edit</a>&nbsp;&nbsp;
 
   </dd>
 </div>
@@ -983,7 +991,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-27 01:58:45 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-01-09 00:05:51 UTC</small>
       </div>
     </div>
   </div>

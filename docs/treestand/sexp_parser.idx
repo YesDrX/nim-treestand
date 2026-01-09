@@ -1,16 +1,16 @@
 nimTitle	sexp_parser	treestand/sexp_parser.html	module src/treestand/sexp_parser		0
 nim	tsEOF	treestand/sexp_parser.html#tsEOF	TerminalSymbol.tsEOF		15
-nim	tsPattern	treestand/sexp_parser.html#tsPattern	TerminalSymbol.tsPattern		15
 nim	tsLParen	treestand/sexp_parser.html#tsLParen	TerminalSymbol.tsLParen		15
 nim	tsRParen	treestand/sexp_parser.html#tsRParen	TerminalSymbol.tsRParen		15
 nim	tsIdentifier	treestand/sexp_parser.html#tsIdentifier	TerminalSymbol.tsIdentifier		15
 nim	tsGrammarSymbol	treestand/sexp_parser.html#tsGrammarSymbol	TerminalSymbol.tsGrammarSymbol		15
+nim	tsPattern	treestand/sexp_parser.html#tsPattern	TerminalSymbol.tsPattern		15
 nim	tsPattern_6	treestand/sexp_parser.html#tsPattern_6	TerminalSymbol.tsPattern_6		15
-nim	tsPattern_7	treestand/sexp_parser.html#tsPattern_7	TerminalSymbol.tsPattern_7		15
-nim	tsGrammarSymbol_8	treestand/sexp_parser.html#tsGrammarSymbol_8	TerminalSymbol.tsGrammarSymbol_8		15
+nim	tsGrammarSymbol_7	treestand/sexp_parser.html#tsGrammarSymbol_7	TerminalSymbol.tsGrammarSymbol_7		15
+nim	tsPattern_8	treestand/sexp_parser.html#tsPattern_8	TerminalSymbol.tsPattern_8		15
 nim	tsPattern_9	treestand/sexp_parser.html#tsPattern_9	TerminalSymbol.tsPattern_9		15
-nim	tsPattern_10	treestand/sexp_parser.html#tsPattern_10	TerminalSymbol.tsPattern_10		15
 nim	tsDot	treestand/sexp_parser.html#tsDot	TerminalSymbol.tsDot		15
+nim	tsPattern_11	treestand/sexp_parser.html#tsPattern_11	TerminalSymbol.tsPattern_11		15
 nim	tsPattern_12	treestand/sexp_parser.html#tsPattern_12	TerminalSymbol.tsPattern_12		15
 nim	TerminalSymbol	treestand/sexp_parser.html#TerminalSymbol	enum TerminalSymbol		15
 nim	ntProgram	treestand/sexp_parser.html#ntProgram	NonTerminalSymbol.ntProgram		30
@@ -31,36 +31,36 @@ nim	nonTerminalSymbolNames	treestand/sexp_parser.html#nonTerminalSymbolNames	con
 nim	terminalSymbolMetadata	treestand/sexp_parser.html#terminalSymbolMetadata	const terminalSymbolMetadata		76
 nim	nonTerminalSymbolMetadata	treestand/sexp_parser.html#nonTerminalSymbolMetadata	const nonTerminalSymbolMetadata		92
 nim	parseTableActions	treestand/sexp_parser.html#parseTableActions	const parseTableActions		109
-nim	parseTableGotos	treestand/sexp_parser.html#parseTableGotos	const parseTableGotos		290
-nim	parseTableIndex	treestand/sexp_parser.html#parseTableIndex	const parseTableIndex		329
-nim	productionInfos	treestand/sexp_parser.html#productionInfos	const productionInfos		351
-nim	lexStates	treestand/sexp_parser.html#lexStates	const lexStates		554
-nim	newLexer	treestand/sexp_parser.html#newLexer,string	proc newLexer(input: string): Lexer		1273
-nim	nextToken	treestand/sexp_parser.html#nextToken,Lexer,set[int16],int	proc nextToken(lexer: Lexer; validExternalSymbols: set[int16] = {}; lexState: int = 0): Token		1286
-nim	externalTokenBase	treestand/sexp_parser.html#externalTokenBase	const externalTokenBase		1465
-nim	externalExtraTokens	treestand/sexp_parser.html#externalExtraTokens	const externalExtraTokens		1466
+nim	parseTableGotos	treestand/sexp_parser.html#parseTableGotos	const parseTableGotos		236
+nim	parseTableIndex	treestand/sexp_parser.html#parseTableIndex	const parseTableIndex		255
+nim	productionInfos	treestand/sexp_parser.html#productionInfos	const productionInfos		272
+nim	lexStates	treestand/sexp_parser.html#lexStates	const lexStates		484
+nim	newLexer	treestand/sexp_parser.html#newLexer,string	proc newLexer(input: string): Lexer		1323
+nim	nextToken	treestand/sexp_parser.html#nextToken,Lexer,set[int16],int	proc nextToken(lexer: Lexer; validExternalSymbols: set[int16] = {}; lexState: int = 0): Token		1336
+nim	externalTokenBase	treestand/sexp_parser.html#externalTokenBase	const externalTokenBase		1509
+nim	externalExtraTokens	treestand/sexp_parser.html#externalExtraTokens	const externalExtraTokens		1510
 nim	symbolName	treestand/sexp_parser.html#symbolName	proc symbolName(sym: parser_types.Symbol): string		12
 nim	isNamed	treestand/sexp_parser.html#isNamed	proc isNamed(sym: parser_types.Symbol): bool		28
 nim	`$`	treestand/sexp_parser.html#$,ParseNode	proc `$`(node: ParseNode): string		43
-nim	toSExpr	treestand/sexp_parser.html#toSExpr,ParseNode,int	proc toSExpr(node: ParseNode; indent: int = 0): string		78
-nim	walkTree	treestand/sexp_parser.html#walkTree,ParseNode,proc(ParseNode)	proc walkTree(node: ParseNode; visit: proc (n: ParseNode) {.closure.})		101
-nim	findNodes	treestand/sexp_parser.html#findNodes,ParseNode,proc(ParseNode)	proc findNodes(node: ParseNode; predicate: proc (n: ParseNode): bool {.closure.}): seq[\n    ParseNode]		109
-nim	findNodesBySymbol	treestand/sexp_parser.html#findNodesBySymbol,ParseNode,string	proc findNodesBySymbol(node: ParseNode; symbolNameToFind: string): seq[ParseNode]		116
-nim	runGenericGLR	treestand/sexp_parser.html#runGenericGLR,Parser,bool	proc runGenericGLR(parser: var Parser; raiseOnFail: bool = false): ParseNode		122
-nim	kind	treestand/sexp_parser.html#kind,ParseNode	proc kind(node: ParseNode): string		586
-nim	text	treestand/sexp_parser.html#text,ParseNode	proc text(node: ParseNode): string		591
-nim	child	treestand/sexp_parser.html#child,ParseNode,int	proc child(node: ParseNode; index: int): ParseNode		603
-nim	childCount	treestand/sexp_parser.html#childCount,ParseNode	proc childCount(node: ParseNode): int		609
-nim	child	treestand/sexp_parser.html#child,ParseNode,string	proc child(node: ParseNode; name: string): ParseNode		614
-nim	capture	treestand/sexp_parser.html#capture,ParseNode	proc capture(node: ParseNode): string		622
-nim	children	treestand/sexp_parser.html#children.i,ParseNode	iterator children(node: ParseNode): ParseNode		626
-nim	namedChildren	treestand/sexp_parser.html#namedChildren.i,ParseNode	iterator namedChildren(node: ParseNode): ParseNode		632
-nim	namedChild	treestand/sexp_parser.html#namedChild,ParseNode,int	proc namedChild(node: ParseNode; index: int): ParseNode		639
-nim	namedChildCount	treestand/sexp_parser.html#namedChildCount,ParseNode	proc namedChildCount(node: ParseNode): int		649
-nim	hasError	treestand/sexp_parser.html#hasError,ParseNode	proc hasError(node: ParseNode): bool		657
-nim	edit	treestand/sexp_parser.html#edit,ParseNode,InputEdit	proc edit(node: ParseNode; edit: InputEdit)		679
-nim	writeCorpus	treestand/sexp_parser.html#writeCorpus,string,string,string,ParseNode,string	proc writeCorpus(filename: string; testName: string; input: string;\n            tree: ParseNode = nil; expectedSExpr: string = "")		739
-nim	newParser	treestand/sexp_parser.html#newParser,string	proc newParser(input: string): Parser		1469
-nim	parse	treestand/sexp_parser.html#parse,Parser	proc parse(parser: var Parser): ParseNode		1487
-nim	parseSexp	treestand/sexp_parser.html#parseSexp,string	proc parseSexp(input: string): ParseNode		1490
-nimgrp	child	treestand/sexp_parser.html#child-procs-all	proc		603
+nim	toSExpr	treestand/sexp_parser.html#toSExpr,ParseNode,int	proc toSExpr(node: ParseNode; indent: int = 0): string		89
+nim	walkTree	treestand/sexp_parser.html#walkTree,ParseNode,proc(ParseNode)	proc walkTree(node: ParseNode; visit: proc (n: ParseNode) {.closure.})		112
+nim	findNodes	treestand/sexp_parser.html#findNodes,ParseNode,proc(ParseNode)	proc findNodes(node: ParseNode; predicate: proc (n: ParseNode): bool {.closure.}): seq[\n    ParseNode]		120
+nim	findNodesBySymbol	treestand/sexp_parser.html#findNodesBySymbol,ParseNode,string	proc findNodesBySymbol(node: ParseNode; symbolNameToFind: string): seq[ParseNode]		127
+nim	runGenericGLR	treestand/sexp_parser.html#runGenericGLR,Parser,bool	proc runGenericGLR(parser: var Parser; raiseOnFail: bool = false): ParseNode		133
+nim	kind	treestand/sexp_parser.html#kind,ParseNode	proc kind(node: ParseNode): string		657
+nim	text	treestand/sexp_parser.html#text,ParseNode	proc text(node: ParseNode): string		662
+nim	child	treestand/sexp_parser.html#child,ParseNode,int	proc child(node: ParseNode; index: int): ParseNode		674
+nim	childCount	treestand/sexp_parser.html#childCount,ParseNode	proc childCount(node: ParseNode): int		680
+nim	child	treestand/sexp_parser.html#child,ParseNode,string	proc child(node: ParseNode; name: string): ParseNode		685
+nim	capture	treestand/sexp_parser.html#capture,ParseNode	proc capture(node: ParseNode): string		693
+nim	children	treestand/sexp_parser.html#children.i,ParseNode	iterator children(node: ParseNode): ParseNode		697
+nim	namedChildren	treestand/sexp_parser.html#namedChildren.i,ParseNode	iterator namedChildren(node: ParseNode): ParseNode		703
+nim	namedChild	treestand/sexp_parser.html#namedChild,ParseNode,int	proc namedChild(node: ParseNode; index: int): ParseNode		710
+nim	namedChildCount	treestand/sexp_parser.html#namedChildCount,ParseNode	proc namedChildCount(node: ParseNode): int		720
+nim	hasError	treestand/sexp_parser.html#hasError,ParseNode	proc hasError(node: ParseNode): bool		728
+nim	edit	treestand/sexp_parser.html#edit,ParseNode,InputEdit	proc edit(node: ParseNode; edit: InputEdit)		750
+nim	writeCorpus	treestand/sexp_parser.html#writeCorpus,string,string,string,ParseNode,string	proc writeCorpus(filename: string; testName: string; input: string;\n            tree: ParseNode = nil; expectedSExpr: string = "")		810
+nim	newParser	treestand/sexp_parser.html#newParser,string	proc newParser(input: string): Parser		1513
+nim	parse	treestand/sexp_parser.html#parse,Parser	proc parse(parser: var Parser): ParseNode		1531
+nim	parseSexp	treestand/sexp_parser.html#parseSexp,string	proc parseSexp(input: string): ParseNode		1534
+nimgrp	child	treestand/sexp_parser.html#child-procs-all	proc		674

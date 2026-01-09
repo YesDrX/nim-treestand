@@ -12,35 +12,35 @@ nim	ClosureCache	treestand/build_tables.html#ClosureCache	object ClosureCache		9
 nim	LR0Item	treestand/build_tables.html#LR0Item	object LR0Item		99
 nim	PropagationLink	treestand/build_tables.html#PropagationLink	object PropagationLink		106
 nim	LR0State	treestand/build_tables.html#LR0State	object LR0State		111
-nim	buildParseTable	treestand/build_tables.html#buildParseTable,SyntaxGrammar,LexicalGrammar	proc buildParseTable(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar): BuildParseTable		125
+nim	buildParseTable	treestand/build_tables.html#buildParseTable,SyntaxGrammar,LexicalGrammar,bool	proc buildParseTable(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;\n                skipConflictDetection: bool = false): BuildParseTable		125
 nim	computeFirst	treestand/build_tables.html#computeFirst,SyntaxGrammar	proc computeFirst(grammar: SyntaxGrammar): FirstSets		128
 nim	newTokenConflictMap	treestand/build_tables.html#newTokenConflictMap,LexicalGrammar,seq[HashSet[uint32]]	proc newTokenConflictMap(lexicalGrammar: LexicalGrammar;\n                    followingTokens: seq[HashSet[uint32]]): TokenConflictMap		136
-nim	buildTables	treestand/build_tables.html#buildTables,SyntaxGrammar,LexicalGrammar	proc buildTables(syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar): Tables		141
-nim	computeNullability	treestand/build_tables.html#computeNullability,SyntaxGrammar	proc computeNullability(grammar: var SyntaxGrammar)		771
-nim	doesConflict	treestand/build_tables.html#doesConflict,TokenConflictMap,int,int	proc doesConflict(map: TokenConflictMap; i, j: int): bool		1124
-nim	doesMatchSameString	treestand/build_tables.html#doesMatchSameString,TokenConflictMap,int,int	proc doesMatchSameString(map: TokenConflictMap; i, j: int): bool		1128
-nim	preferToken	treestand/build_tables.html#preferToken,LexicalGrammar,,	proc preferToken(grammar: LexicalGrammar; left: (int32, int); right: (int32, int)): bool		1131
-nim	preferTransition	treestand/build_tables.html#preferTransition,LexicalGrammar,NfaTransition,int,int32,bool	proc preferTransition(grammar: LexicalGrammar; t: NfaTransition; completedId: int;\n                 completedPrecedence: int32; hasSeparatorTransitions: bool): bool		1147
-nim	computeFollow	treestand/build_tables.html#computeFollow,SyntaxGrammar,FirstSets	proc computeFollow(grammar: SyntaxGrammar; firstSets: FirstSets): FollowSets		1361
-nim	LR1Item	treestand/build_tables.html#LR1Item	object LR1Item		1426
-nim	hash	treestand/build_tables.html#hash,LR1Item	proc hash(item: LR1Item): Hash		1433
-nim	`==`	treestand/build_tables.html#==,LR1Item,LR1Item	proc `==`(a, b: LR1Item): bool		1442
-nim	`<`	treestand/build_tables.html#<,LR1Item,LR1Item	proc `<`(a, b: LR1Item): bool		1449
-nim	CoreItem	treestand/build_tables.html#CoreItem	object CoreItem		1460
-nim	StateKernels	treestand/build_tables.html#StateKernels	type StateKernels		1468
-nim	hash	treestand/build_tables.html#hash,CoreItem	proc hash(item: CoreItem): Hash		1472
-nim	`==`	treestand/build_tables.html#==,CoreItem,CoreItem	proc `==`(a, b: CoreItem): bool		1481
-nim	`<`	treestand/build_tables.html#<,CoreItem,CoreItem	proc `<`(a, b: CoreItem): bool		1488
-nim	precomputeClosureCache	treestand/build_tables.html#precomputeClosureCache,SyntaxGrammar,LexicalGrammar,FirstSets	proc precomputeClosureCache(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;\n                       firstSets: FirstSets): ClosureCache		1605
-nim	getTransitiveClosure	treestand/build_tables.html#getTransitiveClosure,SyntaxGrammar,StateKernels,ClosureCache,FirstSets	proc getTransitiveClosure(grammar: SyntaxGrammar; kernels: StateKernels;\n                     cache: ClosureCache; firstSets: FirstSets): StateKernels		1708
-nim	FirstBetaCacheKey	treestand/build_tables.html#FirstBetaCacheKey	object FirstBetaCacheKey		1831
-nim	hash	treestand/build_tables.html#hash,FirstBetaCacheKey	proc hash(cacheKey: FirstBetaCacheKey): Hash		1836
-nim	closure	treestand/build_tables.html#closure,SyntaxGrammar,HashSet[LR1Item],FirstSets	proc closure(grammar: SyntaxGrammar; items: HashSet[LR1Item]; firstSets: FirstSets): HashSet[\n    LR1Item]		1843
-nim	closureFast	treestand/build_tables.html#closureFast,SyntaxGrammar,HashSet[LR1Item],FirstSets,ClosurePrecomputation	proc closureFast(grammar: SyntaxGrammar; items: HashSet[LR1Item];\n            firstSets: FirstSets; precomputed: ClosurePrecomputation): HashSet[\n    LR1Item]		1949
-nim	goto	treestand/build_tables.html#goto,SyntaxGrammar,HashSet[LR1Item],GrammarSymbol,FirstSets	proc goto(grammar: SyntaxGrammar; items: HashSet[LR1Item]; symbol: GrammarSymbol;\n     firstSets: FirstSets): HashSet[LR1Item]		2039
-nim	buildCanonicalCollection	treestand/build_tables.html#buildCanonicalCollection,SyntaxGrammar,FirstSets,int	proc buildCanonicalCollection(grammar: SyntaxGrammar; firstSets: FirstSets;\n                         augmentedStartIndex: int = -1): tuple[\n    states: seq[HashSet[LR1Item]], stateMap: Table[seq[LR1Item], int],\n    transitions: seq[Table[GrammarSymbol, int]]]		2142
-nim	buildCanonicalCollectionLALR	treestand/build_tables.html#buildCanonicalCollectionLALR,SyntaxGrammar,LexicalGrammar,FirstSets,int	proc buildCanonicalCollectionLALR(grammar: SyntaxGrammar;\n                             lexicalGrammar: LexicalGrammar;\n                             firstSets: FirstSets; augmentedStartIndex: int = -1): tuple[\n    states: seq[StateKernels], stateMap: Table[seq[CoreItem], seq[int]],\n    transitions: seq[Table[GrammarSymbol, int]]]		2275
-nim	`<`	treestand/build_tables.html#<,LR0Item,LR0Item	proc `<`(a, b: LR0Item): bool		2493
-nimgrp	==	treestand/build_tables.html#==-procs-all	proc		1442
-nimgrp	<	treestand/build_tables.html#<-procs-all	proc		1449
-nimgrp	hash	treestand/build_tables.html#hash-procs-all	proc		1433
+nim	buildTables	treestand/build_tables.html#buildTables,SyntaxGrammar,LexicalGrammar,bool	proc buildTables(syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;\n            skipConflictDetection: bool = false): Tables		141
+nim	computeNullability	treestand/build_tables.html#computeNullability,SyntaxGrammar	proc computeNullability(grammar: var SyntaxGrammar)		825
+nim	doesConflict	treestand/build_tables.html#doesConflict,TokenConflictMap,int,int	proc doesConflict(map: TokenConflictMap; i, j: int): bool		1167
+nim	doesMatchSameString	treestand/build_tables.html#doesMatchSameString,TokenConflictMap,int,int	proc doesMatchSameString(map: TokenConflictMap; i, j: int): bool		1171
+nim	preferToken	treestand/build_tables.html#preferToken,LexicalGrammar,,	proc preferToken(grammar: LexicalGrammar; left: (int32, int); right: (int32, int)): bool		1174
+nim	preferTransition	treestand/build_tables.html#preferTransition,LexicalGrammar,NfaTransition,int,int32,bool	proc preferTransition(grammar: LexicalGrammar; t: NfaTransition; completedId: int;\n                 completedPrecedence: int32; hasSeparatorTransitions: bool): bool		1198
+nim	computeFollow	treestand/build_tables.html#computeFollow,SyntaxGrammar,FirstSets	proc computeFollow(grammar: SyntaxGrammar; firstSets: FirstSets): FollowSets		1395
+nim	LR1Item	treestand/build_tables.html#LR1Item	object LR1Item		1460
+nim	hash	treestand/build_tables.html#hash,LR1Item	proc hash(item: LR1Item): Hash		1467
+nim	`==`	treestand/build_tables.html#==,LR1Item,LR1Item	proc `==`(a, b: LR1Item): bool		1476
+nim	`<`	treestand/build_tables.html#<,LR1Item,LR1Item	proc `<`(a, b: LR1Item): bool		1483
+nim	CoreItem	treestand/build_tables.html#CoreItem	object CoreItem		1494
+nim	StateKernels	treestand/build_tables.html#StateKernels	type StateKernels		1502
+nim	hash	treestand/build_tables.html#hash,CoreItem	proc hash(item: CoreItem): Hash		1506
+nim	`==`	treestand/build_tables.html#==,CoreItem,CoreItem	proc `==`(a, b: CoreItem): bool		1515
+nim	`<`	treestand/build_tables.html#<,CoreItem,CoreItem	proc `<`(a, b: CoreItem): bool		1522
+nim	precomputeClosureCache	treestand/build_tables.html#precomputeClosureCache,SyntaxGrammar,LexicalGrammar,FirstSets	proc precomputeClosureCache(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;\n                       firstSets: FirstSets): ClosureCache		1639
+nim	getTransitiveClosure	treestand/build_tables.html#getTransitiveClosure,SyntaxGrammar,StateKernels,ClosureCache,FirstSets	proc getTransitiveClosure(grammar: SyntaxGrammar; kernels: StateKernels;\n                     cache: ClosureCache; firstSets: FirstSets): StateKernels		1744
+nim	FirstBetaCacheKey	treestand/build_tables.html#FirstBetaCacheKey	object FirstBetaCacheKey		1867
+nim	hash	treestand/build_tables.html#hash,FirstBetaCacheKey	proc hash(cacheKey: FirstBetaCacheKey): Hash		1872
+nim	closure	treestand/build_tables.html#closure,SyntaxGrammar,HashSet[LR1Item],FirstSets	proc closure(grammar: SyntaxGrammar; items: HashSet[LR1Item]; firstSets: FirstSets): HashSet[\n    LR1Item]		1879
+nim	closureFast	treestand/build_tables.html#closureFast,SyntaxGrammar,HashSet[LR1Item],FirstSets,ClosurePrecomputation	proc closureFast(grammar: SyntaxGrammar; items: HashSet[LR1Item];\n            firstSets: FirstSets; precomputed: ClosurePrecomputation): HashSet[\n    LR1Item]		1985
+nim	goto	treestand/build_tables.html#goto,SyntaxGrammar,HashSet[LR1Item],GrammarSymbol,FirstSets	proc goto(grammar: SyntaxGrammar; items: HashSet[LR1Item]; symbol: GrammarSymbol;\n     firstSets: FirstSets): HashSet[LR1Item]		2075
+nim	buildCanonicalCollection	treestand/build_tables.html#buildCanonicalCollection,SyntaxGrammar,FirstSets,int	proc buildCanonicalCollection(grammar: SyntaxGrammar; firstSets: FirstSets;\n                         augmentedStartIndex: int = -1): tuple[\n    states: seq[HashSet[LR1Item]], stateMap: Table[seq[LR1Item], int],\n    transitions: seq[Table[GrammarSymbol, int]]]		2177
+nim	buildCanonicalCollectionLALR	treestand/build_tables.html#buildCanonicalCollectionLALR,SyntaxGrammar,LexicalGrammar,FirstSets,int	proc buildCanonicalCollectionLALR(grammar: SyntaxGrammar;\n                             lexicalGrammar: LexicalGrammar;\n                             firstSets: FirstSets; augmentedStartIndex: int = -1): tuple[\n    states: seq[StateKernels], stateMap: Table[seq[CoreItem], seq[int]],\n    transitions: seq[Table[GrammarSymbol, int]]]		2312
+nim	`<`	treestand/build_tables.html#<,LR0Item,LR0Item	proc `<`(a, b: LR0Item): bool		2510
+nimgrp	==	treestand/build_tables.html#==-procs-all	proc		1476
+nimgrp	<	treestand/build_tables.html#<-procs-all	proc		1483
+nimgrp	hash	treestand/build_tables.html#hash-procs-all	proc		1467

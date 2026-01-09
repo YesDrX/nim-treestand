@@ -3,5 +3,5 @@ nim	PrepareGrammarError	treestand/prepare_grammar.html#PrepareGrammarError	objec
 nim	InternedGrammar	treestand/prepare_grammar.html#InternedGrammar	object InternedGrammar		12
 nim	variableTypeForName	treestand/prepare_grammar.html#variableTypeForName,string	proc variableTypeForName(name: string): VariableType		23
 nim	internSymbols	treestand/prepare_grammar.html#internSymbols,InputGrammar	proc internSymbols(input: InputGrammar): InternedGrammar		33
-nim	extractChoices	treestand/prepare_grammar.html#extractChoices,Rule	proc extractChoices(rule: Rule): seq[Rule]		189
-nim	prepareGrammar	treestand/prepare_grammar.html#prepareGrammar,InputGrammar	proc prepareGrammar(input: InputGrammar): tuple[syntax: SyntaxGrammar,\n    lexical: LexicalGrammar]		671
+nim	extractChoices	treestand/prepare_grammar.html#extractChoices,Rule	proc extractChoices(rule: Rule): seq[Rule]		192
+nim	prepareGrammar	treestand/prepare_grammar.html#prepareGrammar,InputGrammar	proc prepareGrammar(input: InputGrammar): tuple[syntax: SyntaxGrammar,\n    lexical: LexicalGrammar]		750

@@ -188,7 +188,9 @@
           </ul></dd>
 <dt><a name="buildParseTable" href="#buildParseTable"><span>buildParseTable:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="build_tables: proc buildParseTable(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar): BuildParseTable" href="treestand/build_tables.html#buildParseTable%2CSyntaxGrammar%2CLexicalGrammar">build_tables: proc buildParseTable(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar): BuildParseTable</a></li>
+          data-doc-search-tag="build_tables: proc buildParseTable(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;
+                skipConflictDetection: bool = false): BuildParseTable" href="treestand/build_tables.html#buildParseTable%2CSyntaxGrammar%2CLexicalGrammar%2Cbool">build_tables: proc buildParseTable(grammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;
+                skipConflictDetection: bool = false): BuildParseTable</a></li>
           </ul></dd>
 <dt><a name="BuildParseTable" href="#BuildParseTable"><span>BuildParseTable:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -204,7 +206,9 @@
           </ul></dd>
 <dt><a name="buildTables" href="#buildTables"><span>buildTables:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="build_tables: proc buildTables(syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar): Tables" href="treestand/build_tables.html#buildTables%2CSyntaxGrammar%2CLexicalGrammar">build_tables: proc buildTables(syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar): Tables</a></li>
+          data-doc-search-tag="build_tables: proc buildTables(syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;
+            skipConflictDetection: bool = false): Tables" href="treestand/build_tables.html#buildTables%2CSyntaxGrammar%2CLexicalGrammar%2Cbool">build_tables: proc buildTables(syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;
+            skipConflictDetection: bool = false): Tables</a></li>
           </ul></dd>
 <dt><a name="BuildTablesError" href="#BuildTablesError"><span>BuildTablesError:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -437,8 +441,10 @@
 <dt><a name="generateExternalScannerBindings" href="#generateExternalScannerBindings"><span>generateExternalScannerBindings:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="codegen: proc generateExternalScannerBindings(grammarName: string; grammarPath: string;
-                                externalTokens: seq[string]): string" href="treestand/codegen.html#generateExternalScannerBindings%2Cstring%2Cstring%2Cseq%5Bstring%5D">codegen: proc generateExternalScannerBindings(grammarName: string; grammarPath: string;
-                                externalTokens: seq[string]): string</a></li>
+                                externalTokens: seq[string];
+                                externalScanner: string = &quot;&quot;): string" href="treestand/codegen.html#generateExternalScannerBindings%2Cstring%2Cstring%2Cseq%5Bstring%5D%2Cstring">codegen: proc generateExternalScannerBindings(grammarName: string; grammarPath: string;
+                                externalTokens: seq[string];
+                                externalScanner: string = &quot;&quot;): string</a></li>
           </ul></dd>
 <dt><a name="generateLexerRuntime" href="#generateLexerRuntime"><span>generateLexerRuntime:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -457,16 +463,16 @@
                externalTokens: seq[string] = @[]; grammarPath: string = &quot;&quot;)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="generate: proc generateParser(grammarPath: string; outputDir: string; dslPath: string = &quot;&quot;;
-               name: string = &quot;&quot;)" href="treestand/cli/generate.html#generateParser%2Cstring%2Cstring%2Cstring%2Cstring">generate: proc generateParser(grammarPath: string; outputDir: string; dslPath: string = &quot;&quot;;
-               name: string = &quot;&quot;)</a></li>
+               name: string = &quot;&quot;; skipConflictDetection: bool = false)" href="treestand/cli/generate.html#generateParser%2Cstring%2Cstring%2Cstring%2Cstring%2Cbool">generate: proc generateParser(grammarPath: string; outputDir: string; dslPath: string = &quot;&quot;;
+               name: string = &quot;&quot;; skipConflictDetection: bool = false)</a></li>
           <li><a class="reference external"
           data-doc-search-tag="codegen: proc generateParser(grammarName: string; grammarPath: string;
                syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;
                parseTable: BuildParseTable; lexTable: BuildLexTable;
-               externalTokens: seq[string]): string" href="treestand/codegen.html#generateParser%2Cstring%2Cstring%2CSyntaxGrammar%2CLexicalGrammar%2CBuildParseTable%2CBuildLexTable%2Cseq%5Bstring%5D">codegen: proc generateParser(grammarName: string; grammarPath: string;
+               externalTokens: seq[string]; externalScanner: string = &quot;&quot;): string" href="treestand/codegen.html#generateParser%2Cstring%2Cstring%2CSyntaxGrammar%2CLexicalGrammar%2CBuildParseTable%2CBuildLexTable%2Cseq%5Bstring%5D%2Cstring">codegen: proc generateParser(grammarName: string; grammarPath: string;
                syntaxGrammar: SyntaxGrammar; lexicalGrammar: LexicalGrammar;
                parseTable: BuildParseTable; lexTable: BuildLexTable;
-               externalTokens: seq[string]): string</a></li>
+               externalTokens: seq[string]; externalScanner: string = &quot;&quot;): string</a></li>
           </ul></dd>
 <dt><a name="generateParserRuntime" href="#generateParserRuntime"><span>generateParserRuntime:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1398,9 +1404,9 @@
 <li><a class="reference external"
           data-doc-search-tag="sexp_parser: TerminalSymbol.tsGrammarSymbol" href="treestand/sexp_parser.html#tsGrammarSymbol">sexp_parser: TerminalSymbol.tsGrammarSymbol</a></li>
           </ul></dd>
-<dt><a name="tsGrammarSymbol_8" href="#tsGrammarSymbol_8"><span>tsGrammarSymbol_8:</span></a></dt><dd><ul class="simple">
+<dt><a name="tsGrammarSymbol_7" href="#tsGrammarSymbol_7"><span>tsGrammarSymbol_7:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="sexp_parser: TerminalSymbol.tsGrammarSymbol_8" href="treestand/sexp_parser.html#tsGrammarSymbol_8">sexp_parser: TerminalSymbol.tsGrammarSymbol_8</a></li>
+          data-doc-search-tag="sexp_parser: TerminalSymbol.tsGrammarSymbol_7" href="treestand/sexp_parser.html#tsGrammarSymbol_7">sexp_parser: TerminalSymbol.tsGrammarSymbol_7</a></li>
           </ul></dd>
 <dt><a name="tsIdentifier" href="#tsIdentifier"><span>tsIdentifier:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1418,9 +1424,9 @@
 <li><a class="reference external"
           data-doc-search-tag="sexp_parser: TerminalSymbol.tsPattern" href="treestand/sexp_parser.html#tsPattern">sexp_parser: TerminalSymbol.tsPattern</a></li>
           </ul></dd>
-<dt><a name="tsPattern_10" href="#tsPattern_10"><span>tsPattern_10:</span></a></dt><dd><ul class="simple">
+<dt><a name="tsPattern_11" href="#tsPattern_11"><span>tsPattern_11:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="sexp_parser: TerminalSymbol.tsPattern_10" href="treestand/sexp_parser.html#tsPattern_10">sexp_parser: TerminalSymbol.tsPattern_10</a></li>
+          data-doc-search-tag="sexp_parser: TerminalSymbol.tsPattern_11" href="treestand/sexp_parser.html#tsPattern_11">sexp_parser: TerminalSymbol.tsPattern_11</a></li>
           </ul></dd>
 <dt><a name="tsPattern_12" href="#tsPattern_12"><span>tsPattern_12:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1430,9 +1436,9 @@
 <li><a class="reference external"
           data-doc-search-tag="sexp_parser: TerminalSymbol.tsPattern_6" href="treestand/sexp_parser.html#tsPattern_6">sexp_parser: TerminalSymbol.tsPattern_6</a></li>
           </ul></dd>
-<dt><a name="tsPattern_7" href="#tsPattern_7"><span>tsPattern_7:</span></a></dt><dd><ul class="simple">
+<dt><a name="tsPattern_8" href="#tsPattern_8"><span>tsPattern_8:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
-          data-doc-search-tag="sexp_parser: TerminalSymbol.tsPattern_7" href="treestand/sexp_parser.html#tsPattern_7">sexp_parser: TerminalSymbol.tsPattern_7</a></li>
+          data-doc-search-tag="sexp_parser: TerminalSymbol.tsPattern_8" href="treestand/sexp_parser.html#tsPattern_8">sexp_parser: TerminalSymbol.tsPattern_8</a></li>
           </ul></dd>
 <dt><a name="tsPattern_9" href="#tsPattern_9"><span>tsPattern_9:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -1492,7 +1498,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2025-12-27 01:58:47 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-01-09 00:05:53 UTC</small>
       </div>
     </div>
   </div>

@@ -23,5 +23,5 @@ nim	PrecedenceValueJson	treestand/parse_grammar.html#PrecedenceValueJson	object 
 nim	RuleJson	treestand/parse_grammar.html#RuleJson	object RuleJson		32
 nim	parseRuleJson	treestand/parse_grammar.html#parseRuleJson,JsonNode	proc parseRuleJson(node: JsonNode): RuleJson		83
 nim	parseGrammar	treestand/parse_grammar.html#parseGrammar,string	proc parseGrammar(input: string): InputGrammar		389
-nim	parseGrammarJson	treestand/parse_grammar.html#parseGrammarJson,string	proc parseGrammarJson(jsonFilename: string): InputGrammar		539
-nim	parseGrammarJs	treestand/parse_grammar.html#parseGrammarJs,string	proc parseGrammarJs(jsFilename: string): InputGrammar		568
+nim	parseGrammarJson	treestand/parse_grammar.html#parseGrammarJson,string	proc parseGrammarJson(jsonFilename: string): InputGrammar		541
+nim	parseGrammarJs	treestand/parse_grammar.html#parseGrammarJs,string	proc parseGrammarJs(jsFilename: string): InputGrammar		570

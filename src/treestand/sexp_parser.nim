@@ -14,17 +14,17 @@ import std/strutils
 type
   TerminalSymbol* = enum
     tsEOF = 0
-    tsPattern = 1
-    tsLParen = 2
-    tsRParen = 3
-    tsIdentifier = 4
-    tsGrammarSymbol = 5
+    tsLParen = 1
+    tsRParen = 2
+    tsIdentifier = 3
+    tsGrammarSymbol = 4
+    tsPattern = 5
     tsPattern_6 = 6
-    tsPattern_7 = 7
-    tsGrammarSymbol_8 = 8
+    tsGrammarSymbol_7 = 7
+    tsPattern_8 = 8
     tsPattern_9 = 9
-    tsPattern_10 = 10
-    tsDot = 11
+    tsDot = 10
+    tsPattern_11 = 11
     tsPattern_12 = 12
 
   NonTerminalSymbol* = enum
@@ -44,7 +44,6 @@ type
 # GrammarSymbol names for debugging and error messages
 const terminalSymbolNames* = [
   "EOF",
-  "/\\s/",
   "\'(\'",
   "\')\'",
   "/[a-zA-Z_][a-zA-Z0-9_\\-\\.]*/",
@@ -56,6 +55,7 @@ const terminalSymbolNames* = [
   "/[a-zA-Z0-9_\\-]+:/",
   "\'.\'",
   "/;.*/",
+  "/\\s/",
 ]
 
 const nonTerminalSymbolNames* = [
@@ -75,7 +75,6 @@ const nonTerminalSymbolNames* = [
 
 const terminalSymbolMetadata* = [
   parser_types.SymbolMetadata(named: false),  # EOF
-  parser_types.SymbolMetadata(named: true),  # "/\\s/"
   parser_types.SymbolMetadata(named: false),  # "\'(\'"
   parser_types.SymbolMetadata(named: false),  # "\')\'"
   parser_types.SymbolMetadata(named: true),  # "/[a-zA-Z_][a-zA-Z0-9_\\-\\.]*/"
@@ -87,6 +86,7 @@ const terminalSymbolMetadata* = [
   parser_types.SymbolMetadata(named: true),  # "/[a-zA-Z0-9_\\-]+:/"
   parser_types.SymbolMetadata(named: false),  # "\'.\'"
   parser_types.SymbolMetadata(named: true),  # "/;.*/"
+  parser_types.SymbolMetadata(named: true),  # "/\\s/"
 ]
 
 const nonTerminalSymbolMetadata* = [
@@ -100,252 +100,173 @@ const nonTerminalSymbolMetadata* = [
   parser_types.SymbolMetadata(named: true),  # field
   parser_types.SymbolMetadata(named: true),  # anchor
   parser_types.SymbolMetadata(named: true),  # comment
-  parser_types.SymbolMetadata(named: true),  # program_repeat1
-  parser_types.SymbolMetadata(named: true),  # string_repeat1
+  parser_types.SymbolMetadata(named: false),  # program_repeat1
+  parser_types.SymbolMetadata(named: false),  # string_repeat1
 ]
 
 
 # Compact Parse Table Arrays
 const parseTableActions* = @[
-  (parser_types.t(2), parser_types.s(4u32)),
-  (parser_types.t(5), parser_types.s(5u32)),
   (parser_types.t(0), parser_types.r(parser_types.nt(0), 0u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(9), parser_types.s(7u32)),
-  (parser_types.t(11), parser_types.s(8u32)),
+  (parser_types.t(1), parser_types.s(2u32)),
+  (parser_types.t(7), parser_types.s(4u32)),
+  (parser_types.t(9), parser_types.s(4u32)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(4), parser_types.s(9u32)),
-  (parser_types.t(8), parser_types.s(11u32)),
-  (parser_types.t(10), parser_types.s(10u32)),
-  (parser_types.t(2), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(0), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(9), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(11), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(4), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(3), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(8), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(10), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(4), parser_types.s(5u32)),
+  (parser_types.t(3), parser_types.s(4u32)),
+  (parser_types.t(8), parser_types.s(4u32)),
+  (parser_types.t(10), parser_types.s(4u32)),
   (parser_types.t(0), parser_types.acc()),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(2), parser_types.s(6u32)),
+  (parser_types.t(1), parser_types.s(2u32)),
+  (parser_types.t(7), parser_types.s(4u32)),
+  (parser_types.t(9), parser_types.s(4u32)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(4), parser_types.s(5u32)),
+  (parser_types.t(3), parser_types.s(4u32)),
+  (parser_types.t(8), parser_types.s(4u32)),
+  (parser_types.t(10), parser_types.s(4u32)),
+  (parser_types.t(0), parser_types.r(parser_types.nt(0), 1u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(1), parser_types.s(2u32)),
+  (parser_types.t(7), parser_types.s(4u32)),
+  (parser_types.t(9), parser_types.s(4u32)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(4), parser_types.s(5u32)),
+  (parser_types.t(3), parser_types.s(4u32)),
+  (parser_types.t(8), parser_types.s(4u32)),
+  (parser_types.t(10), parser_types.s(4u32)),
   (parser_types.t(2), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(0), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(1), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(7), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(9), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(11), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(4), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(3), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(10), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(8), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(2), parser_types.s(4u32)),
-  (parser_types.t(5), parser_types.s(5u32)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(9), parser_types.s(7u32)),
-  (parser_types.t(11), parser_types.s(8u32)),
+  (parser_types.t(10), parser_types.r(parser_types.nt(1), 1u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(5), parser_types.s(9u32)),
+  (parser_types.t(6), parser_types.s(9u32)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(4), parser_types.s(9u32)),
-  (parser_types.t(8), parser_types.s(11u32)),
-  (parser_types.t(10), parser_types.s(10u32)),
-  (parser_types.t(5), parser_types.s(13u32)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(6), parser_types.s(14u32)),
-  (parser_types.t(7), parser_types.s(14u32)),
+  (parser_types.t(4), parser_types.s(10u32)),
+  (parser_types.t(2), parser_types.r(parser_types.nt(2), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(0), parser_types.r(parser_types.nt(2), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(1), parser_types.r(parser_types.nt(2), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(7), parser_types.r(parser_types.nt(2), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(9), parser_types.r(parser_types.nt(2), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(2), parser_types.s(4u32)),
-  (parser_types.t(5), parser_types.s(5u32)),
-  (parser_types.t(0), parser_types.r(parser_types.nt(0), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(9), parser_types.s(7u32)),
-  (parser_types.t(11), parser_types.s(8u32)),
+  (parser_types.t(4), parser_types.r(parser_types.nt(2), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(3), parser_types.r(parser_types.nt(2), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(8), parser_types.r(parser_types.nt(2), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(10), parser_types.r(parser_types.nt(2), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(2), parser_types.s(11u32)),
+  (parser_types.t(1), parser_types.s(2u32)),
+  (parser_types.t(7), parser_types.s(4u32)),
+  (parser_types.t(9), parser_types.s(4u32)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(4), parser_types.s(9u32)),
-  (parser_types.t(8), parser_types.s(11u32)),
-  (parser_types.t(10), parser_types.s(10u32)),
-  (parser_types.t(2), parser_types.r(parser_types.nt(6), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(6), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(0), parser_types.r(parser_types.nt(6), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(9), parser_types.r(parser_types.nt(6), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(11), parser_types.r(parser_types.nt(6), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(4), parser_types.r(parser_types.nt(6), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(3), parser_types.r(parser_types.nt(6), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(8), parser_types.r(parser_types.nt(6), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(10), parser_types.r(parser_types.nt(6), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(2), parser_types.r(parser_types.nt(8), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(8), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(0), parser_types.r(parser_types.nt(8), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(9), parser_types.r(parser_types.nt(8), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(11), parser_types.r(parser_types.nt(8), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(4), parser_types.r(parser_types.nt(8), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(3), parser_types.r(parser_types.nt(8), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(8), parser_types.r(parser_types.nt(8), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(10), parser_types.r(parser_types.nt(8), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(2), parser_types.r(parser_types.nt(3), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(3), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(0), parser_types.r(parser_types.nt(3), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(9), parser_types.r(parser_types.nt(3), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(11), parser_types.r(parser_types.nt(3), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(4), parser_types.r(parser_types.nt(3), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(3), parser_types.r(parser_types.nt(3), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(10), parser_types.r(parser_types.nt(3), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(8), parser_types.r(parser_types.nt(3), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(2), parser_types.r(parser_types.nt(7), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(7), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(0), parser_types.r(parser_types.nt(7), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(9), parser_types.r(parser_types.nt(7), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(11), parser_types.r(parser_types.nt(7), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(4), parser_types.r(parser_types.nt(7), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(3), parser_types.r(parser_types.nt(7), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(8), parser_types.r(parser_types.nt(7), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(10), parser_types.r(parser_types.nt(7), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(2), parser_types.r(parser_types.nt(5), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(5), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(0), parser_types.r(parser_types.nt(5), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(9), parser_types.r(parser_types.nt(5), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(11), parser_types.r(parser_types.nt(5), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(4), parser_types.r(parser_types.nt(5), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(3), parser_types.r(parser_types.nt(5), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(10), parser_types.r(parser_types.nt(5), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(8), parser_types.r(parser_types.nt(5), 1u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(2), parser_types.s(4u32)),
-  (parser_types.t(5), parser_types.s(5u32)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(9), parser_types.s(7u32)),
-  (parser_types.t(11), parser_types.s(8u32)),
-  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(4), parser_types.s(9u32)),
-  (parser_types.t(3), parser_types.s(16u32)),
-  (parser_types.t(8), parser_types.s(11u32)),
-  (parser_types.t(10), parser_types.s(10u32)),
-  (parser_types.t(2), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(0), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(9), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(11), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(4), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(3), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(10), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(8), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.s(17u32)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(6), parser_types.s(18u32)),
-  (parser_types.t(7), parser_types.s(18u32)),
-  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(4), parser_types.s(5u32)),
+  (parser_types.t(3), parser_types.s(4u32)),
+  (parser_types.t(8), parser_types.s(4u32)),
+  (parser_types.t(10), parser_types.s(4u32)),
   (parser_types.t(2), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(0), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(1), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(7), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(9), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(11), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(4), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(3), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(10), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(8), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(10), parser_types.r(parser_types.nt(10), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(5), parser_types.s(12u32)),
+  (parser_types.t(6), parser_types.s(12u32)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(4), parser_types.s(13u32)),
+  (parser_types.t(2), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(0), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(1), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(7), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(9), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(4), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(3), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(8), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(10), parser_types.r(parser_types.nt(4), 2u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(2), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(0), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(1), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(7), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(9), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(11), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(4), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(3), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(10), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(8), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(10), parser_types.r(parser_types.nt(2), 3u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(5), parser_types.r(parser_types.nt(11), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(6), parser_types.r(parser_types.nt(11), 2u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(4), parser_types.r(parser_types.nt(11), 2u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(2), parser_types.r(parser_types.nt(4), 3u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(4), 3u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(0), parser_types.r(parser_types.nt(4), 3u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
+  (parser_types.t(1), parser_types.r(parser_types.nt(4), 3u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(7), parser_types.r(parser_types.nt(4), 3u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(9), parser_types.r(parser_types.nt(4), 3u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(11), parser_types.r(parser_types.nt(4), 3u32, 0, 0, none(parser_types.Associativity), 0)),
+  (parser_types.t(11), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
   (parser_types.t(4), parser_types.r(parser_types.nt(4), 3u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(3), parser_types.r(parser_types.nt(4), 3u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(8), parser_types.r(parser_types.nt(4), 3u32, 0, 0, none(parser_types.Associativity), 0)),
   (parser_types.t(10), parser_types.r(parser_types.nt(4), 3u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(5), parser_types.r(parser_types.nt(11), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(1), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
-  (parser_types.t(6), parser_types.r(parser_types.nt(11), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(7), parser_types.r(parser_types.nt(11), 2u32, 0, 0, none(parser_types.Associativity), 0)),
-  (parser_types.t(12), parser_types.ParseAction(kind: parser_types.pakShiftExtra)),
 ]
 
 const parseTableGotos* = @[
-  (parser_types.nt(5), 1u32),
-  (parser_types.nt(8), 3u32),
-  (parser_types.nt(1), 6u32),
-  (parser_types.nt(7), 3u32),
-  (parser_types.nt(3), 3u32),
-  (parser_types.nt(4), 3u32),
-  (parser_types.nt(2), 3u32),
-  (parser_types.nt(10), 6u32),
-  (parser_types.nt(6), 3u32),
-  (parser_types.nt(0), 2u32),
-  (parser_types.nt(5), 1u32),
-  (parser_types.nt(7), 3u32),
-  (parser_types.nt(1), 12u32),
-  (parser_types.nt(3), 3u32),
-  (parser_types.nt(8), 3u32),
-  (parser_types.nt(4), 3u32),
-  (parser_types.nt(2), 3u32),
-  (parser_types.nt(6), 3u32),
-  (parser_types.nt(10), 12u32),
-  (parser_types.nt(11), 14u32),
-  (parser_types.nt(5), 1u32),
-  (parser_types.nt(8), 3u32),
-  (parser_types.nt(1), 15u32),
-  (parser_types.nt(7), 3u32),
-  (parser_types.nt(3), 3u32),
-  (parser_types.nt(4), 3u32),
-  (parser_types.nt(2), 3u32),
-  (parser_types.nt(6), 3u32),
-  (parser_types.nt(5), 1u32),
-  (parser_types.nt(1), 15u32),
-  (parser_types.nt(7), 3u32),
-  (parser_types.nt(3), 3u32),
-  (parser_types.nt(8), 3u32),
-  (parser_types.nt(4), 3u32),
-  (parser_types.nt(2), 3u32),
-  (parser_types.nt(6), 3u32),
+  (parser_types.nt(2), 4u32),
+  (parser_types.nt(10), 3u32),
+  (parser_types.nt(0), 1u32),
+  (parser_types.nt(1), 3u32),
+  (parser_types.nt(4), 4u32),
+  (parser_types.nt(2), 4u32),
+  (parser_types.nt(10), 7u32),
+  (parser_types.nt(1), 7u32),
+  (parser_types.nt(4), 4u32),
+  (parser_types.nt(2), 4u32),
+  (parser_types.nt(1), 8u32),
+  (parser_types.nt(4), 4u32),
+  (parser_types.nt(11), 9u32),
+  (parser_types.nt(2), 4u32),
+  (parser_types.nt(1), 8u32),
+  (parser_types.nt(4), 4u32),
 ]
 
 const parseTableIndex* = [
-  (actionStart: 0i32, actionLen: 10i32, gotoStart: 0i32, gotoLen: 10i32, lexState: 0i32),
-  (actionStart: 10i32, actionLen: 11i32, gotoStart: 10i32, gotoLen: 0i32, lexState: 1i32),
-  (actionStart: 21i32, actionLen: 3i32, gotoStart: 10i32, gotoLen: 0i32, lexState: 2i32),
-  (actionStart: 24i32, actionLen: 11i32, gotoStart: 10i32, gotoLen: 0i32, lexState: 1i32),
-  (actionStart: 35i32, actionLen: 9i32, gotoStart: 10i32, gotoLen: 9i32, lexState: 0i32),
-  (actionStart: 44i32, actionLen: 5i32, gotoStart: 19i32, gotoLen: 1i32, lexState: 3i32),
-  (actionStart: 49i32, actionLen: 10i32, gotoStart: 20i32, gotoLen: 8i32, lexState: 0i32),
-  (actionStart: 59i32, actionLen: 11i32, gotoStart: 28i32, gotoLen: 0i32, lexState: 1i32),
-  (actionStart: 70i32, actionLen: 11i32, gotoStart: 28i32, gotoLen: 0i32, lexState: 1i32),
-  (actionStart: 81i32, actionLen: 11i32, gotoStart: 28i32, gotoLen: 0i32, lexState: 1i32),
-  (actionStart: 92i32, actionLen: 11i32, gotoStart: 28i32, gotoLen: 0i32, lexState: 1i32),
-  (actionStart: 103i32, actionLen: 11i32, gotoStart: 28i32, gotoLen: 0i32, lexState: 1i32),
-  (actionStart: 114i32, actionLen: 10i32, gotoStart: 28i32, gotoLen: 8i32, lexState: 1i32),
-  (actionStart: 124i32, actionLen: 11i32, gotoStart: 36i32, gotoLen: 0i32, lexState: 1i32),
-  (actionStart: 135i32, actionLen: 5i32, gotoStart: 36i32, gotoLen: 0i32, lexState: 3i32),
-  (actionStart: 140i32, actionLen: 11i32, gotoStart: 36i32, gotoLen: 0i32, lexState: 1i32),
-  (actionStart: 151i32, actionLen: 11i32, gotoStart: 36i32, gotoLen: 0i32, lexState: 1i32),
-  (actionStart: 162i32, actionLen: 11i32, gotoStart: 36i32, gotoLen: 0i32, lexState: 1i32),
-  (actionStart: 173i32, actionLen: 5i32, gotoStart: 36i32, gotoLen: 0i32, lexState: 3i32),
+  (actionStart: 0i32, actionLen: 10i32, gotoStart: 0i32, gotoLen: 5i32, lexState: 0i32),
+  (actionStart: 10i32, actionLen: 3i32, gotoStart: 5i32, gotoLen: 0i32, lexState: 1i32),
+  (actionStart: 13i32, actionLen: 10i32, gotoStart: 5i32, gotoLen: 4i32, lexState: 2i32),
+  (actionStart: 23i32, actionLen: 10i32, gotoStart: 9i32, gotoLen: 3i32, lexState: 0i32),
+  (actionStart: 33i32, actionLen: 11i32, gotoStart: 12i32, gotoLen: 0i32, lexState: 2i32),
+  (actionStart: 44i32, actionLen: 5i32, gotoStart: 12i32, gotoLen: 1i32, lexState: 3i32),
+  (actionStart: 49i32, actionLen: 11i32, gotoStart: 13i32, gotoLen: 0i32, lexState: 2i32),
+  (actionStart: 60i32, actionLen: 10i32, gotoStart: 13i32, gotoLen: 3i32, lexState: 2i32),
+  (actionStart: 70i32, actionLen: 11i32, gotoStart: 16i32, gotoLen: 0i32, lexState: 2i32),
+  (actionStart: 81i32, actionLen: 5i32, gotoStart: 16i32, gotoLen: 0i32, lexState: 3i32),
+  (actionStart: 86i32, actionLen: 11i32, gotoStart: 16i32, gotoLen: 0i32, lexState: 2i32),
+  (actionStart: 97i32, actionLen: 11i32, gotoStart: 16i32, gotoLen: 0i32, lexState: 2i32),
+  (actionStart: 108i32, actionLen: 5i32, gotoStart: 16i32, gotoLen: 0i32, lexState: 3i32),
+  (actionStart: 113i32, actionLen: 11i32, gotoStart: 16i32, gotoLen: 0i32, lexState: 2i32),
 ]
 
 const productionInfos* = @[
@@ -426,6 +347,15 @@ const productionInfos* = @[
     childCount: 3u32,
     fieldNames: @[
       "",
+      "",
+      "",
+    ]
+  ),
+  parser_types.ProductionInfo(
+    symbol: parser_types.nt(2),
+    fieldCount: 2u32,
+    childCount: 2u32,
+    fieldNames: @[
       "",
       "",
     ]
@@ -656,6 +586,35 @@ const lexStates* = @[
         isSeparator: false
       ),
       parser_types.LexTransition(
+        minChar: 59,
+        maxChar: 59,
+        nextState: 9,
+        isSeparator: false
+      ),
+    ],
+    acceptSymbol: -1
+  ),
+  parser_types.LexState(
+    transitions: @[
+      parser_types.LexTransition(
+        minChar: 9,
+        maxChar: 10,
+        nextState: 4,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 13,
+        maxChar: 13,
+        nextState: 4,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 32,
+        maxChar: 32,
+        nextState: 4,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
         minChar: 34,
         maxChar: 34,
         nextState: 5,
@@ -719,35 +678,6 @@ const lexStates* = @[
         minChar: 97,
         maxChar: 122,
         nextState: 11,
-        isSeparator: false
-      ),
-    ],
-    acceptSymbol: -1
-  ),
-  parser_types.LexState(
-    transitions: @[
-      parser_types.LexTransition(
-        minChar: 9,
-        maxChar: 10,
-        nextState: 4,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 13,
-        maxChar: 13,
-        nextState: 4,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 32,
-        maxChar: 32,
-        nextState: 4,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 59,
-        maxChar: 59,
-        nextState: 9,
         isSeparator: false
       ),
     ],
@@ -845,12 +775,245 @@ const lexStates* = @[
   parser_types.LexState(
     transitions: @[
     ],
-    acceptSymbol: 0
+    acceptSymbol: 11
   ),
   parser_types.LexState(
     transitions: @[
     ],
-    acceptSymbol: 4
+    acceptSymbol: 3
+  ),
+  parser_types.LexState(
+    transitions: @[
+    ],
+    acceptSymbol: 0
+  ),
+  parser_types.LexState(
+    transitions: @[
+      parser_types.LexTransition(
+        minChar: 45,
+        maxChar: 45,
+        nextState: 7,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 48,
+        maxChar: 57,
+        nextState: 7,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 58,
+        maxChar: 58,
+        nextState: 18,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 65,
+        maxChar: 90,
+        nextState: 7,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 95,
+        maxChar: 95,
+        nextState: 7,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 97,
+        maxChar: 122,
+        nextState: 7,
+        isSeparator: false
+      ),
+    ],
+    acceptSymbol: -1
+  ),
+  parser_types.LexState(
+    transitions: @[
+    ],
+    acceptSymbol: 9
+  ),
+  parser_types.LexState(
+    transitions: @[
+      parser_types.LexTransition(
+        minChar: 0,
+        maxChar: 8,
+        nextState: 9,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 9,
+        maxChar: 9,
+        nextState: 9,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 11,
+        maxChar: 12,
+        nextState: 9,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 13,
+        maxChar: 13,
+        nextState: 9,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 14,
+        maxChar: 31,
+        nextState: 9,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 32,
+        maxChar: 32,
+        nextState: 9,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 33,
+        maxChar: 1114111,
+        nextState: 9,
+        isSeparator: false
+      ),
+    ],
+    acceptSymbol: 10
+  ),
+  parser_types.LexState(
+    transitions: @[
+      parser_types.LexTransition(
+        minChar: 45,
+        maxChar: 45,
+        nextState: 19,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 46,
+        maxChar: 46,
+        nextState: 19,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 48,
+        maxChar: 57,
+        nextState: 19,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 65,
+        maxChar: 90,
+        nextState: 19,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 95,
+        maxChar: 95,
+        nextState: 19,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 97,
+        maxChar: 122,
+        nextState: 19,
+        isSeparator: false
+      ),
+    ],
+    acceptSymbol: -1
+  ),
+  parser_types.LexState(
+    transitions: @[
+      parser_types.LexTransition(
+        minChar: 45,
+        maxChar: 45,
+        nextState: 11,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 46,
+        maxChar: 46,
+        nextState: 20,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 48,
+        maxChar: 57,
+        nextState: 11,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 58,
+        maxChar: 58,
+        nextState: 18,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 65,
+        maxChar: 90,
+        nextState: 11,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 95,
+        maxChar: 95,
+        nextState: 11,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 97,
+        maxChar: 122,
+        nextState: 11,
+        isSeparator: false
+      ),
+    ],
+    acceptSymbol: 2
+  ),
+  parser_types.LexState(
+    transitions: @[
+      parser_types.LexTransition(
+        minChar: 45,
+        maxChar: 45,
+        nextState: 11,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 46,
+        maxChar: 46,
+        nextState: 20,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 48,
+        maxChar: 57,
+        nextState: 11,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 58,
+        maxChar: 58,
+        nextState: 18,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 65,
+        maxChar: 90,
+        nextState: 11,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 95,
+        maxChar: 95,
+        nextState: 11,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 97,
+        maxChar: 122,
+        nextState: 11,
+        isSeparator: false
+      ),
+    ],
+    acceptSymbol: 2
   ),
   parser_types.LexState(
     transitions: @[
@@ -860,216 +1023,43 @@ const lexStates* = @[
   parser_types.LexState(
     transitions: @[
       parser_types.LexTransition(
-        minChar: 45,
-        maxChar: 45,
-        nextState: 7,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 48,
-        maxChar: 57,
-        nextState: 7,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 58,
-        maxChar: 58,
-        nextState: 18,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 65,
-        maxChar: 90,
-        nextState: 7,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 95,
-        maxChar: 95,
-        nextState: 7,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 97,
-        maxChar: 122,
-        nextState: 7,
-        isSeparator: false
-      ),
-    ],
-    acceptSymbol: -1
-  ),
-  parser_types.LexState(
-    transitions: @[
-    ],
-    acceptSymbol: 10
-  ),
-  parser_types.LexState(
-    transitions: @[
-      parser_types.LexTransition(
         minChar: 0,
-        maxChar: 9,
-        nextState: 9,
+        maxChar: 8,
+        nextState: 14,
         isSeparator: false
       ),
       parser_types.LexTransition(
-        minChar: 11,
-        maxChar: 1114111,
-        nextState: 9,
-        isSeparator: false
-      ),
-    ],
-    acceptSymbol: 11
-  ),
-  parser_types.LexState(
-    transitions: @[
-      parser_types.LexTransition(
-        minChar: 45,
-        maxChar: 45,
-        nextState: 19,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 46,
-        maxChar: 46,
-        nextState: 19,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 48,
-        maxChar: 57,
-        nextState: 19,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 65,
-        maxChar: 90,
-        nextState: 19,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 95,
-        maxChar: 95,
-        nextState: 19,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 97,
-        maxChar: 122,
-        nextState: 19,
-        isSeparator: false
-      ),
-    ],
-    acceptSymbol: -1
-  ),
-  parser_types.LexState(
-    transitions: @[
-      parser_types.LexTransition(
-        minChar: 45,
-        maxChar: 45,
-        nextState: 11,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 46,
-        maxChar: 46,
-        nextState: 20,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 48,
-        maxChar: 57,
-        nextState: 11,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 58,
-        maxChar: 58,
-        nextState: 18,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 65,
-        maxChar: 90,
-        nextState: 11,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 95,
-        maxChar: 95,
-        nextState: 11,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 97,
-        maxChar: 122,
-        nextState: 11,
-        isSeparator: false
-      ),
-    ],
-    acceptSymbol: 3
-  ),
-  parser_types.LexState(
-    transitions: @[
-      parser_types.LexTransition(
-        minChar: 45,
-        maxChar: 45,
-        nextState: 11,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 46,
-        maxChar: 46,
-        nextState: 20,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 48,
-        maxChar: 57,
-        nextState: 11,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 58,
-        maxChar: 58,
-        nextState: 18,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 65,
-        maxChar: 90,
-        nextState: 11,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 95,
-        maxChar: 95,
-        nextState: 11,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 97,
-        maxChar: 122,
-        nextState: 11,
-        isSeparator: false
-      ),
-    ],
-    acceptSymbol: 3
-  ),
-  parser_types.LexState(
-    transitions: @[
-    ],
-    acceptSymbol: 2
-  ),
-  parser_types.LexState(
-    transitions: @[
-      parser_types.LexTransition(
-        minChar: 0,
+        minChar: 9,
         maxChar: 9,
         nextState: 14,
         isSeparator: false
       ),
       parser_types.LexTransition(
         minChar: 11,
+        maxChar: 12,
+        nextState: 14,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 13,
+        maxChar: 13,
+        nextState: 14,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 14,
+        maxChar: 31,
+        nextState: 14,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 32,
+        maxChar: 32,
+        nextState: 14,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 33,
         maxChar: 33,
         nextState: 14,
         isSeparator: false
@@ -1087,18 +1077,48 @@ const lexStates* = @[
         isSeparator: false
       ),
     ],
-    acceptSymbol: 5
+    acceptSymbol: 4
   ),
   parser_types.LexState(
     transitions: @[
       parser_types.LexTransition(
         minChar: 0,
+        maxChar: 8,
+        nextState: 14,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 9,
         maxChar: 9,
         nextState: 14,
         isSeparator: false
       ),
       parser_types.LexTransition(
         minChar: 11,
+        maxChar: 12,
+        nextState: 14,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 13,
+        maxChar: 13,
+        nextState: 14,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 14,
+        maxChar: 31,
+        nextState: 14,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 32,
+        maxChar: 32,
+        nextState: 14,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 33,
         maxChar: 33,
         nextState: 14,
         isSeparator: false
@@ -1116,18 +1136,48 @@ const lexStates* = @[
         isSeparator: false
       ),
     ],
-    acceptSymbol: 0
+    acceptSymbol: 4
   ),
   parser_types.LexState(
     transitions: @[
       parser_types.LexTransition(
         minChar: 0,
+        maxChar: 8,
+        nextState: 16,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 9,
         maxChar: 9,
         nextState: 16,
         isSeparator: false
       ),
       parser_types.LexTransition(
         minChar: 11,
+        maxChar: 12,
+        nextState: 16,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 13,
+        maxChar: 13,
+        nextState: 16,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 14,
+        maxChar: 31,
+        nextState: 16,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 32,
+        maxChar: 32,
+        nextState: 16,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 33,
         maxChar: 33,
         nextState: 16,
         isSeparator: false
@@ -1157,7 +1207,7 @@ const lexStates* = @[
         isSeparator: false
       ),
     ],
-    acceptSymbol: 5
+    acceptSymbol: 4
   ),
   parser_types.LexState(
     transitions: @[
@@ -1179,47 +1229,6 @@ const lexStates* = @[
   parser_types.LexState(
     transitions: @[
     ],
-    acceptSymbol: 9
-  ),
-  parser_types.LexState(
-    transitions: @[
-      parser_types.LexTransition(
-        minChar: 45,
-        maxChar: 45,
-        nextState: 19,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 46,
-        maxChar: 46,
-        nextState: 19,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 48,
-        maxChar: 57,
-        nextState: 19,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 65,
-        maxChar: 90,
-        nextState: 19,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 95,
-        maxChar: 95,
-        nextState: 19,
-        isSeparator: false
-      ),
-      parser_types.LexTransition(
-        minChar: 97,
-        maxChar: 122,
-        nextState: 19,
-        isSeparator: false
-      ),
-    ],
     acceptSymbol: 8
   ),
   parser_types.LexState(
@@ -1227,6 +1236,47 @@ const lexStates* = @[
       parser_types.LexTransition(
         minChar: 45,
         maxChar: 45,
+        nextState: 19,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 46,
+        maxChar: 46,
+        nextState: 19,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 48,
+        maxChar: 57,
+        nextState: 19,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 65,
+        maxChar: 90,
+        nextState: 19,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 95,
+        maxChar: 95,
+        nextState: 19,
+        isSeparator: false
+      ),
+      parser_types.LexTransition(
+        minChar: 97,
+        maxChar: 122,
+        nextState: 19,
+        isSeparator: false
+      ),
+    ],
+    acceptSymbol: 7
+  ),
+  parser_types.LexState(
+    transitions: @[
+      parser_types.LexTransition(
+        minChar: 45,
+        maxChar: 45,
         nextState: 20,
         isSeparator: false
       ),
@@ -1261,12 +1311,12 @@ const lexStates* = @[
         isSeparator: false
       ),
     ],
-    acceptSymbol: 3
+    acceptSymbol: 2
   ),
   parser_types.LexState(
     transitions: @[
     ],
-    acceptSymbol: 6
+    acceptSymbol: 5
   ),
 ]
 
@@ -1287,9 +1337,6 @@ proc nextToken*(lexer: Lexer, validExternalSymbols: set[int16] = {}, lexState: i
   # Skip whitespace and extras (preserve start for scanning)
   let startPosBeforeSkip {.used.} = lexer.pos
   
-  # Skip whitespace
-  while lexer.pos < lexer.input.len and lexer.input[lexer.pos] in {'\t', ' ', '\r', '\n'}:
-    advance(lexer)
   # Check for EOF
   if lexer.pos >= lexer.input.len:
     let pt = Point(row: lexer.row, column: lexer.col)
@@ -1300,65 +1347,12 @@ proc nextToken*(lexer: Lexer, validExternalSymbols: set[int16] = {}, lexState: i
   while skipAgain:
     skipAgain = false
     
-    # Skip whitespace again
-    while lexer.pos < lexer.input.len and lexer.input[lexer.pos] in {'\t', ' ', '\r', '\n'}:
-      advance(lexer)
     
     if lexer.pos >= lexer.input.len:
       let pt = Point(row: lexer.row, column: lexer.col)
       return Token(kind: terminal(int(tsEOF)), text: "", startPos: lexer.pos, endPos: lexer.pos, startPoint: pt, endPoint: pt)
     
     # Try to match each extra symbol
-    # Try to skip extra: terminal(1)
-    block tryExtra1:
-      let extraStartPos = lexer.pos
-      let extraStartRow = lexer.row
-      let extraStartCol = lexer.col
-      var extraState = lexState
-      var extraLastAccept = -1
-      var extraAcceptPos = extraStartPos
-      var extraAcceptRow = extraStartRow
-      var extraAcceptCol = extraStartCol
-      
-      while lexer.pos < lexer.input.len:
-        let ch = lexer.input[lexer.pos].int
-        
-        if extraState < lexStates.len and lexStates[extraState].acceptSymbol >= 0:
-          extraLastAccept = lexStates[extraState].acceptSymbol
-          extraAcceptPos = lexer.pos
-          extraAcceptRow = lexer.row
-          extraAcceptCol = lexer.col
-        
-        var foundTrans = false
-        if extraState < lexStates.len:
-          for trans in lexStates[extraState].transitions:
-            if ch >= trans.minChar and ch <= trans.maxChar:
-              extraState = trans.nextState
-              advance(lexer)
-              foundTrans = true
-              break
-        
-        if not foundTrans:
-          break
-      
-      if extraState < lexStates.len and lexStates[extraState].acceptSymbol >= 0:
-        extraLastAccept = lexStates[extraState].acceptSymbol
-        extraAcceptPos = lexer.pos
-        extraAcceptRow = lexer.row
-        extraAcceptCol = lexer.col
-      
-      if extraLastAccept == 0:
-        debugEchoMsg "Matched extra {extra.index}: " & lexer.input[startPosBeforeSkip..<extraAcceptPos]
-        lexer.pos = extraAcceptPos
-        lexer.row = extraAcceptRow
-        lexer.col = extraAcceptCol
-        skipAgain = true
-        break tryExtra1
-      else:
-        # Not this extra, restore position
-        lexer.pos = extraStartPos
-        lexer.row = extraStartRow
-        lexer.col = extraStartCol
     # Try to skip extra: terminal(12)
     block tryExtra12:
       let extraStartPos = lexer.pos
@@ -1398,12 +1392,62 @@ proc nextToken*(lexer: Lexer, validExternalSymbols: set[int16] = {}, lexState: i
         extraAcceptCol = lexer.col
       
       if extraLastAccept == 11:
-        debugEchoMsg "Matched extra {extra.index}: " & lexer.input[startPosBeforeSkip..<extraAcceptPos]
+        debugEchoMsg "Matched extra 11: startPosBeforeSkip=", startPosBeforeSkip, " extraAcceptPos=", extraAcceptPos
         lexer.pos = extraAcceptPos
         lexer.row = extraAcceptRow
         lexer.col = extraAcceptCol
         skipAgain = true
         break tryExtra12
+      else:
+        # Not this extra, restore position
+        lexer.pos = extraStartPos
+        lexer.row = extraStartRow
+        lexer.col = extraStartCol
+    # Try to skip extra: terminal(11)
+    block tryExtra11:
+      let extraStartPos = lexer.pos
+      let extraStartRow = lexer.row
+      let extraStartCol = lexer.col
+      var extraState = lexState
+      var extraLastAccept = -1
+      var extraAcceptPos = extraStartPos
+      var extraAcceptRow = extraStartRow
+      var extraAcceptCol = extraStartCol
+      
+      while lexer.pos < lexer.input.len:
+        let ch = lexer.input[lexer.pos].int
+        
+        if extraState < lexStates.len and lexStates[extraState].acceptSymbol >= 0:
+          extraLastAccept = lexStates[extraState].acceptSymbol
+          extraAcceptPos = lexer.pos
+          extraAcceptRow = lexer.row
+          extraAcceptCol = lexer.col
+        
+        var foundTrans = false
+        if extraState < lexStates.len:
+          for trans in lexStates[extraState].transitions:
+            if ch >= trans.minChar and ch <= trans.maxChar:
+              extraState = trans.nextState
+              advance(lexer)
+              foundTrans = true
+              break
+        
+        if not foundTrans:
+          break
+      
+      if extraState < lexStates.len and lexStates[extraState].acceptSymbol >= 0:
+        extraLastAccept = lexStates[extraState].acceptSymbol
+        extraAcceptPos = lexer.pos
+        extraAcceptRow = lexer.row
+        extraAcceptCol = lexer.col
+      
+      if extraLastAccept == 10:
+        debugEchoMsg "Matched extra 10: startPosBeforeSkip=", startPosBeforeSkip, " extraAcceptPos=", extraAcceptPos
+        lexer.pos = extraAcceptPos
+        lexer.row = extraAcceptRow
+        lexer.col = extraAcceptCol
+        skipAgain = true
+        break tryExtra11
       else:
         # Not this extra, restore position
         lexer.pos = extraStartPos
@@ -1463,7 +1507,7 @@ proc nextToken*(lexer: Lexer, validExternalSymbols: set[int16] = {}, lexState: i
   return Token(kind: terminal(int(tsEOF)), text: lexer.input[startPos..<lexer.pos], startPos: startPos, endPos: lexer.pos, startPoint: startPoint, endPoint: Point(row: lexer.row, column: lexer.col))
 
 const externalTokenBase* = 13
-const externalExtraTokens*: set[int16] = {}
+const externalExtraTokens* = {12.int16, 11.int16}
 include parser_runtime
 
 proc newParser*(input: string): Parser =
@@ -1485,7 +1529,7 @@ proc newParser*(input: string): Parser =
   return parser
 
 proc parse*(parser: var Parser): ParseNode =
-  return runGenericGLR(parser)
+  return runGenericGLR(parser, raiseOnFail = true)
 
 proc parseSexp*(input: string): ParseNode =
   var parser = newParser(input)
