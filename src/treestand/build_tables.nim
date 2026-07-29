@@ -2560,7 +2560,37 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
           if keepShifts and winningReduces.len > 0 and not glrHeuristicApplied:
             debugEchoMsg "CONTRADICTION: Both shifts and reduces won - unresolved!"
             allResolved = false
-          
+
+          # Repetition guard (tree-sitter `is_repetition` intent).  A rule that
+          # conflicts with its OWN repetition helper at a shiftable terminal is
+          # the benign "keep repeating vs stop" ambiguity — e.g. Python's
+          # `union_pattern` (prec.right) vs `union_pattern_repeat1` (prec.left)
+          # on `'|'`.  Contradictory associativity between an owner and its
+          # helper cannot be resolved by precedence/associativity, but the
+          # correct action is to SHIFT (continue the repetition); tree-sitter
+          # keeps the shift and marks it a repetition.  We detect this precisely:
+          # every reduce, after mapping repeat helpers to their owning rule,
+          # collapses to a SINGLE visible rule, and at least one reduce is an
+          # auxiliary helper.  A genuine cross-rule conflict (e.g. two different
+          # rules' repeats, `conflict_in_repeat_rule`) maps to >1 owner and is
+          # left to error as before.
+          if not allResolved:
+            var mappedOwners: seq[GrammarSymbol] = @[]
+            var involvesRepeat = false
+            for r in reduces:
+              if r.reduceSymbol.kind == stNonTerminal and
+                 augmentedGrammar.variables[r.reduceSymbol.index].kind == vtAuxiliary:
+                involvesRepeat = true
+                for p in auxParents[r.reduceSymbol.index]:
+                  if p notin mappedOwners: mappedOwners.add(p)
+              elif r.reduceSymbol notin mappedOwners:
+                mappedOwners.add(r.reduceSymbol)
+            if involvesRepeat and mappedOwners.len == 1:
+              debugEchoMsg "Repetition ambiguity (rule vs own repeat): keeping SHIFT"
+              keepShifts = true
+              winningReduces = @[]
+              allResolved = true
+
           if not allResolved:
             var participants: seq[GrammarSymbol] = @[]
             for a in actions:
