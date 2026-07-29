@@ -1,23 +1,28 @@
 ## Efficient BitSet implementation for lookahead sets in LALR(1) parser generation.
-## Provides O(1) set operations using bitwise operations on uint64 words.
+##
+## The words are stored INLINE (fixed-size array), so copying/unioning sets in
+## hot loops never touches the heap. 1024 bits covers the combined terminal +
+## external token count of every realistic grammar.
 
 import grammar, hashes
 import std/bitops
 
+const BitsetWords* = 16  ## 1024 bits of inline storage
+
 type
   BitSet* = object
-    ## Compact bitset for representing sets of terminal symbols.
-    ## Uses seq[uint64] to support arbitrary number of terminals.
-    words*: seq[uint64]
-    capacity*: int  # Total number of bits (symbols) this set can represent
+    words*: array[BitsetWords, uint64]
+    capacity*: int16  ## Number of bits this set "knows about" (grows on demand)
+
+proc wordCount(capacity: int): int {.inline.} =
+  (capacity + 63) div 64
 
 proc newBitSet*(capacity: int): BitSet =
   ## Create a new empty BitSet that can hold `capacity` bits.
-  let wordCount = (capacity + 63) div 64  # Round up to nearest word
-  result = BitSet(
-    words: newSeq[uint64](wordCount),
-    capacity: capacity
-  )
+  if capacity > BitsetWords * 64:
+    raise newException(ValueError, "BitSet capacity exceeded: " & $capacity &
+      " bits requested, max is " & $(BitsetWords * 64))
+  result = BitSet(capacity: capacity.int16)  # words are zero-initialized
 
 proc initBitSet*(capacity: int = 128): BitSet =
   ## Initialize an empty BitSet with default capacity.
@@ -31,85 +36,71 @@ proc len*(bs: BitSet): int =
 
 proc incl*(bs: var BitSet, bitIndex: int) =
   ## Set the bit at `bitIndex` to 1.
+  if bitIndex >= BitsetWords * 64:
+    raise newException(ValueError, "BitSet index out of range: " & $bitIndex)
   if bitIndex >= bs.capacity:
-    # Expand capacity if needed
-    let newCapacity = max(bitIndex + 1, bs.capacity * 2)
-    let newWordCount = (newCapacity + 63) div 64
-    bs.words.setLen(newWordCount)
-    bs.capacity = newCapacity
-  
+    bs.capacity = (bitIndex + 1).int16
+
   let wordIdx = bitIndex shr 6  # bitIndex div 64
   let bitIdx = bitIndex and 63   # bitIndex mod 64
   bs.words[wordIdx] = bs.words[wordIdx] or (1'u64 shl bitIdx)
 
 proc excl*(bs: var BitSet, bitIndex: int) =
   ## Clear the bit at `bitIndex` (set to 0).
-  if bitIndex >= bs.capacity:
+  if bitIndex >= bs.capacity or bitIndex < 0:
     return  # Nothing to clear
-  
+
   let wordIdx = bitIndex shr 6
   let bitIdx = bitIndex and 63
   bs.words[wordIdx] = bs.words[wordIdx] and not (1'u64 shl bitIdx)
+
+proc incl2*(bs: var BitSet, bitIndex: int): bool =
+  ## Set the bit at `bitIndex` to 1. Returns true (for `discard`-free use
+  ## inside `mgetOrPut(...)` call sites).
+  bs.incl(bitIndex)
+  true
 
 proc contains*(bs: BitSet, bitIndex: int): bool =
   ## Check if bit at `bitIndex` is set.
   if bitIndex >= bs.capacity or bitIndex < 0:
     return false
-  
+
   let wordIdx = bitIndex shr 6
   let bitIdx = bitIndex and 63
-  if wordIdx >= bs.words.len:
-    return false
-  
   (bs.words[wordIdx] and (1'u64 shl bitIdx)) != 0
 
 proc union*(dest: var BitSet, src: BitSet): bool =
   ## Union `src` into `dest` using bitwise OR. Returns true if `dest` was modified.
   var changed = false
-  
-  # Expand dest if needed
-  if src.capacity > dest.capacity:
-    let newCapacity = src.capacity
-    let newWordCount = (newCapacity + 63) div 64
-    dest.words.setLen(newWordCount)
-    dest.capacity = newCapacity
-  
-  # Perform word-level OR
-  let minWords = min(dest.words.len, src.words.len)
-  for i in 0 ..< minWords:
+
+  # Perform word-level OR (only over the words `src` actually uses)
+  let srcWords = wordCount(src.capacity.int)
+  for i in 0 ..< srcWords:
     let oldWord = dest.words[i]
     dest.words[i] = oldWord or src.words[i]
     if dest.words[i] != oldWord:
       changed = true
-  
+
+  if src.capacity > dest.capacity:
+    dest.capacity = src.capacity
+
   result = changed
 
 proc intersect*(dest: var BitSet, src: BitSet) =
   ## Intersect `dest` with `src` using bitwise AND.
-  let minWords = min(dest.words.len, src.words.len)
-  for i in 0 ..< minWords:
+  # Words beyond `src`'s capacity are zero in `src`, so a full-width AND
+  # also clears any `dest` bits outside of `src`'s range.
+  for i in 0 ..< BitsetWords:
     dest.words[i] = dest.words[i] and src.words[i]
-  
-  # Clear remaining words in dest if src is smaller
-  if dest.words.len > src.words.len:
-    for i in src.words.len ..< dest.words.len:
-      dest.words[i] = 0
 
 proc clear*(bs: var BitSet) =
   ## Clear all bits (set all to 0).
-  for i in 0 ..< bs.words.len:
+  for i in 0 ..< BitsetWords:
     bs.words[i] = 0
 
 proc `==`*(a, b: BitSet): bool =
   ## Check if two BitSets are equal.
-  # Compare word by word
-  let maxWords = max(a.words.len, b.words.len)
-  for i in 0 ..< maxWords:
-    let aWord = if i < a.words.len: a.words[i] else: 0'u64
-    let bWord = if i < b.words.len: b.words[i] else: 0'u64
-    if aWord != bWord:
-      return false
-  true
+  a.words == b.words
 
 proc hash*(bs: BitSet): Hash =
   ## Hash a BitSet for use in tables.
@@ -121,7 +112,7 @@ proc hash*(bs: BitSet): Hash =
 
 iterator items*(bs: BitSet): int =
   ## Iterate over all set bit indices.
-  for wordIdx in 0 ..< bs.words.len:
+  for wordIdx in 0 ..< BitsetWords:
     let word = bs.words[wordIdx]
     if word != 0:
       for bitIdx in 0 ..< 64:

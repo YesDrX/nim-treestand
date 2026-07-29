@@ -301,7 +301,8 @@ proc `==`*(a, b: GrammarSymbol): bool =
   a.kind == b.kind and a.index == b.index
 
 proc hash*(s: GrammarSymbol): Hash =
-  hash((s.kind, s.index))
+  # Packed single-value hash (kind + 16-bit index) - hot during table building.
+  hash(ord(s.kind).uint64 or (s.index.uint64 shl 8))
 
 proc `$`*(s: GrammarSymbol): string =
   case s.kind
