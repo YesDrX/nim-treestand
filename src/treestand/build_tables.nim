@@ -2231,7 +2231,76 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
     for s in augmentedGrammar.expectedConflicts:
       debugEchoMsg "  Set: ", s
     return false
-  
+
+  # --- Tree-sitter style structural conflict-set resolution -----------------
+  # A repeat helper (`X_repeat1`) conflict is really a conflict between the
+  # *visible* rules that contain the repeat, not between the helpers.  Tree-
+  # sitter's `get_auxiliary_node_info` maps an auxiliary symbol to the
+  # non-auxiliary rules that reference it, then whitelists a conflict when the
+  # resulting set of "parent" symbols exactly matches a declared `conflicts`
+  # entry.  We precompute that mapping here (`auxParents`) and use it instead
+  # of the name-heuristic `getOriginalSymbol`, which over-resolves helpers past
+  # their immediate owner (e.g. `parameter_list_repeat1` -> `parameter_list`
+  # -> `function_declarator`, losing the `parameter_list` the conflict is
+  # actually declared against).
+  #
+  # Each helper is unique to the rule that spawned it (grammar preparation
+  # generates a distinct `_repeatN` per repeat), so a grammar-global map of
+  # "who references this helper" yields the same parent set tree-sitter derives
+  # per-state.  When a helper is only referenced by another helper we recurse
+  # up until we reach the non-auxiliary owners.
+  var auxDirectRefs = newSeq[seq[GrammarSymbol]](augmentedGrammar.variables.len)
+  for vi in 0 ..< augmentedGrammar.variables.len:
+    for prod in augmentedGrammar.variables[vi].productions:
+      for step in prod.steps:
+        if step.symbol.kind == stNonTerminal:
+          let target = step.symbol.index.int
+          let refSym = GrammarSymbol(kind: stNonTerminal, index: vi.uint16)
+          if refSym notin auxDirectRefs[target]:
+            auxDirectRefs[target].add(refSym)
+
+  proc collectNonAuxParents(idx: int, acc: var seq[GrammarSymbol], seen: var seq[int]) =
+    if idx in seen: return
+    seen.add(idx)
+    for p in auxDirectRefs[idx]:
+      if augmentedGrammar.variables[p.index].kind == vtAuxiliary:
+        collectNonAuxParents(p.index.int, acc, seen)
+      elif p notin acc:
+        acc.add(p)
+
+  var auxParents = newSeq[seq[GrammarSymbol]](augmentedGrammar.variables.len)
+  for vi in 0 ..< augmentedGrammar.variables.len:
+    if augmentedGrammar.variables[vi].kind == vtAuxiliary:
+      var acc: seq[GrammarSymbol] = @[]
+      var seen: seq[int] = @[]
+      collectNonAuxParents(vi, acc, seen)
+      auxParents[vi] = acc
+
+  proc computeActualConflict(conflictingVars: seq[GrammarSymbol]): seq[GrammarSymbol] =
+    ## Port of tree-sitter's `actual_conflict`: replace each auxiliary
+    ## conflicting rule with its non-auxiliary parent rules; keep other rules
+    ## as-is.  The result is the set of symbols matched against declared conflicts.
+    for v in conflictingVars:
+      if v.kind == stNonTerminal and augmentedGrammar.variables[v.index].kind == vtAuxiliary:
+        for p in auxParents[v.index]:
+          if p notin result: result.add(p)
+      elif v notin result:
+        result.add(v)
+
+  proc matchesExpectedExact(actual: seq[GrammarSymbol]): bool =
+    ## Whitelist match using tree-sitter's exact set-equality semantics
+    ## (order-independent) between `actual_conflict` and a declared conflict.
+    if actual.len == 0: return false
+    for expectedSet in augmentedGrammar.expectedConflicts:
+      if expectedSet.len != actual.len: continue
+      var allIn = true
+      for e in expectedSet:
+        if e notin actual:
+          allIn = false
+          break
+      if allIn: return true
+    return false
+
   for stateId in 0..<entries.len:
     var actionsBySymbol = stdtables.initTable[GrammarSymbol, seq[BuildParseAction]]()
     
@@ -2600,7 +2669,14 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
                   let vr = augmentedGrammar.variables[v.index]
                   if vr.kind == vtAuxiliary or vr.name.contains("_repeat"):
                     hasAux = true
-              let isExpected = (allResolveSame and hasAux and augmentedGrammar.expectedConflicts.len > 0) or isConflictExpected(seenVars)
+              # Structural (tree-sitter faithful) check first: replace repeat
+              # helpers with their owning rules and match the declared conflict
+              # set exactly.  Falls back to the earlier heuristics so previously
+              # passing grammars are unaffected.
+              let actualConflict = computeActualConflict(seenVars)
+              let isExpected = matchesExpectedExact(actualConflict) or
+                (allResolveSame and hasAux and augmentedGrammar.expectedConflicts.len > 0) or
+                isConflictExpected(seenVars)
               
               if not isExpected:
                 # --- Path Reconstruction for Context ---
