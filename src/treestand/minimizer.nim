@@ -24,18 +24,6 @@ type
 
 # --- Helpers ---
 
-proc findAction(entry: BuildParseTableEntry, lookahead: GrammarSymbol): BuildParseAction =
-  for (sym, action) in entry.actionMap:
-    if sym == lookahead:
-      return action
-  return BuildParseAction(kind: bpakError)
-
-proc findGoto(entry: BuildParseTableEntry, symbol: GrammarSymbol): int =
-  for (sym, state) in entry.gotoMap:
-    if sym == symbol:
-      return state.int
-  return -1
-  
 proc findGotoIndex(entry: BuildParseTableEntry, symbol: GrammarSymbol): int =
   for i, item in entry.gotoMap:
     if item.sym == symbol:
@@ -81,88 +69,56 @@ proc actionsCompatible(a, b: BuildParseAction, p: Partition): bool =
   else:
     return a == b
 
-proc areStatesIncompatible(a, b: int, p: Partition, parseTable: BuildParseTable): bool =
-  ## Determines if two states are incompatible and cannot be merged.
+proc buildCorePartition(stateCount: int, coreIds: seq[int]): Partition =
+  ## Creates the initial partition for state minimization.
   ##
-  ## States are incompatible if:
-  ## - For any lookahead symbol, their actions differ (and aren't both error)
-  ## - One state has an action for a symbol while the other has error
-  ## - Their GOTO transitions for non-terminals differ
-  ##
-  ## This is the core compatibility predicate used in partition refinement.
-  ## Returns true if states CANNOT be merged, false if they can.
-  let entryA = parseTable.entries[a]
-  let entryB = parseTable.entries[b]
-  
-  # 1. Check Terminal Actions
-  # Check A against B
-  for (sym, actionA) in entryA.actionMap:
-    let actionB = findAction(entryB, sym)
-    if not actionsCompatible(actionA, actionB, p):
-      return true
-      
-  # Check B against A (for symbols in B but not in A)
-  for (sym, actionB) in entryB.actionMap:
-    let actionA = findAction(entryA, sym)
-    if not actionsCompatible(actionA, actionB, p):
-      return true
-
-  # 2. Check GOTO Actions
-  for (sym, stateA) in entryA.gotoMap:
-    let stateB = findGoto(entryB, sym)
-    if stateB == -1: return true # B missing goto
-    if p.stateToGroup[stateA.int] != p.stateToGroup[stateB]: return true
-    
-  for (sym, stateB) in entryB.gotoMap:
-    let stateA = findGoto(entryA, sym)
-    if stateA == -1: return true
-    
-  return false
-
-proc buildPartition(stateCount: int): Partition =
-  ## Creates the initial coarse partition for state minimization.
-  ##
-  ## Initial partition: {0}, {1}, {2..N}
-  ## - State 0: Error state (kept separate)
-  ## - State 1: Start state (kept separate)
-  ## - States 2..N: All other states (initially grouped together)
-  ##
-  ## This coarse partition will be iteratively refined by splitting
-  ## groups based on incompatible states.
+  ## Mirrors tree-sitter's `merge_compatible_states`: states are initially
+  ## grouped by their LR(0) item-set core, so pairwise compatibility checks
+  ## only ever happen within small, already-similar groups.
+  ## - State 0 (start state) and state 1 are kept as singleton groups,
+  ##   matching the previous behavior.
+  ## - States 2..N are grouped by `coreIds`.
   result.stateToGroup = newSeq[int](stateCount)
-  
-  var groupRest = newSeq[int]()
-  
-  for i in 0 ..< stateCount:
-    if i == 0:
-      result.stateToGroup[i] = 0  # Error state in group 0
-    elif i == 1:
-      result.stateToGroup[i] = 1  # Start state in group 1
-    else:
-      result.stateToGroup[i] = 2  # All others in group 2
-      groupRest.add(i)
-      
-  result.groups = @[@[0], @[1], groupRest]
+  result.groups = @[]
 
-proc splitPartition(p: var Partition, parseTable: BuildParseTable): bool =
-  ## Refines the partition by splitting incompatible states into separate groups.
-  ##
-  ## Algorithm:
-  ## 1. For each group, partition states by compatibility with the first state
-  ## 2. If a group splits, mark changed = true
-  ## 3. Return whether any splits occurred
-  ##
-  ## This is called iteratively until no more splits occur (fixpoint),
-  ## yielding the finest partition where all states in a group are
-  ## mutually compatible.
+  if stateCount == 0:
+    return
+
+  # Keep states 0 and 1 in their own groups (start state invariants).
+  result.groups.add(@[0])
+  result.stateToGroup[0] = 0
+  if stateCount > 1:
+    result.groups.add(@[1])
+    result.stateToGroup[1] = 1
+
+  var groupByCoreId = initTable[int, int]()  # coreId -> group index
+
+  for i in 2 ..< stateCount:
+    let coreId = if i < coreIds.len: coreIds[i] else: i
+    if coreId in groupByCoreId:
+      let g = groupByCoreId[coreId]
+      result.groups[g].add(i)
+      result.stateToGroup[i] = g
+    else:
+      let g = result.groups.len
+      groupByCoreId[coreId] = g
+      result.groups.add(@[i])
+      result.stateToGroup[i] = g
+
+proc splitPartition(
+    p: var Partition,
+    incompatible: proc(a, b: int, p: Partition): bool
+): bool =
+  ## Refines the partition by splitting incompatible states into separate
+  ## groups, using the given incompatibility predicate.
   ##
   ## Returns: true if partition was refined, false if already at fixpoint
   var newGroups = newSeq[seq[int]]()
   var newStateToGroup = newSeq[int](p.stateToGroup.len)
   var changed = false
-  
+
   var currentGroupIdx = 0
-  
+
   for group in p.groups:
     if group.len <= 1:
       # Singleton groups cannot be split
@@ -170,25 +126,25 @@ proc splitPartition(p: var Partition, parseTable: BuildParseTable): bool =
       for s in group: newStateToGroup[s] = currentGroupIdx
       inc currentGroupIdx
       continue
-      
+
     var subGroups = newSeq[seq[int]]()
-    
+
     for stateId in group:
       var placed = false
       for idx, subGroup in subGroups:
         # Check if compatible with representative of subGroup
-        if not areStatesIncompatible(stateId, subGroup[0], p, parseTable):
+        if not incompatible(stateId, subGroup[0], p):
            # compatible
            subGroups[idx].add(stateId)
            placed = true
            break
-           
+
       if not placed:
         subGroups.add(@[stateId])
-        
+
     if subGroups.len > 1:
       changed = true
-      
+
     for subGroup in subGroups:
       newGroups.add(subGroup)
       for s in subGroup: newStateToGroup[s] = currentGroupIdx
@@ -198,67 +154,157 @@ proc splitPartition(p: var Partition, parseTable: BuildParseTable): bool =
   p.stateToGroup = newStateToGroup
   return changed
 
-proc mergeCompatibleStates(parseTable: var BuildParseTable) =
-  ## Merges compatible parse states using partition refinement.
+proc mergeCompatibleStates(
+    parseTable: var BuildParseTable,
+    coreIds: seq[int],
+    syntaxGrammar: SyntaxGrammar,
+    doesConflict: proc(i, j: int): bool,
+    doesMatchSameString: proc(i, j: int): bool
+) =
+  ## Merges compatible parse states using partition refinement, following
+  ## tree-sitter's `minimize_parse_table.rs`:
   ##
-  ## Algorithm (similar to DFA minimization):
-  ## 1. Start with coarse partition: {error}, {start}, {rest}
-  ## 2. Iteratively refine by splitting groups with incompatible states
-  ## 3. Continue until fixpoint (no more splits possible)
-  ## 4. Merge all states in each final group into a single state
-  ## 5. Update all state references to point to merged states
-  ##
-  ## Complexity: O(n² * a) where n = states, a = alphabet size
-  ## (Similar to Hopcroft's DFA minimization but adapted for LR tables)
-  
-  # Build initial coarse partition
-  var p = buildPartition(parseTable.entries.len)
-  
-  # Refine partition until fixpoint
+  ## 1. Start with a fine partition: states grouped by LR(0) item-set core.
+  ## 2. One split pass separating states whose terminal entries conflict
+  ##    (including the `token_conflicts` check for tokens present on only
+  ##    one side).
+  ## 3. Split to fixpoint while states' shift/goto successors land in
+  ##    different groups.
+  ## 4. Merge all states in each final group into a single state.
+  ## 5. Update all state references to point to merged states.
+
+  # Per-state symbol -> index lookup tables, built once (O(1) lookups
+  # instead of linear scans during compatibility checks).
+  var actionIdx = newSeq[Table[GrammarSymbol, int]](parseTable.entries.len)
+  var gotoIdx = newSeq[Table[GrammarSymbol, int]](parseTable.entries.len)
+  for i, entry in parseTable.entries:
+    actionIdx[i] = initTable[GrammarSymbol, int]()
+    for j, item in entry.actionMap:
+      if item.sym notin actionIdx[i]:
+        actionIdx[i][item.sym] = j
+    gotoIdx[i] = initTable[GrammarSymbol, int]()
+    for j, item in entry.gotoMap:
+      if item.sym notin gotoIdx[i]:
+        gotoIdx[i][item.sym] = j
+
+  # Pointer alias so the predicate closures below can capture the entries.
+  let entriesPtr = addr parseTable.entries
+
+  # Port of tree-sitter's `token_conflicts`: would adding `newToken`
+  # (present in the other state) to `entry` introduce a lexical conflict?
+  proc tokenConflicts(entry: BuildParseTableEntry, newToken: GrammarSymbol): bool =
+    if newToken.kind == stEndOfNonTerminalExtra:
+      return true
+    # External tokens could conflict lexically with any of the state's
+    # existing lookahead tokens.
+    if newToken.kind == stExternal:
+      return true
+    # Tokens that are both internal and external could influence the
+    # behavior of the external scanner.
+    for ext in syntaxGrammar.externalTokens:
+      if ext.correspondingInternalToken.isSome and
+         ext.correspondingInternalToken.get == newToken:
+        return true
+    if newToken.kind != stTerminal:
+      return false
+    # Do not add a token if it conflicts with an existing token.
+    for (token, _) in entry.actionMap:
+      if token.kind != stTerminal:
+        continue
+      if doesConflict(newToken.index.int, token.index.int) or
+         doesMatchSameString(newToken.index.int, token.index.int):
+        return true
+    return false
+
+  # Phase 1 predicate: terminal-entry conflicts.
+  proc statesConflict(a, b: int, p: Partition): bool =
+    let entryA = entriesPtr[][a]
+    let entryB = entriesPtr[][b]
+    for (sym, actionA) in entryA.actionMap:
+      if sym in actionIdx[b]:
+        let actionB = entryB.actionMap[actionIdx[b][sym]].action
+        if not actionsCompatible(actionA, actionB, p):
+          return true
+      elif tokenConflicts(entryB, sym):
+        return true
+    for (sym, _) in entryB.actionMap:
+      if sym notin actionIdx[a] and tokenConflicts(entryA, sym):
+        return true
+    return false
+
+  # Phase 2 predicate: successor states land in different groups.
+  proc successorsDiffer(a, b: int, p: Partition): bool =
+    let entryA = entriesPtr[][a]
+    let entryB = entriesPtr[][b]
+    for (sym, actionA) in entryA.actionMap:
+      if actionA.kind == bpakShift and sym in actionIdx[b]:
+        let actionB = entryB.actionMap[actionIdx[b][sym]].action
+        if actionB.kind == bpakShift and
+           p.stateToGroup[actionA.shiftState.int] != p.stateToGroup[actionB.shiftState.int]:
+          return true
+    for (sym, stateA) in entryA.gotoMap:
+      if sym in gotoIdx[b]:
+        let stateB = entryB.gotoMap[gotoIdx[b][sym]].state
+        if p.stateToGroup[stateA.int] != p.stateToGroup[stateB.int]:
+          return true
+      else:
+        return true # B missing goto
+    for (sym, _) in entryB.gotoMap:
+      if sym notin gotoIdx[a]:
+        return true # A missing goto
+    return false
+
+  # Build initial partition (grouped by LR item-set core)
+  var p = buildCorePartition(parseTable.entries.len, coreIds)
+
+  # Phase 1: split states with conflicting terminal entries (single pass)
+  discard splitPartition(p, statesConflict)
+
+  # Phase 2: split until shift/goto successors agree on groups (fixpoint)
   var changed = true
   while changed:
-    changed = splitPartition(p, parseTable)
-  
+    changed = splitPartition(p, successorsDiffer)
+
   # Merge states based on final partition
   var newEntries = newSeq[BuildParseTableEntry]()
   var oldToNewState = newSeq[uint32](parseTable.entries.len)
-  
+
   for group in p.groups:
     if group.len == 0: continue
-    
+
     # Create merged state from group
     # We take the first state as base, and merge others
     var baseState = parseTable.entries[group[0]]
-    
+
     for k in 1 ..< group.len:
       let otherState = parseTable.entries[group[k]]
-      
+
       # Merge actions (simple union, assuming compatibility verified)
       for item in otherState.actionMap:
         if not hasAction(baseState, item.sym):
           baseState.actionMap.add(item)
-          
+
       for item in otherState.gotoMap:
         if not hasGoto(baseState, item.sym):
           baseState.gotoMap.add(item)
 
     newEntries.add(baseState)
     let newStateIdx = uint32(newEntries.len - 1)
-    
+
     for oldIdx in group:
       oldToNewState[oldIdx] = newStateIdx
-      
+
   # Update all references
   for i in 0 ..< newEntries.len:
     for j in 0 ..< newEntries[i].actionMap.len:
       if newEntries[i].actionMap[j].action.kind == bpakShift:
         let old = newEntries[i].actionMap[j].action.shiftState
         newEntries[i].actionMap[j].action.shiftState = oldToNewState[old]
-        
+
     for j in 0 ..< newEntries[i].gotoMap.len:
       let old = newEntries[i].gotoMap[j].state
       newEntries[i].gotoMap[j].state = oldToNewState[old]
-  
+
   parseTable.entries = newEntries
 
 # --- Unit Reduction Removal ---
@@ -437,24 +483,28 @@ proc removeUnusedStates(parseTable: var BuildParseTable) =
 proc minimizeParseTable*(
   parseTable: var BuildParseTable,
   syntaxGrammar: SyntaxGrammar,
-  lexicalGrammar: LexicalGrammar
+  lexicalGrammar: LexicalGrammar,
+  coreIds: seq[int] = @[],
+  doesConflict: proc(i, j: int): bool = nil,
+  doesMatchSameString: proc(i, j: int): bool = nil
 ) =
   ## Main entry point for parse table minimization.
   ##
   ## Applies a sequence of optimizations to reduce parse table size:
   ## 1. **Unit Reduction Removal**: Bypasses states that only perform A -> B reductions
-  ## 2. **State Merging**: Merges states with compatible actions using partition refinement
+  ## 2. **State Merging**: Merges states with compatible actions using partition
+  ##    refinement, pre-grouped by LR(0) item-set core
   ## 3. **Unreachable State Removal**: Removes states not reachable from start
   ##
-  ## This typically reduces parse table size by 20-30% while preserving correctness.
-  ##
-  ## Example (JSON grammar):
-  ##   Before: 54 states
-  ##   After: 41 states (~24% reduction)
-  ##
-  ## The algorithm mirrors Tree-sitter's approach and is similar to LALR(1)
-  ## state merging, but adapted for GLR-capable parse tables.
-  
+  ## `coreIds` maps each parse state to its LR(0) item-set core id (states
+  ## sharing a core are merge candidates). `doesConflict` /
+  ## `doesMatchSameString` query the lexical token-conflict map and guard
+  ## against merging states whose disjoint lookahead tokens could conflict
+  ## in the lexer.
+  let noConflicts = proc(i, j: int): bool = false
+  let dc = if doesConflict == nil: noConflicts else: doesConflict
+  let dmss = if doesMatchSameString == nil: noConflicts else: doesMatchSameString
+
   removeUnitReductions(parseTable, syntaxGrammar)
-  mergeCompatibleStates(parseTable)
+  mergeCompatibleStates(parseTable, coreIds, syntaxGrammar, dc, dmss)
   removeUnusedStates(parseTable)

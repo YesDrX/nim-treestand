@@ -26,3 +26,10 @@ callgrind.out
 profile_results.txt
 test_all_grammars.log
 treestand.out
+/.omo/
+/.claude/
+treestand
+treestand_baseline
+treestand_dbg
+treestand_new
+REFACTOR_STATUS.md

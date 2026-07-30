@@ -56,20 +56,6 @@ type
   FirstSets* = stdtables.Table[GrammarSymbol, SymbolSet]
   FollowSets* = stdtables.Table[GrammarSymbol, SymbolSet]
   
-  # Precomputed transitive closure data structures (tree-sitter algorithm)
-  FollowSetInfo = object
-    lookaheads: SymbolSet
-    propagatesLookaheads: bool  # Whether to inherit from parent item's lookahead
-  
-  TransitiveClosureAddition = object
-    variableIndex: int
-    productionIndex: int
-    followInfo: FollowSetInfo
-  
-  ClosurePrecomputation = object
-    # For each non-terminal i, additions[i] contains all items that must be
-    # added to an item set when non-terminal i appears as the next symbol
-    additions: seq[seq[TransitiveClosureAddition]]
 
   # === New LALR(1) Closure Cache Types (using BitSet) ===
   
@@ -93,27 +79,49 @@ type
     additions*: seq[seq[ClosureAddition]]
     symbolContext*: SymbolContext  # For symbol <-> bit mapping
 
-  # === Pager's LALR Algorithm Types ===
-  # Enabled with -d:usePagerLALR compile flag
-  
-  LR0Item* = object
-    ## LR(0) item: production with dot position, no lookahead
-    variableIndex*: uint16
-    productionIndex*: uint16
-    position*: uint16
-    inheritedPrecedence*: int32
-  
-  PropagationLink* = object
-    ## Lookahead propagation: from one item to another
-    targetStateId*: int
-    targetItem*: LR0Item
-  
-  LR0State* = object
-    ## State in LR(0) automaton with Pager's lookahead data
-    kernels*: seq[LR0Item]  # Core LR(0) items
-    lookaheads*: stdtables.Table[LR0Item, LookaheadSet]  # Computed lookaheads
-    spontaneous*: stdtables.Table[LR0Item, LookaheadSet]  # Spontaneously generated
-    propagations*: stdtables.Table[LR0Item, seq[PropagationLink]]  # Where to propagate
+
+# --- New LALR(1) Data Structures (Kernel-Only with BitSet) ---
+
+type
+  CoreItem* = object
+    ## The "core" of an LR item: just the rule position, without lookaheads.
+    ## `inheritedPrecedence` carries the enclosing precedence context down
+    ## through closures (used for shift-precedence computation during the
+    ## fill phase). It is part of the item identity for the fill closure but
+    ## kept to step-prec-only during state construction to keep state counts
+    ## compact.
+    variableIndex*: uint16         # Which non-terminal variable this production belongs to
+    productionIndex*: uint16       # Which production of that variable
+    position*: uint16              # Dot position (0 = before first symbol)
+    inheritedPrecedence*: int16    # Precedence inherited from parent rule
+
+  StateKernels* = stdtables.Table[CoreItem, LookaheadSet]
+    ## Maps each core item to its set of lookaheads.
+    ## This is the state representation for LALR(1) construction.
+
+proc hash*(item: CoreItem): Hash =
+  ## Hash for CoreItem: the four 16-bit fields pack into one uint64,
+  ## so a single mix is enough. Called millions of times during construction.
+  let packed = item.variableIndex.uint64 or
+    (item.productionIndex.uint64 shl 16) or
+    (item.position.uint64 shl 32) or
+    (cast[uint16](item.inheritedPrecedence).uint64 shl 48)
+  result = hash(packed)
+
+proc `==`*(a, b: CoreItem): bool =
+  ## Equality for CoreItem.
+  a.variableIndex == b.variableIndex and
+  a.productionIndex == b.productionIndex and
+  a.position == b.position and
+  a.inheritedPrecedence == b.inheritedPrecedence
+
+proc `<`*(a, b: CoreItem): bool =
+  ## Ordering for CoreItem (for sorted sequences as map keys).
+  if a.variableIndex != b.variableIndex: return a.variableIndex < b.variableIndex
+  if a.productionIndex != b.productionIndex: return a.productionIndex < b.productionIndex
+  if a.position != b.position: return a.position < b.position
+  return a.inheritedPrecedence < b.inheritedPrecedence
+
 
 # Forward declarations
 proc buildLexicalNfa(lexicalGrammar: var LexicalGrammar)
@@ -122,7 +130,17 @@ proc dfaFromNfa(
     tokenConflictMap: TokenConflictMap,
     startConfigs: seq[seq[uint32]]
 ): tuple[table: BuildLexTable, startStateMap: seq[uint32]]
-proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, skipConflictDetection: bool = false): BuildParseTable
+
+proc isNullable(grammar: SyntaxGrammar, symbol: GrammarSymbol): bool =
+  # Only Non-Terminals can be nullable
+  if symbol.kind != stNonTerminal:
+    return false
+
+  # O(1) Lookup
+  return grammar.variables[symbol.index].isNullable
+
+
+proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, skipConflictDetection: bool = false, tokenConflictMap: TokenConflictMap = TokenConflictMap()): BuildParseTable
 
 # Conflict helper declarations
 proc computeFirst*(grammar: SyntaxGrammar): FirstSets
@@ -223,14 +241,16 @@ proc buildTables*(syntaxGrammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, 
             mutableSyntax.extraSymbols.add(sym)
 
   # 3. Build parse table from syntax grammar
-  # Using modified syntax grammar with newly detected extras
-  var parseTable = buildParseTable(mutableSyntax, mutableLexical, skipConflictDetection)
-
+  # The token conflict map is needed by parse table minimization (to decide
+  # which states may merge), so compute it before building the parse table.
   let firstSets = computeFirst(syntaxGrammar)
   let lastSets = computeLast(syntaxGrammar)
   let followingTokens = computeFollowingTokens(syntaxGrammar, mutableLexical, firstSets, lastSets)
   let tokenConflictMap = newTokenConflictMap(mutableLexical, followingTokens)
-  
+
+  # Using modified syntax grammar with newly detected extras
+  var parseTable = buildParseTable(mutableSyntax, mutableLexical, skipConflictDetection, tokenConflictMap)
+
   # 4. Determine unique lexical configurations derived from Parse Table
   # Collect valid lookaheads for each parse state
   # Build lexical states
@@ -864,14 +884,6 @@ proc computeNullability*(grammar: var SyntaxGrammar) =
            changed = true
            break
 
-proc isNullable(grammar: SyntaxGrammar, symbol: GrammarSymbol): bool =
-  # Only Non-Terminals can be nullable
-  if symbol.kind != stNonTerminal:
-    return false
-  
-  # O(1) Lookup
-  return grammar.variables[symbol.index].isNullable
-
 proc computeLast(grammar: SyntaxGrammar): stdtables.Table[GrammarSymbol, SymbolSet] =
   ## Compute LAST sets for all non-terminals (similar to FIRST but from end)
   result = stdtables.initTable[GrammarSymbol, SymbolSet]()
@@ -1454,192 +1466,14 @@ proc computeFollow*(grammar: SyntaxGrammar, firstSets: FirstSets): FollowSets =
           if result[sym].len != oldSize:
             changed = true
 
-# --- LR(1) Items and Canonical Collection ---
-
-type
-  LR1Item* = object
-    variableIndex*: int32         # Which variable (non-terminal) this production belongs to
-    productionIndex*: int32       # Which production of that variable
-    position*: int32              # Dot position (0 = before first symbol)
-    lookahead*: GrammarSymbol     # Lookahead symbol
-    inheritedPrecedence*: int32   # Precedence inherited from parent rule
-
-proc hash*(item: LR1Item): Hash =
-  when nimvm:
-    for fld, val in item.fieldPairs:
-      result = result !& hash(val)
-  else:
-    result = hash(cast[int](item)) # 64 bits
-    result = result !& hash(cast[ptr int](item.position.addr)[]) # 64 bits
-    result = result !& hash(item.inheritedPrecedence) # 32 bits
-
-proc `==`*(a, b: LR1Item): bool =
-  a.variableIndex == b.variableIndex and
-  a.productionIndex == b.productionIndex and
-  a.position == b.position and
-  a.lookahead == b.lookahead and
-  a.inheritedPrecedence == b.inheritedPrecedence
-
-proc `<`*(a, b: LR1Item): bool =
-  if a.variableIndex != b.variableIndex: return a.variableIndex < b.variableIndex
-  if a.productionIndex != b.productionIndex: return a.productionIndex < b.productionIndex
-  if a.position != b.position: return a.position < b.position
-  if a.inheritedPrecedence != b.inheritedPrecedence: return a.inheritedPrecedence < b.inheritedPrecedence
-  if a.lookahead.kind != b.lookahead.kind: return a.lookahead.kind < b.lookahead.kind
-  return a.lookahead.index < b.lookahead.index
-
-# --- New LALR(1) Data Structures (Kernel-Only with BitSet) ---
-
-type
-  CoreItem* = object
-    ## The "core" of an LR item: just the rule position, without lookaheads.
-    ## This is the key for LALR(1) state merging.
-    variableIndex*: uint16         # Which non-terminal variable this production belongs to
-    productionIndex*: uint16       # Which production of that variable
-    position*: uint16              # Dot position (0 = before first symbol)
-    inheritedPrecedence*: int16    # Precedence inherited from parent rule
-  
-  StateKernels* = stdtables.Table[CoreItem, LookaheadSet]
-    ## Maps each core item to its set of lookaheads.
-    ## This is the new state representation for LALR(1).
-
-proc hash*(item: CoreItem): Hash =
-  ## Efficient hash for CoreItem using combined field hashing.
-  result = Hash(0)
-  result = result !& hash(item.variableIndex)
-  result = result !& hash(item.productionIndex)
-  result = result !& hash(item.position)
-  result = result !& hash(item.inheritedPrecedence)
-  result = !$result
-
-proc `==`*(a, b: CoreItem): bool =
-  ## Equality for CoreItem.
-  a.variableIndex == b.variableIndex and
-  a.productionIndex == b.productionIndex and
-  a.position == b.position and
-  a.inheritedPrecedence == b.inheritedPrecedence
-
-proc `<`*(a, b: CoreItem): bool =
-  ## Ordering for CoreItem (for sorted sequences as map keys).
-  if a.variableIndex != b.variableIndex: return a.variableIndex < b.variableIndex
-  if a.productionIndex != b.productionIndex: return a.productionIndex < b.productionIndex
-  if a.position != b.position: return a.position < b.position
-  return a.inheritedPrecedence < b.inheritedPrecedence
-
-# Toggle to use fast precomputed closure vs regular worklist closure
-# Set to false to revert to safe, tested implementation
-const USE_FAST_CLOSURE {.used.} = false  # TESTING: Debug precomputed closure; FAST_CLOSURE is actually slower ^-^
-
-# Toggle to use new LALR(1) implementation with kernel-only storage and BitSet
-# Set to true to enable the optimized LALR(1) algorithm
-const USE_LALR_OPTIMIZED {.used.} = true  # Re-enabled after fixing cache bug
-
-# Toggle to use Pager's LALR algorithm (propagation-based)
-# Enabled for systematic debugging
-const USE_PAGER_LALR {.used.} = true
-
-proc precomputeClosureAdditions(grammar: SyntaxGrammar, firstSets: FirstSets): ClosurePrecomputation {.used.} =
-  ## Precompute which items must be added when expanding each non-terminal.
-  ## This is the tree-sitter optimization - compute once, use many times.
-  result = ClosurePrecomputation(
-    additions: newSeq[seq[TransitiveClosureAddition]](grammar.variables.len)
-  )
-  
-  for i in 0 ..< grammar.variables.len:
-    # For each non-terminal i, compute which non-terminals can appear
-    # at the start of i's productions, along with their follow sets
-    var followInfoByNonTerminal = stdtables.initTable[int, FollowSetInfo]()
-    var stack = newSeq[(int, SymbolSet, bool)]()
-    
-    # Start with non-terminal i itself
-    stack.add((i, initSymbolSet(), true))
-    
-    while stack.len > 0:
-      let (symIdx, lookaheads, propagates) = stack.pop()
-      
-      # Get or create follow set info for this non-terminal
-      if symIdx notin followInfoByNonTerminal:
-        followInfoByNonTerminal[symIdx] = FollowSetInfo(
-          lookaheads: initSymbolSet(),
-          propagatesLookaheads: false
-        )
-      
-      var info = followInfoByNonTerminal[symIdx]
-      var didAdd = false
-      
-      # Merge lookaheads
-      for la in lookaheads:
-        if la notin info.lookaheads:
-          info.lookaheads.incl(la)
-          didAdd = true
-      
-      # Merge propagation flag
-      if propagates and not info.propagatesLookaheads:
-        info.propagatesLookaheads = true
-        didAdd = true
-      
-      # If nothing changed, we've already processed this
-      if not didAdd:
-        continue
-      
-      # Store updated info
-      followInfoByNonTerminal[symIdx] = info
-      
-      # Explore all productions of this non-terminal
-      for production in grammar.variables[symIdx].productions:
-        if production.steps.len > 0:
-          let firstSym = production.steps[0].symbol
-          
-          if firstSym.kind == stNonTerminal:
-            # First symbol is a non-terminal - need to explore it
-            # Compute FIRST(β) where β = ALL symbols after firstSym
-            var betaFirst = initSymbolSet()
-            var allBetaNullable = true
-            
-            # FIX: Iterate through ALL symbols after the first, not just one
-            for j in 1 ..< production.steps.len:
-              let sym = production.steps[j].symbol
-              
-              if sym.kind == stNonTerminal:
-                # Add FIRST(sym) to betaFirst
-                if sym in firstSets:
-                  for firstSym in firstSets[sym]:
-                    betaFirst.incl(firstSym)
-              else:
-                # FIX: Handle external/terminal symbols directly
-                betaFirst.incl(sym)
-              
-              # FIX: Check nullability to know when to stop
-              if not isNullable(grammar, sym):
-                allBetaNullable = false
-                break
-            
-            # Compute final lookaheads for this expansion
-            if allBetaNullable:
-              # β is nullable (or empty) - propagate parent lookaheads AND add FIRST(β)
-              var combined = betaFirst
-              for la in lookaheads:
-                combined.incl(la)
-              stack.add((firstSym.index.int, combined, propagates))
-            else:
-              # β is not nullable - only use FIRST(β), don't propagate
-              stack.add((firstSym.index.int, betaFirst, false))
-    
-    # Now store all additions for variable i
-    for (varIdx, followInfo) in pairs(followInfoByNonTerminal):
-      for prodIdx in 0 ..< grammar.variables[varIdx].productions.len:
-        result.additions[i].add(TransitiveClosureAddition(
-          variableIndex: varIdx,
-          productionIndex: prodIdx,
-          followInfo: followInfo
-        ))
 
 # === New LALR(1) Closure Precomputation (using BitSet) ===
 
 proc precomputeClosureCache*(
     grammar: SyntaxGrammar,
     lexicalGrammar: LexicalGrammar,
-    firstSets: FirstSets
+    firstSets: FirstSets,
+    firstSetsBits: stdtables.Table[GrammarSymbol, BitSet]
 ): ClosureCache =
   ## Precompute closure expansions using BitSet for efficient lookahead operations.
   ## This is the optimized version for LALR(1) with kernel-only storage.
@@ -1703,31 +1537,35 @@ proc precomputeClosureCache*(
               # Compute FIRST(β) where β = symbols after firstSym
               var betaFirst = initBitSet(ctx.maxIndex)
               var allBetaNullable = true
-              
+
               for j in 1 ..< production.steps.len:
                 let sym = production.steps[j].symbol
-                
+
                 if sym.kind == stNonTerminal:
                   # Add FIRST(sym) to betaFirst
-                  if sym in firstSets:
-                    for firstSym in firstSets[sym]:
-                      let bit = ctx.symbolToBit(firstSym)
-                      if bit >= 0:
-                        betaFirst.incl(bit)
+                  if sym in firstSetsBits:
+                    discard betaFirst.union(firstSetsBits[sym])
                 else:
                   # Terminal or External
                   let bit = ctx.symbolToBit(sym)
                   if bit >= 0:
                     betaFirst.incl(bit)
-                
+
                 if not isNullable(grammar, sym):
                   allBetaNullable = false
                   break
               
-              # Determine new lookaheads for firstSym expansion
+              # Determine new lookaheads for firstSym expansion.
+              # When beta is fully nullable (in particular when firstSym is
+              # the LAST step of the production, so beta is empty), the
+              # current lookaheads also flow into firstSym's expansion -
+              # matching tree-sitter's item_set_builder.rs, which pushes the
+              # current lookaheads when the production has no next step.
               var newLookaheads = betaFirst
+              if allBetaNullable:
+                discard newLookaheads.union(lookaheads)
               let newPropagates = allBetaNullable and propagates
-              
+
               # Add to stack for further exploration
               stack.add((firstSym.index.int, newLookaheads, newPropagates))
     
@@ -1741,127 +1579,6 @@ proc precomputeClosureCache*(
         followInfo: followInfo
       ))
 
-proc getTransitiveClosure*(
-    grammar: SyntaxGrammar,
-    kernels: StateKernels,
-    cache: ClosureCache,
-    firstSets: FirstSets
-): StateKernels =
-  ## Compute the transitive closure of a kernel set using the precomputed cache.
-  ## Input: Kernel items (rule positions with their lookahead BitSets)
-  ## Output: Full closure (kernels + all recursive expansions)
-  ##
-  ## This is the key LALR(1) optimization: we only store kernels in states,
-  ## and compute closure on-the-fly when needed (during GOTO transitions).
-  
-  result = kernels  # Start with kernels
-  var queue = newSeq[CoreItem]()
-  for core in kernels.keys:
-    queue.add(core)
-  
-  var visited = initHashSet[CoreItem]()
-  
-  while queue.len > 0:
-    let item = queue.pop()
-    if item in visited:
-      continue
-    visited.incl(item)
-    
-    # Look up what symbol is at the dot position
-    let variable = grammar.variables[item.variableIndex]
-    let production = variable.productions[item.productionIndex]
-    
-    # If dot is at end, nothing to expand
-    if item.position >= production.steps.len.uint16:
-      continue
-    
-    let symbol = production.steps[item.position].symbol
-    
-    # We only expand non-terminals
-    if symbol.kind != stNonTerminal:
-      continue
-    
-    # Look up precomputed expansions for this non-terminal
-    let nonTermIdx = symbol.index.int
-    if nonTermIdx >= cache.additions.len:
-      continue
-    
-    # Get the item's current lookaheads
-    if item notin result:
-      continue  # Shouldn't happen
-    let itemLookaheads = result[item]
-    
-    # === Compute Expansion Context ===
-    # We are expanding A -> ... . B beta, L
-    # The context for B's expansion is FIRST(beta L)
-    # This equals FIRST(beta) U (if nullable(beta) then L else {})
-    
-    var expansionContext = initBitSet(cache.symbolContext.maxIndex)
-    var betaNullable = true
-    
-    # Compute FIRST(beta)
-    for k in (item.position + 1).int ..< production.steps.len:
-      let betaSym = production.steps[k].symbol
-      
-      if betaSym.kind == stNonTerminal:
-        if betaSym in firstSets:
-          for firstSym in firstSets[betaSym]:
-            let bit = cache.symbolContext.symbolToBit(firstSym)
-            if bit >= 0:
-              expansionContext.incl(bit)
-      else:
-        # Terminal/External
-        let bit = cache.symbolContext.symbolToBit(betaSym)
-        if bit >= 0:
-          expansionContext.incl(bit)
-      
-      if not isNullable(grammar, betaSym):
-        betaNullable = false
-        break
-    
-    # If beta is nullable, include item's lookaheads (L)
-    if betaNullable:
-      discard expansionContext.union(itemLookaheads)
-    
-    # For each precomputed expansion
-    for addition in cache.additions[nonTermIdx]:
-      # Calculate precedence for the new item
-      let stepPrec = production.steps[item.position].precedence
-      let stepPrecVal = if stepPrec.kind == pkInteger: stepPrec.intValue.int16 else: 0'i16
-      
-      let nextInheritedPrec =
-        if stepPrecVal != 0: stepPrecVal
-        elif production.precedence != 0: production.precedence.int16
-        else: item.inheritedPrecedence
-      
-      # Create the core for the new item
-      let newCore = CoreItem(
-        variableIndex: addition.variableIndex,
-        productionIndex: addition.productionIndex,
-        position: 0,  # Closure items always start at position 0
-        inheritedPrecedence: nextInheritedPrec
-      )
-      
-      # Calculate new lookaheads using the computed context
-      var newLookaheads = addition.followInfo.lookaheads  # Static FIRST(content_suffix)
-      
-      # If the addition propagates lookaheads, merge with our expansion context
-      if addition.followInfo.propagatesLookaheads:
-        discard newLookaheads.union(expansionContext)
-      
-      # Add to result or union with existing
-      var changed = false
-      if newCore in result:
-        # Merge lookaheads with existing core
-        changed = result[newCore].union(newLookaheads)
-      else:
-        # New core - add it
-        result[newCore] = newLookaheads
-        changed = true
-      
-      # If lookaheads changed, add to queue for further expansion
-      if changed and newCore notin visited:
-        queue.add(newCore)
 
 type
   FirstBetaCacheKey* = object
@@ -1876,1016 +1593,197 @@ proc hash*(cacheKey: FirstBetaCacheKey): Hash {.inline.} =
   else:
     result = hash(cast[int](cacheKey))
 
-proc closure*(
-  grammar: SyntaxGrammar,
-  items: HashSet[LR1Item],
-  firstSets: FirstSets): HashSet[LR1Item] =
-  ## Compute closure using a Worklist Algorithm (O(N) instead of O(N^2))
-  result = items
-  
-  # Worklist: only process items that haven't been expanded yet
-  # Pre-allocate with reasonable capacity to reduce reallocations
-  var stack = newSeqOfCap[LR1Item](items.len * 4)  # Heuristic: avg 4x expansion
-  for item in items: stack.add(item)
-  
-  # Phase 2: FIRST(β) memoization cache
-  # Key: (variableIndex, productionIndex, position) → (FIRST set, isNullable)
-  var firstBetaCache = stdtables.initTable[FirstBetaCacheKey, (SymbolSet, bool)]()
-  
-  while stack.len > 0:
-    let item = stack.pop()
-    
-    let variable = grammar.variables[item.variableIndex]
-    let production = variable.productions[item.productionIndex]
-    
-    # If dot is at the end, nothing to expand
-    if item.position >= production.steps.len:
-      continue
-    
-    let nextSym = production.steps[item.position].symbol
-    
-    # We only expand Non-Terminals
-    if nextSym.kind != stNonTerminal:
-      continue
-      
-    # --- Lookahead Computation with Memoization ---
-    # We need FIRST(beta + item.lookahead), where beta is symbols after nextSym
-    
-    # Check cache for FIRST(β) where β = symbols after position
-    let cacheKey = FirstBetaCacheKey(
-      variableIndex: item.variableIndex.uint16,
-      productionIndex: item.productionIndex.uint16,
-      position: item.position.uint16
-    )
-    var lookaheads: SymbolSet
-    var allBetaNullable: bool
-    
-    if cacheKey in firstBetaCache:
-      # Cache hit - reuse computed FIRST(β)
-      let (cachedFirst, cachedNullable) = firstBetaCache[cacheKey]
-      lookaheads = cachedFirst  # Copy the set
-      allBetaNullable = cachedNullable
-    else:
-      # Cache miss - compute FIRST(β)
-      lookaheads = initSymbolSet(8)  # Typical lookahead set size
-      allBetaNullable = true
-      
-      # Check symbols after the current non-terminal (beta)
-      for i in (item.position + 1) ..< production.steps.len:
-        let sym = production.steps[i].symbol
-        
-        if sym.kind == stNonTerminal:
-          if sym in firstSets:
-            for firstSym in firstSets[sym]:
-              lookaheads.incl(firstSym)
-        else:
-          # Terminal/External
-          lookaheads.incl(sym)
-        
-        if not isNullable(grammar, sym):
-          allBetaNullable = false
-          break
-      
-      # Store in cache for future use
-      firstBetaCache[cacheKey] = (lookaheads, allBetaNullable)
-    
-    # If everything after nextSym is nullable, we inherit the item's lookahead
-    if allBetaNullable:
-      lookaheads.incl(item.lookahead)
-      
-    # --- Precedence Computation ---
-    let stepPrec = production.steps[item.position].precedence
-    let stepPrecVal = if stepPrec.kind == pkInteger: stepPrec.intValue else: 0
-    
-    let nextInheritedPrec = 
-      if stepPrecVal != 0: stepPrecVal
-      elif production.precedence != 0: production.precedence 
-      else: item.inheritedPrecedence
+# === LALR(1) table construction support ===
 
-    # --- Add New Items ---
-    let nextVarIndex = nextSym.index
-    # Iterate all productions of the non-terminal B
-    for prodIdx in 0 ..< grammar.variables[nextVarIndex].productions.len:
-      for la in lookaheads:
-        let newItem = LR1Item(
-          variableIndex: nextVarIndex.int32,
-          productionIndex: prodIdx.int32,
-          position: 0, # Closure items always start at 0
-          lookahead: la,
-          inheritedPrecedence: nextInheritedPrec
-        )
-        
-        # KEY OPTIMIZATION:
-        # If we haven't seen this exact item before, add it to result AND stack.
-        # If we HAVE seen it, we don't need to expand it again.
-        if newItem notin result:
-          result.incl(newItem)
-          stack.add(newItem)
+type
+  ShiftDedupKey = object
+    sym: GrammarSymbol
+    target: uint32
+    prec: int32
+    dynPrec: int32
 
-proc closureFast*(
-  grammar: SyntaxGrammar,
-  items: HashSet[LR1Item],
-  firstSets: FirstSets,
-  precomputed: ClosurePrecomputation
-): HashSet[LR1Item] =
-  result = initHashSet[LR1Item](items.len * 4)
-  var stack = newSeq[LR1Item]()
-  
-  # Initialize with kernel items
-  for item in items:
-    result.incl(item)
-    stack.add(item)
-  
-  # Process worklist - expand each item
-  while stack.len > 0:
-    let item = stack.pop()
-    
-    let variable = grammar.variables[item.variableIndex]
-    let production = variable.productions[item.productionIndex]
-    
-    # If dot is at the end, nothing to expand
-    if item.position >= production.steps.len:
-      continue
-    
-    let nextSym = production.steps[item.position].symbol
-    
-    # Only expand non-terminals
-    if nextSym.kind != stNonTerminal:
-      continue
-    
-    # Compute FIRST(β) for ALL symbols after current position
-    var followingTokens = initSymbolSet(16)
-    var allNullable = true
-    
-    for i in (item.position + 1) ..< production.steps.len:
-      let sym = production.steps[i].symbol
-      
-      if sym.kind == stNonTerminal:
-        if sym in firstSets:
-          for f in firstSets[sym]:
-            followingTokens.incl(f)
-      else:
-        # Handle external/terminal symbols
-        followingTokens.incl(sym)
-      
-      if not isNullable(grammar, sym):
-        allNullable = false
-        break
-    
-    # If all symbols after are nullable, add item's lookahead
-    if allNullable:
-      followingTokens.incl(item.lookahead)
-    
-    # Get precedence
-    let stepPrec = production.steps[item.position].precedence
-    let stepPrecVal = if stepPrec.kind == pkInteger: stepPrec.intValue else: 0
-    let nextInheritedPrec = 
-      if stepPrecVal != 0: stepPrecVal
-      elif production.precedence != 0: production.precedence
-      else: item.inheritedPrecedence
-    
-    # Use precomputed additions with corrected lookaheads
-    for addition in precomputed.additions[nextSym.index]:
-      var lookaheads = initSymbolSet(32)
-      
-      # Add fixed lookaheads from precomputation
-      for la in addition.followInfo.lookaheads:
-        lookaheads.incl(la)
-      
-      # Add propagated lookaheads if applicable
-      if addition.followInfo.propagatesLookaheads:
-        for la in followingTokens:
-          lookaheads.incl(la)
-      
-      # Create items for each lookahead
-      for la in lookaheads:
-        let newItem = LR1Item(
-          variableIndex: addition.variableIndex.int32,
-          productionIndex: addition.productionIndex.int32,
-          position: 0,
-          lookahead: la,
-          inheritedPrecedence: nextInheritedPrec
-        )
-        
-        # Add to result AND stack if new
-        if newItem notin result:
-          result.incl(newItem)
-          stack.add(newItem)  # ← FIX: Must expand this item too!
+  ReduceDedupKey = object
+    # Plain-field dedup key for reduce actions (participants are always
+    # @[reduceSymbol], so they don't need to be hashed/compared).
+    sym: GrammarSymbol
+    reduceSymbol: GrammarSymbol
+    reduceCount: uint32
+    dynPrec: int32
+    staticPrec: int32
+    assoc: Option[GrammarAssociativity]
 
-proc goto*(grammar: SyntaxGrammar, items: HashSet[LR1Item], symbol: GrammarSymbol, firstSets: FirstSets): HashSet[LR1Item] =
-  ## Compute GOTO(items, symbol)
-  var moved = initHashSet[LR1Item](items.len)  # Pre-size based on input
-  
-  for item in items:
-    let variable = grammar.variables[item.variableIndex]
-    let production = variable.productions[item.productionIndex]
-    
-    # Check if dot is before the symbol
-    if item.position >= production.steps.len:
-      continue
-    
-    let nextSym = production.steps[item.position].symbol
-    if nextSym == symbol:
-      # Move dot over symbol
-      moved.incl(LR1Item(
-        variableIndex: item.variableIndex,
-        productionIndex: item.productionIndex,
-        position: item.position + 1,
-        lookahead: item.lookahead,
-        inheritedPrecedence: item.inheritedPrecedence
-      ))
-  
-  # Return closure of moved items
-  if moved.len > 0:
-    closure(grammar, moved, firstSets)
-  else:
-    initHashSet[LR1Item]()
-
-proc mergeStates(
-    states: var seq[HashSet[LR1Item]], 
-    transitions: var seq[stdtables.Table[GrammarSymbol, int]]
-) =
-  ## Merge compatible LR(1) states (LALR optimization)
-  ## States are compatible if they have the same core items (ignoring lookaheads)
-  echo "[Treestand] Merging compatible states (LALR optimization)..."
-  
-  var coreToState = stdtables.initTable[seq[LR1Item], int]()
-  var stateRemap = stdtables.initTable[int, int]() # Old ID -> New ID
-  
-  var mergedStates = newSeq[HashSet[LR1Item]]()
-  var nextStateId = 0
-  
-  for i in 0 ..< states.len:
-    # Build core key (ignore lookahead)
-    var core = newSeq[LR1Item]()
-    for item in states[i]:
-      var coreItem = item
-      # Use a unified dummy lookahead for core comparison
-      coreItem.lookahead = GrammarSymbol(kind: stEnd, index: 0)
-      core.add(coreItem)
-    # Sort to ensure canonical key
-    core.sort()
-    
-    if core in coreToState:
-      # Found existing state with same core -> Merge!
-      let targetId = coreToState[core]
-      stateRemap[i] = targetId
-      
-      # Merge lookaheads into the existing state
-      for item in states[i]:
-        # HashSet automatically handles the union logic
-        # Since items differ only by lookahead, adding them unions the lookaheads
-        mergedStates[targetId].incl(item)
-    else:
-      # New unique core found
-      let targetId = nextStateId
-      coreToState[core] = targetId
-      stateRemap[i] = targetId
-      
-      # Add new state (copy initial items)
-      mergedStates.add(states[i])
-      inc(nextStateId)
-      
-  echo "[Treestand] Reduced states from ", states.len, " to ", mergedStates.len
-  
-  # Update transitions for the new merged states
-  var newTransitions = newSeq[stdtables.Table[GrammarSymbol, int]](mergedStates.len)
-  for i in 0 ..< newTransitions.len:
-    newTransitions[i] = stdtables.initTable[GrammarSymbol, int]()
-    
-  for oldStateId, transTable in transitions:
-    # If this old state was merged into a target state
-    if oldStateId in stateRemap:
-        let newStateId = stateRemap[oldStateId]
-        
-        for sym, oldTargetId in transTable:
-          let newTargetId = stateRemap[oldTargetId]
-          
-          if sym in newTransitions[newStateId]:
-            # Consistent transition check (should match if cores are same)
-            if newTransitions[newStateId][sym] != newTargetId:
-               # In standard LALR, this shouldn't happen for valid cores
-               # But if it does, it's a conflict
-               discard 
-          else:
-            newTransitions[newStateId][sym] = newTargetId
-            
-  # Replace with merged data
-  states = mergedStates
-  transitions = newTransitions
-
-proc buildCanonicalCollection*(grammar: SyntaxGrammar, firstSets: FirstSets, augmentedStartIndex: int = -1): tuple[states: seq[HashSet[LR1Item]], stateMap: stdtables.Table[seq[LR1Item], int], transitions: seq[stdtables.Table[GrammarSymbol, int]]] =
-  # LALR(1) construction: merge states by core during construction
-  # This matches tree-sitter's algorithm for better state compression
-  const estimatedStates = 2048
-  var states = newSeqOfCap[HashSet[LR1Item]](estimatedStates)
-  var stateMap = stdtables.initTable[seq[LR1Item], int](estimatedStates)
-  var transitions = newSeqOfCap[stdtables.Table[GrammarSymbol, int]](estimatedStates)
-  var workList = initDeque[int]()
-  let startVarIndex = if augmentedStartIndex >= 0: augmentedStartIndex else: 0
- 
-  # Precompute closure additions if using fast closure
-  when USE_FAST_CLOSURE:
-    echo "[Treestand] Precomputing closure additions for fast closure..."
-    let closurePrecomp = precomputeClosureAdditions(grammar, firstSets)
-    echo "[Treestand] Precomputation complete. Using closureFast."
-  
-  let initialItem = LR1Item(
-    variableIndex: startVarIndex.int32,
-    productionIndex: 0.int32,
-    position: 0.int32,
-    lookahead: GrammarSymbol(kind: stEnd, index: 0),
-    inheritedPrecedence: 0
-  )
-  
-  let initialKernel = @[initialItem]
-  var initialSet = initHashSet[LR1Item]()
-  initialSet.incl(initialItem)
-  
-  # DEBUGGING: Compare both implementations
-  when USE_FAST_CLOSURE:
-    let fastClosure = closureFast(grammar, initialSet, firstSets, closurePrecomp)
-
-    when defined(debug):
-      let slowClosure = closure(grammar, initialSet, firstSets)
-      
-      if fastClosure.len != slowClosure.len:
-        echo "[DEBUG] Initial closure DIVERGENCE!"
-        echo "  Fast: ", fastClosure.len, " items"
-        echo "  Slow: ", slowClosure.len, " items"
-        
-        for item in slowClosure:
-          if item notin fastClosure:
-            let v = grammar.variables[item.variableIndex]
-            let p = v.productions[item.productionIndex]
-            echo "  MISSING in fast: ", v.name, " prod=", item.productionIndex, " pos=", item.position
-        
-        for item in fastClosure:
-          if item notin slowClosure:
-            let v = grammar.variables[item.variableIndex]
-            echo "  EXTRA in fast: ", v.name, " prod=", item.productionIndex, " pos=", item.position
-    
-    let initialClosure = fastClosure
-  else:
-    let initialClosure = closure(grammar, initialSet, firstSets)
-  
-  states.add(initialClosure)
-  stateMap[initialKernel] = 0
-  transitions.add(stdtables.initTable[GrammarSymbol, int]())
-  workList.addLast(0)
-  
-  echo "[Treestand] Starting canonical collection construction."
-  var steps = 0
-  
-  while workList.len > 0:
-    let stateId = workList.popFirst()
-    let currentSet = states[stateId]
-    
-    inc steps
-    if steps mod 500 == 0:
-      echo "[Treestand] Processing state ", stateId, ". Total states: ", states.len
-    
-    # Map: Symbol → List of Kernel Items for the next state
-    var nextStateKernels = stdtables.initTable[GrammarSymbol, seq[LR1Item]]()
-    
-    for item in currentSet:
-      let variable = grammar.variables[item.variableIndex]
-      let production = variable.productions[item.productionIndex]
-      
-      # If dot is not at end, we can transition
-      if item.position < production.steps.len:
-        let symbol = production.steps[item.position].symbol
-        
-        # Create the item as it would appear in the next state (dot moved)
-        let movedItem = LR1Item(
-           variableIndex: item.variableIndex,
-           productionIndex: item.productionIndex,
-           position: item.position + 1,
-           lookahead: item.lookahead,
-           inheritedPrecedence: item.inheritedPrecedence
-        )
-        
-        if symbol notin nextStateKernels:
-          nextStateKernels[symbol] = newSeq[LR1Item]()
-        
-        nextStateKernels[symbol].add(movedItem)
-
-    # Now process the groups
-    for symbol, unsortedKernel in nextStateKernels:
-      var nextKernel = unsortedKernel
-      nextKernel.sort() # Sort for map key
-      
-      var targetStateId: int
-      
-      # Natural LALR: if this exact kernel already exists, reuse it
-      if nextKernel in stateMap:
-        targetStateId = stateMap[nextKernel]
-      else:
-        # Create new state
-        var kernelSet = initHashSet[LR1Item]()
-        for item in nextKernel: kernelSet.incl(item)
-        
-        # Use fast or regular closure based on toggle
-        when USE_FAST_CLOSURE:
-          let fullState = closureFast(grammar, kernelSet, firstSets, closurePrecomp)
-        else:
-          let fullState = closure(grammar, kernelSet, firstSets)
-        
-        targetStateId = states.len
-        states.add(fullState)
-        stateMap[nextKernel] = targetStateId
-        transitions.add(stdtables.initTable[GrammarSymbol, int]())
-        workList.addLast(targetStateId)
-      
-      transitions[stateId][symbol] = targetStateId
-
-  echo "[Treestand] Canonical collection complete. Total states before merge: ", states.len
-  
-  # LALR Merging: combine states with same core but different lookaheads
-  mergeStates(states, transitions)
-  echo "[Treestand] Total states after LALR merge: ", states.len
-  
-  (states, stateMap, transitions)
-
-# === New LALR(1) State Construction with Kernel-Only Storage ===
-
-proc buildCanonicalCollectionLALR*(
-    grammar: SyntaxGrammar,
-    lexicalGrammar: LexicalGrammar,
-    firstSets: FirstSets,
-    augmentedStartIndex: int = -1
-): tuple[states: seq[StateKernels], stateMap: stdtables.Table[seq[CoreItem], seq[int]], transitions: seq[stdtables.Table[GrammarSymbol, int]]] =
-  ## Build LALR(1) state collection using kernel-only storage with BitSet lookaheads.
-  ## This is the optimized implementation that:
-  ## 1. Stores only kernels in states (compute closure on-demand)
-  ## 2. Uses BitSet for O(1) lookahead operations
-  ## 3. Merges states during construction when kernels match
-  ## 4. Propagates lookahead changes back through the worklist
-  
-  echo "[Treestand] Building LALR(1) canonical collection with kernel-only storage..."
-  let startTime = cpuTime()
-  
-  # Precompute closure cache
-  echo "[Treestand] Precomputing closure cache..."
-  let closureCache = precomputeClosureCache(grammar, lexicalGrammar, firstSets)
-  echo "[Treestand] Closure cache complete."
-  
-  const estimatedStates = 512  # LALR needs far fewer states than Canonical LR(1)
-  var states = newSeqOfCap[StateKernels](estimatedStates)
-  var stateMap = stdtables.initTable[seq[CoreItem], seq[int]](estimatedStates)
-  var transitions = newSeqOfCap[stdtables.Table[GrammarSymbol, int]](estimatedStates)
-  var workList = initDeque[int]()
-  
-  let startVarIndex = if augmentedStartIndex >= 0: augmentedStartIndex else: 0
-  
-  # Create initial kernel item
-  let initialCore = CoreItem(
-    variableIndex: startVarIndex.uint16,
-    productionIndex: 0,
-    position: 0,
-    inheritedPrecedence: 0
-  )
-  
-  # Initial lookahead is EOF (end symbol)
-  var initialLookaheads = initBitSet(closureCache.symbolContext.maxIndex)
-  let eofBit = closureCache.symbolContext.symbolToBit(GrammarSymbol(kind: stEnd, index: 0))
-  initialLookaheads.incl(eofBit)
-  
-  # Create initial kernel set
-  var initialKernels = stdtables.initTable[CoreItem, LookaheadSet]()
-  initialKernels[initialCore] = initialLookaheads
-  
-  # Add initial state
-  states.add(initialKernels)
-  stateMap[@[initialCore]] = @[0]
-  transitions.add(stdtables.initTable[GrammarSymbol, int]())
-  workList.addLast(0)
-  
-  echo "[Treestand] Starting LALR construction..."
-  var steps = 0
-  
-  while workList.len > 0:
-    let stateId = workList.popFirst()
-    let kernels = states[stateId]
-    
-    inc steps
-    if steps mod 100 == 0:
-      debugEchoMsg "[BuildTables] Processing state ", stateId, ". Total states: ", states.len
-    
-    # Compute closure on-demand
-    let fullClosure = getTransitiveClosure(grammar, kernels, closureCache, firstSets)
-    
-    # Group items by next symbol (GOTO operation)
-    var nextStateKernels = stdtables.initTable[GrammarSymbol, StateKernels]()
-    
-    for core, lookaheads in fullClosure:
-      let variable = grammar.variables[core.variableIndex]
-      let production = variable.productions[core.productionIndex]
-      
-      # Skip if dot is at end
-      if core.position >= production.steps.len.uint16:
-        continue
-      
-      let symbol = production.steps[core.position].symbol
-      
-      # Create moved item (dot advanced)
-      let movedCore = CoreItem(
-        variableIndex: core.variableIndex,
-        productionIndex: core.productionIndex,
-        position: core.position + 1,
-        inheritedPrecedence: core.inheritedPrecedence
-      )
-      
-      # Initialize group for this symbol if needed
-      if symbol notin nextStateKernels:
-        nextStateKernels[symbol] = stdtables.initTable[CoreItem, LookaheadSet]()
-      
-      # Add/merge lookaheads
-      if movedCore in nextStateKernels[symbol]:
-        discard nextStateKernels[symbol][movedCore].union(lookaheads)
-      else:
-        nextStateKernels[symbol][movedCore] = lookaheads
-    
-    # Process each symbol transition
-    for symbol, nextKernels in nextStateKernels:
-      # Create canonical key from kernel cores (sorted for consistency)
-      var kernelCores = newSeq[CoreItem]()
-      for core in nextKernels.keys:
-        kernelCores.add(core)
-      kernelCores.sort()
-      
-      var targetStateId: int = -1
-      
-      # LALR merging: check if this kernel (core only) already exists
-      if kernelCores in stateMap:
-        # Check candidates for compatibility
-        # Compatibility condition: Merging must not change the set of VALID EXTERNAL TOKENS
-        
-        # debugEchoMsg "[LALR] Kernel exists, checking ", stateMap[kernelCores].len, " candidates for merge"
-        for candidateId in stateMap[kernelCores]:
-           # Optimization: Just check if Externals(Candidate) == Externals(Next)
-           var externals1 = initBitSet(closureCache.symbolContext.maxIndex)
-           var externals2 = initBitSet(closureCache.symbolContext.maxIndex)
-           
-           for _, la in states[candidateId]:
-             for bit in la:
-                let s = closureCache.symbolContext.bitToSymbol(bit)
-                if s.kind == stExternal: externals1.incl(bit)
-           
-           for _, la in nextKernels:
-             for bit in la:
-                let s = closureCache.symbolContext.bitToSymbol(bit)
-                if s.kind == stExternal: externals2.incl(bit)
-           
-           if externals1 == externals2:
-            # debugEchoMsg "[LALR] External tokens match, merging into state ", candidateId
-             targetStateId = candidateId
-             break
-           else:
-            discard
-             # debugEchoMsg "[LALR] External tokens differ, trying next candidate"
-        
-        
-        if targetStateId == -1:
-          debugEchoMsg "[LALR] No compatible candidate found, creating new state"
-        
-      if targetStateId != -1:
-        # Kernel exists and is compatible - merge lookaheads
-        var changed = false
-        
-        for core, lookaheads in nextKernels:
-          if core in states[targetStateId]:
-            # Union lookaheads
-            if states[targetStateId][core].union(lookaheads):
-              changed = true
-          else:
-            # New core in existing state (shouldn't happen if kernel keys are correct)
-            states[targetStateId][core] = lookaheads
-            changed = true
-        
-        # Propagation: if lookaheads changed, re-process this state
-        if changed and targetStateId notin workList:
-          workList.addLast(targetStateId)
-      else:
-        # Create new state
-        targetStateId = states.len
-        states.add(nextKernels)
-        # Add to list of states for this core
-        if kernelCores notin stateMap:
-           stateMap[kernelCores] = @[targetStateId]
-        else:
-           debugEchoMsg "[LALR] Adding state ", targetStateId, " to existing kernel (now ", stateMap[kernelCores].len + 1, " states for this kernel)"
-           stateMap[kernelCores].add(targetStateId)
-           
-        transitions.add(stdtables.initTable[GrammarSymbol, int]())
-        workList.addLast(targetStateId)
-      
-      # Record transition
-      transitions[stateId][symbol] = targetStateId
-  
-  let elapsed = cpuTime() - startTime
-  echo "[Treestand] LALR(1) collection complete. Total states: ", states.len, " (built in ", elapsed.formatFloat(ffDecimal, 3), "s)"
-  
-  (states, stateMap, transitions)
-
-
-# ==================================================================
-# Pager's LALR Algorithm Support
-# ==================================================================
-# Hash and equality for LR0Item (needed for hash tables/sets)
-proc hash(item: LR0Item): Hash =
-  var h: Hash = 0
-  h = h !& hash(item.variableIndex)
-  h = h !& hash(item.productionIndex)
-  h = h !& hash(item.position)
-  h = h !& hash(item.inheritedPrecedence)
+proc hash(key: ShiftDedupKey): Hash =
+  var h = hash(key.sym)
+  h = h !& hash(key.target)
+  h = h !& hash(key.prec)
+  h = h !& hash(key.dynPrec)
   result = !$h
 
-proc `==`(a, b: LR0Item): bool =
-  a.variableIndex == b.variableIndex and
-  a.productionIndex == b.productionIndex and
-  a.position == b.position and
-  a.inheritedPrecedence == b.inheritedPrecedence
+proc `==`(a, b: ShiftDedupKey): bool =
+  a.sym == b.sym and a.target == b.target and
+    a.prec == b.prec and a.dynPrec == b.dynPrec
 
-proc `<`*(a, b: LR0Item): bool =
-  ## Ordering for sorting LR0Items
-  if a.variableIndex != b.variableIndex:
-    return a.variableIndex < b.variableIndex
-  if a.productionIndex != b.productionIndex:
-    return a.productionIndex < b.productionIndex
-  if a.position != b.position:
-    return a.position < b.position
-  return a.inheritedPrecedence < b.inheritedPrecedence
+proc hash(key: ReduceDedupKey): Hash =
+  var h = hash(key.sym)
+  h = h !& hash(key.reduceSymbol)
+  h = h !& hash(key.reduceCount)
+  h = h !& hash(key.dynPrec)
+  h = h !& hash(key.staticPrec)
+  h = h !& hash(key.assoc.isSome)
+  if key.assoc.isSome:
+    h = h !& hash(ord(key.assoc.get))
+  result = !$h
 
-# LR(0) Closure - compute closure without lookaheads
-proc computeLR0Closure(
-  kernels: seq[LR0Item],
-  grammar: SyntaxGrammar
-): HashSet[LR0Item] =
-  ## Compute LR(0) closure: expand items until fixed point
-  # debugEchoMsg "[Pager] Computing LR(0) closure for ", kernels.len, " kernels"
-  
-  result = initHashSet[LR0Item]()
-  var workList = initDeque[LR0Item]()
-  
-  # Add all kernels
-  for item in kernels:
-    result.incl(item)
-    workList.addLast(item)
-  
-  while workList.len > 0:
-    let item = workList.popFirst()
-    let variable = grammar.variables[item.variableIndex]
-    let production = variable.productions[item.productionIndex]
-    
-    # Check if dot is before a non-terminal
-    if item.position < production.steps.len.uint16:
-      let nextSymbol = production.steps[item.position].symbol
-      
-      if nextSymbol.kind == stNonTerminal:
-        # Add all productions of this non-terminal
-        let nextVar = grammar.variables[nextSymbol.index]
-        for prodIdx in 0 ..< nextVar.productions.len:
-          let prec = production.steps[item.position].precedence
-          let precedenceVal = if prec.kind == pkInteger: prec.intValue else: 0
-          
-          let newItem = LR0Item(
-            variableIndex: nextSymbol.index.uint16,
-            productionIndex: prodIdx.uint16,
-            position: 0,
-            inheritedPrecedence: precedenceVal
-          )
-          
-          if newItem notin result:
-            result.incl(newItem)
-            workList.addLast(newItem)
+proc `==`(a, b: ReduceDedupKey): bool =
+  a.sym == b.sym and a.reduceSymbol == b.reduceSymbol and
+    a.reduceCount == b.reduceCount and a.dynPrec == b.dynPrec and
+    a.staticPrec == b.staticPrec and a.assoc == b.assoc
 
-# Build LR(0) automaton
-proc buildLR0Automaton(
-  grammar: SyntaxGrammar,
-  augmentedStartIndex: int
-): (seq[seq[LR0Item]], seq[stdtables.Table[GrammarSymbol, int]]) =
-  ## Build LR(0) automaton: states contain only kernel items (no lookaheads)
-  echo "[Treestand] Building LR(0) automaton..."
-  
-  var states = newSeq[seq[LR0Item]]()
-  var stateMap = stdtables.initTable[seq[LR0Item], int]()
-  var transitions = newSeq[stdtables.Table[GrammarSymbol, int]]()
-  var workList = initDeque[int]()
-  
-  # Initial state: S' -> •S
-  let initialItem = LR0Item(
-    variableIndex: augmentedStartIndex.uint16,
-    productionIndex: 0,
-    position: 0,
-    inheritedPrecedence: 0
-  )
-  
-  var initialKernel = @[initialItem]
-  states.add(initialKernel)
-  stateMap[initialKernel] = 0
-  transitions.add(stdtables.initTable[GrammarSymbol, int]())
-  workList.addLast(0)
-  
-  var stepsProcessed = 0
-  while workList.len > 0:
-    let stateId = workList.popFirst()
-    let kernels = states[stateId]
-    
-    inc stepsProcessed
-    if stepsProcessed mod 100 == 0:
-      debugEchoMsg "[Pager] Processed ", stepsProcessed, " states, total: ", states.len
-    
-    # Compute closure
-    let closure = computeLR0Closure(kernels, grammar)
-    
-    # Group by next symbol (GOTO)
-    var gotoSets = stdtables.initTable[GrammarSymbol, seq[LR0Item]]()
-    
-    for item in closure:
-      let variable = grammar.variables[item.variableIndex]
-      let production = variable.productions[item.productionIndex]
-      
-      # Can we shift?
-      if item.position < production.steps.len.uint16:
-        let symbol = production.steps[item.position].symbol
-        
-        # Move dot over symbol
-        let movedItem = LR0Item(
-          variableIndex: item.variableIndex,
-          productionIndex: item.productionIndex,
-          position: item.position + 1,
-          inheritedPrecedence: item.inheritedPrecedence
-        )
-        
-        if symbol notin gotoSets:
-          gotoSets[symbol] = @[]
-        gotoSets[symbol].add(movedItem)
-    
-    # Create/find target states
-    for symbol, unsortedKernel in gotoSets:
-      var kernel = unsortedKernel
-      kernel.sort()
-      
-      var targetStateId: int
-      if kernel in stateMap:
-        targetStateId = stateMap[kernel]
-      else:
-        targetStateId = states.len
-        states.add(kernel)
-        stateMap[kernel] = targetStateId
-        transitions.add(stdtables.initTable[GrammarSymbol, int]())
-        workList.addLast(targetStateId)
-      
-      transitions[stateId][symbol] = targetStateId
-  
-  
-  debugEchoMsg "[Pager] LR(0) automaton complete: ", states.len, " states"
-  
-  (states, transitions)
+proc computeFirstBitSets(
+    firstSets: FirstSets,
+    ctx: SymbolContext
+): stdtables.Table[GrammarSymbol, BitSet] =
+  ## Convert FIRST sets (IntSet-based) to BitSets for fast union operations.
+  result = stdtables.initTable[GrammarSymbol, BitSet]()
+  for sym, firstSet in firstSets:
+    var bs = initBitSet(ctx.maxIndex)
+    for s in firstSet:
+      let bit = ctx.symbolToBit(s)
+      if bit >= 0:
+        bs.incl(bit)
+    result[sym] = bs
 
-# Compute lookahead propagations using Pager's algorithm
-proc computeLookaheadPropagations(
-  lr0States: seq[seq[LR0Item]],
-  transitions: seq[stdtables.Table[GrammarSymbol, int]],
-  grammar: SyntaxGrammar,
-  lexicalGrammar: LexicalGrammar,
-  firstSets: FirstSets,
-  ctx: SymbolContext
-): seq[LR0State] =
-  ## Compute spontaneous lookaheads and propagation links for each LR(0) state
-  echo "[Treestand] Computing lookahead propagations..."
-  
-  result = newSeq[LR0State](lr0States.len)
-  
-  # Initialize states with empty tables
-  for i in 0 ..< lr0States.len:
-    result[i] = LR0State(
-      kernels: lr0States[i],
-      lookaheads: stdtables.initTable[LR0Item, LookaheadSet](),
-      spontaneous: stdtables.initTable[LR0Item, LookaheadSet](),
-      propagations: stdtables.initTable[LR0Item, seq[PropagationLink]]()
+proc getTransitiveClosureFast*(
+    grammar: var SyntaxGrammar,
+    kernels: StateKernels,
+    cache: ClosureCache,
+    firstSetsBits: stdtables.Table[GrammarSymbol, BitSet],
+    firstBetaCache: var stdtables.Table[FirstBetaCacheKey, tuple[first: BitSet, nullable: bool]],
+    fullPrecedence: bool = false
+): StateKernels =
+  ## Single-pass transitive closure using precomputed additions, mirroring
+  ## tree-sitter's `ParseItemSetBuilder::transitive_closure`. Because
+  ## `cache.additions` is transitively closed, only the kernel items need to
+  ## be processed - no worklist, no re-processing of closure items.
+  ##
+  ## `fullPrecedence` controls how precedence propagates into closure items:
+  ## - false (used during state construction): only the precedence annotated
+  ##   on the expanded step is kept. This yields few distinct precedence
+  ##   variants and keeps the number of distinct states small.
+  ## - true (used when filling parse actions): precedence is also inherited
+  ##   from the enclosing production / parent item, matching the conflict-
+  ##   resolution behavior of the previous propagation-based pipeline.
+  result = kernels
+  for item, itemLookaheads in kernels:
+    template variable: untyped = grammar.variables[item.variableIndex]
+    template production: untyped = grammar.variables[item.variableIndex].productions[item.productionIndex]
+    if item.position >= production.steps.len.uint16:
+      continue
+    let symbol = production.steps[item.position].symbol
+    if symbol.kind != stNonTerminal:
+      continue
+    let nonTermIdx = symbol.index.int
+    if nonTermIdx >= cache.additions.len:
+      continue
+
+    # Expansion context = FIRST(beta) [+ item lookaheads if beta is nullable].
+    # FIRST(beta) is memoized globally per (variable, production, position).
+    let cacheKey = FirstBetaCacheKey(
+      variableIndex: item.variableIndex,
+      productionIndex: item.productionIndex,
+      position: item.position
     )
-    
-    # Initialize lookahead sets for all kernels
-    for kernel in lr0States[i]:
-      result[i].lookaheads[kernel] = initBitSet(ctx.maxIndex)
-      result[i].spontaneous[kernel] = initBitSet(ctx.maxIndex)
-      result[i].propagations[kernel] = @[]
-  
-  # Special: Add EOF to initial state's initial item
-  if lr0States.len > 0 and lr0States[0].len > 0:
-    let eofBit = ctx.symbolToBit(GrammarSymbol(kind: stEnd, index: 0))
-    result[0].spontaneous[lr0States[0][0]].incl(eofBit)
-    result[0].lookaheads[lr0States[0][0]].incl(eofBit)
-  
-  debugEchoMsg "[Pager] Processing ", lr0States.len, " states for propagation..."
-  var statesProcessed = 0
-  
-  for stateId in 0 ..< lr0States.len:
-    inc statesProcessed
-    if statesProcessed mod 100 == 0:
-      debugEchoMsg "[Pager] Propagation: processed ", statesProcessed, " of ", lr0States.len
-    
-    # Process each kernel item specifically to trace dummy lookahead flow
-    for kernel in lr0States[stateId]:
-      # Queue for closure: (item, propagates, spontaneous)
-      # propagates: true if this item carries the dummy lookahead from the kernel
-      # spontaneous: lookaheads generated between the kernel and this item
-      var closureQueue = initDeque[tuple[item: LR0Item, propagates: bool, spontaneous: SymbolSet]]()
-      var closureInfo = stdtables.initTable[LR0Item, tuple[propagates: bool, spontaneous: SymbolSet]]()
-      
-      # Init with kernel
-      let startInfo = (propagates: true, spontaneous: initSymbolSet())
-      closureQueue.addLast((item: kernel, propagates: true, spontaneous: initSymbolSet()))
-      closureInfo[kernel] = startInfo
-      
-      while closureQueue.len > 0:
-        let (currentItem, currentProp, currentSpont) = closureQueue.popFirst()
-        
-        let variable = grammar.variables[currentItem.variableIndex]
-        let production = variable.productions[currentItem.productionIndex]
-        
-        # 1. Expand (Closure)
-        if currentItem.position < production.steps.len.uint16:
-          let step = production.steps[currentItem.position]
-          if step.symbol.kind == stNonTerminal:
-            let targetVarIdx = step.symbol.index
-            let targetVar = grammar.variables[targetVarIdx]
-            
-            # Calculate FIRST(beta)
-            let betaStart = currentItem.position + 1
-            var betaFirst = initSymbolSet()
-            var betaNullable = true
-            
-            if betaStart < production.steps.len.uint16:
-              let betaSteps = production.steps[betaStart.int .. ^1]
-              for bStep in betaSteps:
-                # Terminals provide their own lookahead, variables use firstSets
-                if bStep.symbol.kind == stNonTerminal:
-                  let f = firstSets.getOrDefault(bStep.symbol, initSymbolSet())
-                  for s in f:
-                     betaFirst.incl(s)
-                  
-                  # Check nullability
-                  if grammar.variables[bStep.symbol.index].isNullable:
-                     discard
-                  else:
-                     betaNullable = false
-                     break
-                else:
-                  # Terminal or other symbol
-                  betaFirst.incl(bStep.symbol)
-                  betaNullable = false
-                  break
-            
-            # Combine logic
-            let nextPropagates = currentProp and betaNullable
-            var nextSpont = betaFirst
-            if betaNullable:
-               for s in currentSpont: nextSpont.incl(s)
-            
-            # Add all productions of targetVar
-            for prodIdx, _ in targetVar.productions:
-              let prec = step.precedence
-              let precedenceVal = if prec.kind == pkInteger: prec.intValue else: 0
-              let newItem = LR0Item(
-                variableIndex: targetVarIdx.uint16,
-                productionIndex: prodIdx.uint16,
-                position: 0,
-                inheritedPrecedence: int16(precedenceVal)
-              )
-              
-              # Merge with existing info if any
-              var changed = false
-              if newItem in closureInfo:
-                var info = closureInfo[newItem]
-                if not info.propagates and nextPropagates:
-                  info.propagates = true
-                  changed = true
-                for s in nextSpont:
-                  if not info.spontaneous.contains(s):
-                    info.spontaneous.incl(s)
-                    changed = true
-                closureInfo[newItem] = info
-              else:
-                closureInfo[newItem] = (propagates: nextPropagates, spontaneous: nextSpont)
-                changed = true
-              
-              if changed:
-                closureQueue.addLast((item: newItem, propagates: closureInfo[newItem].propagates, spontaneous: closureInfo[newItem].spontaneous))
-        
-        # 2. Shift (Transition)
-        if currentItem.position < production.steps.len.uint16:
-          let symbol = production.steps[currentItem.position].symbol
-          if symbol in transitions[stateId]:
-             let targetStateId = transitions[stateId][symbol]
-             let movedItem = LR0Item(
-               variableIndex: currentItem.variableIndex,
-               productionIndex: currentItem.productionIndex,
-               position: currentItem.position + 1,
-               inheritedPrecedence: currentItem.inheritedPrecedence
-             )
-             
-             # Create propagation link if propagates
-             if currentProp:
-               # Ensure target lists exist
-               if movedItem notin result[targetStateId].propagations:
-                  result[targetStateId].propagations[movedItem] = @[]
-               
-               # Add link
-               var exists = false
-               for link in result[stateId].propagations[kernel]:
-                 if link.targetStateId == targetStateId and link.targetItem == movedItem:
-                   exists = true; break
-               if not exists:
-                 result[stateId].propagations[kernel].add(PropagationLink(
-                   targetStateId: targetStateId,
-                   targetItem: movedItem
-                 ))
-             
-             # Add spontaneous lookaheads
-             for s in currentSpont:
-                 let bit = ctx.symbolToBit(s)
-                 if movedItem notin result[targetStateId].spontaneous:
-                    result[targetStateId].spontaneous[movedItem] = initBitSet(ctx.maxIndex)
-                 if movedItem notin result[targetStateId].lookaheads:
-                    result[targetStateId].lookaheads[movedItem] = initBitSet(ctx.maxIndex)
-                    
-                 result[targetStateId].spontaneous[movedItem].incl(bit)
-                 result[targetStateId].lookaheads[movedItem].incl(bit)
-  
-  debugEchoMsg "[Pager] Propagation computation complete"
+    var betaFirst: BitSet
+    var betaNullable: bool
+    if cacheKey in firstBetaCache:
+      (betaFirst, betaNullable) = firstBetaCache[cacheKey]
+    else:
+      betaFirst = initBitSet(cache.symbolContext.maxIndex)
+      betaNullable = true
+      for k in (item.position + 1).int ..< production.steps.len:
+        let betaSym = production.steps[k].symbol
+        if betaSym.kind == stNonTerminal:
+          if betaSym in firstSetsBits:
+            discard betaFirst.union(firstSetsBits[betaSym])
+        else:
+          let bit = cache.symbolContext.symbolToBit(betaSym)
+          if bit >= 0:
+            betaFirst.incl(bit)
+        if not isNullable(grammar, betaSym):
+          betaNullable = false
+          break
+      firstBetaCache[cacheKey] = (betaFirst, betaNullable)
 
-# Propagate lookaheads iteratively until fixed point
-proc propagateLookaheads(
-  states: var seq[LR0State]
-): void =
-  ## Iteratively propagate lookaheads through the graph until no changes
-  echo "[Treestand] Propagating lookaheads..."
-  
-  var changed = true
-  var iterations = 0
-  
-  while changed:
-    changed = false
-    inc iterations
-    
-    if iterations mod 10 == 0:
-      debugEchoMsg "[Pager] Propagation iteration ", iterations
-    
-    for stateId in 0 ..< states.len:
-      for kernel, propagations in states[stateId].propagations:
-        if kernel notin states[stateId].lookaheads:
-          continue
-        
-        let sourceLookaheads = states[stateId].lookaheads[kernel]
-        
-        for link in propagations:
-          let targetState = link.targetStateId
-          let targetItem = link.targetItem
-          
-          if targetItem notin states[targetState].lookaheads:
-            states[targetState].lookaheads[targetItem] = initBitSet(sourceLookaheads.len)
-          
-          # Union source lookaheads into target
-          if states[targetState].lookaheads[targetItem].union(sourceLookaheads):
-            changed = true
-  
-  debugEchoMsg "[Pager] Propagation converged after ", iterations, " iterations"
+    var expansionContext = betaFirst
+    if betaNullable:
+      discard expansionContext.union(itemLookaheads)
 
-# Convert Pager's LR0State format to StateKernels format
-proc convertPagerToStateKernels(
-  pagerStates: seq[LR0State],
-  ctx: SymbolContext
-): seq[StateKernels] =
-  ## Convert from Pager's format to existing StateKernels format
-  echo "[Treestand] Converting to StateKernels format..."
-  
-  result = newSeq[StateKernels](pagerStates.len)
-  
-  for i, pagerState in pagerStates:
-    result[i] = stdtables.initTable[CoreItem, LookaheadSet]()
-    
-    for kernel in pagerState.kernels:
-      let core = CoreItem(
-        variableIndex: kernel.variableIndex,
-        productionIndex: kernel.productionIndex,
-        position: kernel.position,
-        inheritedPrecedence: kernel.inheritedPrecedence.int16
+    let stepPrec = production.steps[item.position].precedence
+    let stepPrecVal = if stepPrec.kind == pkInteger: stepPrec.intValue.int16 else: 0'i16
+    let nextInheritedPrec =
+      if not fullPrecedence: stepPrecVal
+      elif stepPrecVal != 0: stepPrecVal
+      elif production.precedence != 0: production.precedence.int16
+      else: item.inheritedPrecedence
+
+    for addition in cache.additions[nonTermIdx]:
+      let newCore = CoreItem(
+        variableIndex: addition.variableIndex,
+        productionIndex: addition.productionIndex,
+        position: 0,
+        inheritedPrecedence: nextInheritedPrec
       )
-      
-      # Get lookaheads for this kernel
-      if kernel in pagerState.lookaheads:
-        result[i][core] = pagerState.lookaheads[kernel]
+      if addition.followInfo.propagatesLookaheads:
+        var newLookaheads = addition.followInfo.lookaheads
+        discard newLookaheads.union(expansionContext)
+        discard result.mgetOrPut(newCore, BitSet()).union(newLookaheads)
       else:
-        result[i][core] = initBitSet(ctx.maxIndex)
-  
-  debugEchoMsg "[Pager] Conversion complete: ", result.len, " states"
+        discard result.mgetOrPut(newCore, BitSet()).union(addition.followInfo.lookaheads)
 
-# TODO: Integration point in buildParseTable with -d:usePagerLALR
 
-proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, skipConflictDetection: bool = false): BuildParseTable =
+proc sortedCores(kernels: StateKernels): seq[CoreItem] =
+  ## Sorted kernel items, used as the canonical dedup key for a state.
+  ## inheritedPrecedence is zeroed so that states differing only by
+  ## precedence context merge together, keeping state counts compact.
+  result = newSeqOfCap[CoreItem](kernels.len)
+  for item in kernels.keys:
+    var normalized = item
+    normalized.inheritedPrecedence = 0
+    result.add(normalized)
+  result.sort()
+
+proc registerStateLALR(
+    states: var seq[StateKernels],
+    transitions: var seq[stdtables.Table[GrammarSymbol, int]],
+    stateIdsByCore: var stdtables.Table[seq[CoreItem], int],
+    stateQueue: var Deque[int],
+    inQueue: var HashSet[int],
+    kernels: StateKernels
+): int =
+  ## Register a kernel item set as a state, deduplicating on the kernel
+  ## CORE (items without lookaheads). On a repeat visit, lookaheads are
+  ## unioned into the existing state and it is re-queued if they grew.
+  ## (Module-level so it is safe to use from the compile-time VM path.)
+  let coreSeq = sortedCores(kernels)
+  if coreSeq in stateIdsByCore:
+    let id = stateIdsByCore[coreSeq]
+    var changed = false
+    for item, la in kernels:
+      if states[id].mgetOrPut(item, BitSet()).union(la):
+        changed = true
+    if changed and id notin inQueue:
+      stateQueue.addLast(id)
+      inQueue.incl(id)
+    return id
+  let id = states.len
+  states.add(kernels)
+  transitions.add(stdtables.initTable[GrammarSymbol, int]())
+  stateIdsByCore[coreSeq] = id
+  stateQueue.addLast(id)
+  inQueue.incl(id)
+  id
+
+proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, skipConflictDetection: bool = false, tokenConflictMap: TokenConflictMap = TokenConflictMap()): BuildParseTable =
   ## Builds the LR(1) parse table from the syntax grammar.
   ##
   ## This is the core of the parser generator - it constructs the parse table
@@ -2966,70 +1864,216 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
 
   let firstSets = computeFirst(augmentedGrammar)
   
-  # Build LR states - choose algorithm based on compile flags
-  when USE_PAGER_LALR or defined(usePagerLALR):
-    # === Pager's LALR Algorithm ===
-    echo "[Treestand] Using Pager's LALR algorithm (propagation-based)"
-    
-    # Step 1: Build LR(0) automaton
-    let (lr0States, lr0Transitions) = buildLR0Automaton(
-      augmentedGrammar,
-      augmentedStartIndex
-    )
-    
-    # Step 2: Compute propagation graph
-    let ctx = newSymbolContext(lexicalGrammar.variables.len, augmentedGrammar.externalTokens.len)
-    var statesWithProp = computeLookaheadPropagations(
-      lr0States,
-      lr0Transitions,
-      augmentedGrammar,
-      lexicalGrammar,
-      firstSets,
-      ctx
-    )
-    
-    # Step 3: Propagate lookaheads to fixed point
-    propagateLookaheads(statesWithProp)
-    
-    # Step 4: Convert to StateKernels format
-    let statesLALR = convertPagerToStateKernels(statesWithProp, ctx)
-    
-    # Precompute closure cache (needed for converting kernels to full states)
-    let closureCache = precomputeClosureCache(augmentedGrammar, lexicalGrammar, firstSets)
-    
-    # OPTIMIZATION: We do NOT convert to full LR1 items here anymore.
-    # We will expand them lazily in the "Fill in the parse table" loop to save huge amounts of memory and time.
-    # echo "[Treestand] Converting to full LR1 items for table building..."
-    # var states = newSeq[HashSet[LR1Item]](statesLALR.len)
-    
-    let transitions = lr0Transitions
-    
-  elif USE_LALR_OPTIMIZED:
-    echo "[Treestand] Using optimized LALR(1) implementation"
-    # Call new LALR implementation
-    let (statesLALR, _, transitionsLALR) = buildCanonicalCollectionLALR(
-      augmentedGrammar,
-      lexicalGrammar,
-      firstSets,
-      augmentedStartIndex
-    )
-    
-    
-    # Precompute closure cache (needed for converting kernels to full states)
-    let closureCache = precomputeClosureCache(augmentedGrammar, lexicalGrammar, firstSets)
-    let ctx = newSymbolContext(lexicalGrammar.variables.len, augmentedGrammar.externalTokens.len)
-   
-    # OPTIMIZATION: We do NOT convert to full LR1 items here anymore.
-    # We will expand them lazily in the "Fill in the parse table" loop to save huge amounts of memory and time.
-    # var states = newSeq[HashSet[LR1Item]](statesLALR.len)
-    
-    let transitions = transitionsLALR
-  
-  else:
-    echo "[Treestand] Using traditional Canonical LR(1) implementation"
-    # Pass augmentedStartIndex to buildCanonicalCollection so it knows where to start
-    let (states, _, transitions) = buildCanonicalCollection(augmentedGrammar, firstSets, augmentedStartIndex)
-  
+  # === Direct LALR(1) construction ===
+  # States are deduplicated by their kernel item-set CORE (lookaheads not
+  # included). When an existing core is reached again, its lookahead sets
+  # are unioned and the state is re-queued, converging to the LALR(1)
+  # lookahead sets. This produces the same states/lookaheads as the previous
+  # propagation-based (Pager) pipeline, but computes closures in a single
+  # pass via precomputed additions and never runs a global propagation
+  # fixpoint over the whole state graph.
+  let ctx = newSymbolContext(lexicalGrammar.variables.len, augmentedGrammar.externalTokens.len)
+  let firstSetsBits = computeFirstBitSets(firstSets, ctx)
+  let closureCache = precomputeClosureCache(augmentedGrammar, lexicalGrammar, firstSets, firstSetsBits)
+  var firstBetaCache = stdtables.initTable[FirstBetaCacheKey, tuple[first: BitSet, nullable: bool]]()
+
+  var states: seq[StateKernels] = @[]
+  var transitions: seq[stdtables.Table[GrammarSymbol, int]] = @[]
+  var stateIdsByCore = stdtables.initTable[seq[CoreItem], int]()
+  var stateQueue = initDeque[int]()
+  var inQueue = initHashSet[int]()
+
+  # Initial state 0: augmented start item with EOF lookahead
+  block:
+    var startKernels = stdtables.initTable[CoreItem, LookaheadSet]()
+    var startLookaheads = initBitSet(ctx.maxIndex)
+    startLookaheads.incl(ctx.symbolToBit(GrammarSymbol(kind: stEnd, index: 0)))
+    startKernels[CoreItem(
+      variableIndex: augmentedStartIndex.uint16,
+      productionIndex: 0,
+      position: 0,
+      inheritedPrecedence: 0
+    )] = startLookaheads
+    discard registerStateLALR(states, transitions, stateIdsByCore, stateQueue, inQueue, startKernels)
+
+  let constructionStart = cpuTime()
+  var iterCount = 0
+  while stateQueue.len > 0:
+    inc iterCount
+    let stateId = stateQueue.popFirst()
+    inQueue.excl(stateId)
+    let fullClosure = getTransitiveClosureFast(
+      augmentedGrammar, states[stateId], closureCache, firstSetsBits, firstBetaCache, fullPrecedence=false)
+
+    # --- Group items by next symbol (successor computation) ---
+    var nextStateKernels = stdtables.initTable[GrammarSymbol, StateKernels]()
+    var nextSymbols: seq[GrammarSymbol] = @[]
+    for core, lookaheads in fullClosure:
+      template variable: untyped = augmentedGrammar.variables[core.variableIndex]
+      template production: untyped = augmentedGrammar.variables[core.variableIndex].productions[core.productionIndex]
+      if core.position >= production.steps.len.uint16:
+        continue
+      let symbol = production.steps[core.position].symbol
+      let movedCore = CoreItem(
+        variableIndex: core.variableIndex,
+        productionIndex: core.productionIndex,
+        position: core.position + 1,
+        inheritedPrecedence: core.inheritedPrecedence
+      )
+      if symbol notin nextStateKernels:
+        nextStateKernels[symbol] = stdtables.initTable[CoreItem, LookaheadSet]()
+        nextSymbols.add(symbol)
+      discard nextStateKernels[symbol].mgetOrPut(movedCore, BitSet()).union(lookaheads)
+
+    # Register successor states (sorted for deterministic state numbering)
+    nextSymbols.sort do (a, b: GrammarSymbol) -> int:
+      if a.kind != b.kind: ord(a.kind) - ord(b.kind)
+      else: a.index.int - b.index.int
+    for symbol in nextSymbols:
+      # NOTE: register first, then assign - registerStateLALR may grow
+      # `transitions` (reallocating the seq), so taking the slot reference
+      # before the call would leave a dangling reference.
+      let targetStateId = registerStateLALR(
+        states, transitions, stateIdsByCore, stateQueue, inQueue, nextStateKernels[symbol])
+      transitions[stateId][symbol] = targetStateId
+
+  echo "[Treestand] LALR(1) construction complete. States: ", states.len,
+       " (built in ", (cpuTime() - constructionStart).formatFloat(ffDecimal, 3), "s)"
+
+  let fillStart = cpuTime()
+  # --- Fill in the parse table (one pass per state) ---
+  var entries = newSeq[BuildParseTableEntry](states.len)
+  # Global index: for each terminal bit, the non-terminals whose FIRST set
+  # contains that terminal. Used to compute shift participants only for
+  # terminals that are actually shifted in a state.
+  var firstNontermsByTerminal = newSeq[seq[int]](ctx.maxIndex)
+  for sym, bits in firstSetsBits:
+    if sym.kind == stNonTerminal:
+      for bit in bits:
+        let s = ctx.bitToSymbol(bit)
+        if s.kind == stTerminal:
+          firstNontermsByTerminal[bit].add(sym.index.int)
+
+  # Reusable per-state buffers for shift-participant collection:
+  # direct terminal shifts: terminal bit -> parent variable bitset
+  # indirect (via FIRST): non-terminal -> parent variable bitset
+  var directParents = newSeq[BitSet](ctx.maxIndex)
+  var parentsByNonterm = newSeq[BitSet](augmentedGrammar.variables.len)
+  var usedTermBits = newSeqOfCap[int](64)
+  var usedNonterms = newSeqOfCap[int](64)
+  for stateId in 0 ..< states.len:
+    let fullClosure = getTransitiveClosureFast(
+      augmentedGrammar, states[stateId], closureCache, firstSetsBits, firstBetaCache,
+      fullPrecedence = true)
+
+    # Collect shift participants (for conflict resolution):
+    # direct terminal shifts and per-non-terminal parents (whose FIRST sets
+    # provide the indirect shifts). Stored as bitsets of variable indices.
+    usedTermBits.setLen(0)
+    usedNonterms.setLen(0)
+    for coreItem, _ in fullClosure:
+      template variable: untyped = augmentedGrammar.variables[coreItem.variableIndex]
+      template production: untyped = augmentedGrammar.variables[coreItem.variableIndex].productions[coreItem.productionIndex]
+      if coreItem.position < production.steps.len.uint16:
+        let nextSym = production.steps[coreItem.position].symbol
+        if nextSym.kind == stTerminal:
+          let tb = ctx.symbolToBit(nextSym)
+          if tb >= 0:
+            if directParents[tb].len == 0:
+              usedTermBits.add(tb)
+            directParents[tb].incl(coreItem.variableIndex.int)
+        elif nextSym.kind == stNonTerminal:
+          let n = nextSym.index.int
+          if parentsByNonterm[n].len == 0:
+            usedNonterms.add(n)
+          parentsByNonterm[n].incl(coreItem.variableIndex.int)
+
+    var shiftSeen = initHashSet[ShiftDedupKey]()
+    var reduceSeen = initHashSet[ReduceDedupKey]()
+    var gotoSeen = initHashSet[GrammarSymbol]()
+
+    for coreItem, lookaheadsBitSet in fullClosure:
+      template variable: untyped = augmentedGrammar.variables[coreItem.variableIndex]
+      template production: untyped = augmentedGrammar.variables[coreItem.variableIndex].productions[coreItem.productionIndex]
+
+      if coreItem.position < production.steps.len.uint16:
+        # --- SHIFT and GOTO (lookahead-independent: once per item) ---
+        let nextSym = production.steps[coreItem.position].symbol
+        let effectiveRulePrec = if production.precedence != 0: production.precedence
+                                else: coreItem.inheritedPrecedence.int32
+        let shiftPrecVal = if coreItem.position > 0:
+            let prevStepPrec = production.steps[coreItem.position - 1].precedence
+            if prevStepPrec.kind == pkInteger: prevStepPrec.intValue else: effectiveRulePrec
+          else:
+            effectiveRulePrec
+        let gotoStateId = transitions[stateId][nextSym]
+
+        if nextSym.kind != stNonTerminal:
+          let key = ShiftDedupKey(
+            sym: nextSym, target: gotoStateId.uint32,
+            prec: shiftPrecVal, dynPrec: production.dynamicPrecedence)
+          if key notin shiftSeen:
+            shiftSeen.incl(key)
+            var participants: seq[GrammarSymbol] = @[]
+            let tb = ctx.symbolToBit(nextSym)
+            if tb >= 0:
+              var pbits = directParents[tb]
+              for n in firstNontermsByTerminal[tb]:
+                discard pbits.union(parentsByNonterm[n])
+              for p in pbits:
+                participants.add(GrammarSymbol(kind: stNonTerminal, index: p.uint16))
+            entries[stateId].actionMap.add((
+              sym: nextSym,
+              action: BuildParseAction(
+                kind: bpakShift,
+                participants: participants,
+                shiftState: gotoStateId.uint32,
+                shiftPrecedence: shiftPrecVal,
+                shiftDynamicPrecedence: production.dynamicPrecedence
+              )
+            ))
+        else:
+          if nextSym notin gotoSeen:
+            gotoSeen.incl(nextSym)
+            entries[stateId].gotoMap.add((sym: nextSym, state: gotoStateId.uint32))
+      else:
+        # --- REDUCE / ACCEPT ---
+        if coreItem.variableIndex.int == augmentedStartIndex:
+          for bitIndex in items(lookaheadsBitSet):
+            let lookaheadSym = ctx.bitToSymbol(bitIndex)
+            entries[stateId].actionMap.add((
+              sym: lookaheadSym,
+              action: BuildParseAction(kind: bpakAccept)
+            ))
+        else:
+          let lhs = GrammarSymbol(kind: stNonTerminal, index: coreItem.variableIndex)
+          let reduceAction = BuildParseAction(
+            kind: bpakReduce,
+            participants: @[lhs],
+            reduceSymbol: lhs,
+            reduceCount: production.steps.len.uint32,
+            reducePrecedence: production.dynamicPrecedence,
+            reduceStaticPrecedence: production.precedence,
+            reduceAssociativity: production.associativity
+          )
+          for bitIndex in items(lookaheadsBitSet):
+            let lookaheadSym = ctx.bitToSymbol(bitIndex)
+            let key = ReduceDedupKey(
+              sym: lookaheadSym, reduceSymbol: lhs,
+              reduceCount: production.steps.len.uint32,
+              dynPrec: production.dynamicPrecedence,
+              staticPrec: production.precedence,
+              assoc: production.associativity)
+            if key notin reduceSeen:
+              reduceSeen.incl(key)
+              entries[stateId].actionMap.add((sym: lookaheadSym, action: reduceAction))
+
+    # Clear the participant buffer slots used by this state
+    for tb in usedTermBits:
+      directParents[tb].clear()
+    for n in usedNonterms:
+      parentsByNonterm[n].clear()
+
   # --- Helper: Find shortest symbol path to a state (BFS) ---
   proc findPathToState(targetState: int): seq[GrammarSymbol] =
     var queue = initDeque[int]()
@@ -3065,241 +2109,6 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
           break
       path.reverse()
     return path
-
-  when USE_PAGER_LALR or USE_LALR_OPTIMIZED:
-    var entries = newSeq[BuildParseTableEntry](statesLALR.len)
-    debugEchoMsg "[Treestand] Initializing parse table entries..."
-    # Initialize parse table entries
-    for i in 0 ..< statesLALR.len:
-      if i mod 100 == 0:
-        debugEchoMsg "[Treestand] Initializing parse table entry ", i
-      entries[i] = BuildParseTableEntry(actionMap: @[], gotoMap: @[])
-  else:
-    var entries = newSeq[BuildParseTableEntry](states.len)
-    debugEchoMsg "[Treestand] Initializing parse table entries..."
-    # Initialize parse table entries
-    for i in 0 ..< states.len:
-      if i mod 100 == 0:
-        debugEchoMsg "[Treestand] Initializing parse table entry ", i
-      entries[i] = BuildParseTableEntry(actionMap: @[], gotoMap: @[])
-  
-  # Fill in the parse table
-  debugEchoMsg "[Treestand] Filling in parse table..."
-  
-  when USE_PAGER_LALR or USE_LALR_OPTIMIZED:
-     # Optimized loop for LALR(1) - Iterates kernels and expands lazily
-     for stateId in 0 ..< statesLALR.len:
-       if stateId mod 100 == 0:
-         debugEchoMsg "[Treestand] Filling in parse table entry (Lazy LALR) ", stateId
-
-       # 1. Compute Transitive Closure
-       let fullClosure = getTransitiveClosure(augmentedGrammar, statesLALR[stateId], closureCache, firstSets)
-
-       # 1.5 Collect Shift Participants (Pass 1)
-       # Map Terminal -> Set[ParentNonTerminal]
-       var shiftParticipants = initTable[GrammarSymbol, HashSet[GrammarSymbol]]()
-       
-       for coreItem, _ in fullClosure:
-          let variable = augmentedGrammar.variables[coreItem.variableIndex]
-          let production = variable.productions[coreItem.productionIndex]
-          let lhs = GrammarSymbol(kind: stNonTerminal, index: coreItem.variableIndex)
-          
-          if coreItem.position < production.steps.len.uint16:
-             let nextSym = production.steps[coreItem.position].symbol
-             
-             if nextSym.kind == stTerminal:
-                # Direct shift
-                if nextSym notin shiftParticipants:
-                   shiftParticipants[nextSym] = initHashSet[GrammarSymbol]()
-                shiftParticipants[nextSym].incl(lhs)
-             elif nextSym.kind == stNonTerminal:
-                # Indirect shift via FIRST set
-                if nextSym in firstSets:
-                   for firstSym in firstSets[nextSym]:
-                      if firstSym.kind == stTerminal:
-                         if firstSym notin shiftParticipants:
-                             shiftParticipants[firstSym] = initHashSet[GrammarSymbol]()
-                         shiftParticipants[firstSym].incl(lhs)
-
-       # 2. Iterate the closure items directly (avoiding LR1Item allocation)
-       # fullClosure is Table[CoreItem, BitSet]
-       for coreItem, lookaheadsBitSet in fullClosure:
-          let variable = augmentedGrammar.variables[coreItem.variableIndex]
-          let production = variable.productions[coreItem.productionIndex]
-          
-          # Iterate all lookaheads in the BitSet          
-          for bitIndex in items(lookaheadsBitSet):
-             # Decode lookahead symbol from bit index
-             let lookaheadSym = ctx.bitToSymbol(bitIndex)
-             
-             # Now process this "virtual" item: (coreItem, lookaheadSym)
-             
-             if coreItem.position < production.steps.len.uint16:
-               # --- SHIFT and GOTO LOGIC ---
-               # Note: GOTO logic only depends on nextSym, not lookahead. 
-               # We could optimize by hoisting GOTO logic out of lookahead loop, 
-               # but `fullClosure` keys are CoreItems (rule positions). 
-               # The standard algorithm iterates items.
-               
-               let nextSym = production.steps[coreItem.position].symbol
-               
-               # Calculate precedence
-               let effectiveRulePrec = if production.precedence != 0: production.precedence else: coreItem.inheritedPrecedence.int32
-               
-               let shiftPrecVal = if coreItem.position > 0:
-                   let prevStepPrec = production.steps[coreItem.position - 1].precedence
-                   if prevStepPrec.kind == pkInteger: prevStepPrec.intValue else: effectiveRulePrec
-                 else:
-                   effectiveRulePrec
-
-               if stateId < transitions.len and nextSym in transitions[stateId]:
-                 let gotoStateId = transitions[stateId][nextSym]
-                 
-                 if nextSym.kind != stNonTerminal:
-                   # SHIFT ACTION
-                   # Deduplication check
-                   var alreadyExists = false
-                   for (sym, action) in entries[stateId].actionMap:
-                      if sym == nextSym and action.kind == bpakShift and action.shiftState == gotoStateId.uint32 and action.shiftPrecedence == shiftPrecVal and action.shiftDynamicPrecedence == production.dynamicPrecedence:
-                        alreadyExists = true
-                        break
-                   
-                   if not alreadyExists:
-                       # Retrieve participants
-                       var participants: seq[GrammarSymbol] = @[]
-                       if nextSym in shiftParticipants:
-                           for p in shiftParticipants[nextSym]:
-                               participants.add(p)
-                       
-                       entries[stateId].actionMap.add((
-                         sym: nextSym,
-                         action: BuildParseAction(
-                           kind: bpakShift,
-                           participants: participants,
-                           shiftState: gotoStateId.uint32,
-                           shiftPrecedence: shiftPrecVal,
-                           shiftDynamicPrecedence: production.dynamicPrecedence
-                         )
-                       ))
-                 else:
-                   # GOTO ACTION (Non-Terminals)
-                   # GOTO map is simpler, no precedence
-                   var alreadyExists = false
-                   for g in entries[stateId].gotoMap:
-                      if g.sym == nextSym: 
-                        alreadyExists = true
-                        break
-                   if not alreadyExists:
-                     entries[stateId].gotoMap.add((sym: nextSym, state: gotoStateId.uint32))
-
-             else:
-               # --- REDUCE LOGIC ---
-               if coreItem.variableIndex.int == augmentedStartIndex:
-                 # Accept
-                 entries[stateId].actionMap.add((
-                   sym: lookaheadSym,
-                   action: BuildParseAction(kind: bpakAccept)
-                 ))
-               else:
-                 let lhs = GrammarSymbol(kind: stNonTerminal, index: coreItem.variableIndex)
-                 
-                 let reduceAction = BuildParseAction(
-                     kind: bpakReduce,
-                     participants: @[lhs],
-                     reduceSymbol: lhs,
-                     reduceCount: production.steps.len.uint32,
-                     reducePrecedence: production.dynamicPrecedence,
-                     reduceStaticPrecedence: production.precedence,
-                     reduceAssociativity: production.associativity
-                 )
-
-                 var alreadyExists = false
-                 for existing in entries[stateId].actionMap:
-                    if existing.sym == lookaheadSym and existing.action == reduceAction:
-                       alreadyExists = true
-                       break
-                 
-                 if not alreadyExists:
-                    entries[stateId].actionMap.add((
-                      sym: lookaheadSym, 
-                      action: reduceAction
-                    ))
-  else:
-    # Original Legacy Loop (for Traditional Canonical LR1)
-    for stateId in 0 ..< states.len:
-      if stateId mod 100 == 0:
-        debugEchoMsg "[Treestand] Filling in parse table entry ", stateId
-      
-      let itemSet = states[stateId]
-      
-      for item in itemSet:
-        let variable = augmentedGrammar.variables[item.variableIndex]
-        let production = variable.productions[item.productionIndex]
-        
-        if item.position < production.steps.len:
-          # --- SHIFT LOGIC ---
-          let itemVar = augmentedGrammar.variables[item.variableIndex]              
-          if stateId < transitions.len and nextSym in transitions[stateId]:
-            let gotoStateId = transitions[stateId][nextSym]
-            
-            if nextSym.kind != stNonTerminal:
-              var alreadyExists = false
-              for (sym, action) in entries[stateId].actionMap:
-                 if sym == nextSym and action.kind == bpakShift and action.shiftState == gotoStateId.uint32 and action.shiftPrecedence == shiftPrecVal and action.shiftDynamicPrecedence == production.dynamicPrecedence:
-                   alreadyExists = true
-                   break
-              
-              if not alreadyExists:
-                  entries[stateId].actionMap.add((
-                    sym: nextSym,
-                    action: BuildParseAction(
-                      kind: bpakShift,
-                      participants: @[GrammarSymbol(kind: stNonTerminal, index: item.variableIndex)],
-                      shiftState: gotoStateId.uint32,
-                      shiftPrecedence: shiftPrecVal,
-                      shiftDynamicPrecedence: production.dynamicPrecedence
-                    )
-                  ))
-            else:
-              var alreadyExists = false
-              for g in entries[stateId].gotoMap:
-                 if g.sym == nextSym: 
-                   alreadyExists = true
-                   break
-              if not alreadyExists:
-                entries[stateId].gotoMap.add((sym: nextSym, state: gotoStateId.uint32))
-
-        else:
-          # --- REDUCE LOGIC ---
-          if item.variableIndex == augmentedStartIndex:
-            entries[stateId].actionMap.add((
-              sym: item.lookahead,
-              action: BuildParseAction(kind: bpakAccept)
-            ))
-          else:
-            let lhs = GrammarSymbol(kind: stNonTerminal, index: item.variableIndex.uint16)
-            
-            let reduceAction = BuildParseAction(
-                kind: bpakReduce,
-                participants: @[lhs],
-                reduceSymbol: lhs,
-                reduceCount: production.steps.len.uint32,
-                reducePrecedence: production.dynamicPrecedence,
-                reduceStaticPrecedence: production.precedence,
-                reduceAssociativity: production.associativity
-            )
-
-            var alreadyExists = false
-            for existing in entries[stateId].actionMap:
-               if existing.sym == item.lookahead and existing.action == reduceAction:
-                  alreadyExists = true
-                  break
-            
-            if not alreadyExists:
-               entries[stateId].actionMap.add((
-                 sym: item.lookahead, 
-                 action: reduceAction
-               ))
 
   var productionInfos = newSeq[BuildProductionInfo]()
   debugEchoMsg "[Treestand] Building production infos..."
@@ -3341,6 +2150,7 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
           ))
   
   # Detect conflicts in the parse table
+  echo "[Treestand] Fill complete in ", (cpuTime() - fillStart).formatFloat(ffDecimal, 3), "s"
   echo "[Treestand] Detecting conflicts in the parse table ..."
   proc getOriginalSymbol(g: SyntaxGrammar, sym: GrammarSymbol, visited: seq[GrammarSymbol] = @[]): GrammarSymbol =
     if sym.kind == stNonTerminal:
@@ -3352,7 +2162,12 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
       let variable = g.variables[sym.index]
       if variable.originalSymbol.isSome:
           let parent = variable.originalSymbol.get()
-          # echo "Resolving (Primary): ", variable.name, " -> ", g.variables[parent.index].name
+          # For named rules (declared in the grammar), resolve exactly one
+          # level up to their containing parent rule, then stop.  For
+          # auxiliary/inlined rules, follow the chain fully because their
+          # parent is the visible rule they were expanded from.
+          if variable.kind == vtNamed:
+            return parent
           var newVisited = visited
           newVisited.add(sym)
           return getOriginalSymbol(g, parent, newVisited)
@@ -3377,37 +2192,115 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
   
   proc isConflictExpected(ruleSymbols: seq[GrammarSymbol]): bool =
     if ruleSymbols.len == 0: return true
-    
-    # Removed overly board auto-approval for repeat conflicts.
-    # Conflicts should be resolved via expectedConflicts mapping to parent rules.
-    
+
+    # Resolve symbols and include their one-level named parent (if any).
+    # This allows declared conflicts referencing e.g. `_simple_type` to match
+    # participants that are children like `pointer_type` — the parent rule
+    # name is what tree-sitter grammars declare in their `conflicts` lists.
+    var resolved = newSeqOfCap[GrammarSymbol](ruleSymbols.len)
+    for r in ruleSymbols:
+      if r notin resolved:
+        resolved.add(r)
+      let orig = getOriginalSymbol(augmentedGrammar, r)
+      if orig notin resolved:
+        resolved.add(orig)
+      # Also check if this rule has a direct parent via originalSymbol
+      if r.kind == stNonTerminal:
+        let variable = augmentedGrammar.variables[r.index]
+        if variable.originalSymbol.isSome:
+          let parent = variable.originalSymbol.get
+          if parent notin resolved:
+            resolved.add(parent)
     for expectedSet in augmentedGrammar.expectedConflicts:
-      # CRITICAL: Check if the expected conflict set is fully contained in the participants
-      # Meaning: expectedSet <= ruleSymbols
-      # This allows extra participants to be present (e.g. multiple parents of a shift)
-      
+      # Check if the expected set is a subset of the resolved
+      # participants (declared conflicts typically name only the
+      # specific rules involved, while participants may include
+      # additional parent symbols).
       var allExpectedFound = true
       for expectedRule in expectedSet:
-        var found = false
-        for rule in ruleSymbols:
-           let originalRule = getOriginalSymbol(augmentedGrammar, rule)
-           if originalRule == expectedRule:
-             found = true
-             break
-        if not found:
-           allExpectedFound = false
-           break
-           
+        if expectedRule notin resolved:
+          allExpectedFound = false
+          break
       if allExpectedFound:
-         debugEchoMsg "Conflict expected and suppressed for: ", ruleSymbols
-         return true
-         
+        debugEchoMsg "Conflict expected and suppressed for: ", ruleSymbols
+        return true
+
     debugEchoMsg "Conflict NOT expected for: ", ruleSymbols
+    debugEchoMsg "  resolved: ", resolved
     debugEchoMsg "Available expected sets:"
     for s in augmentedGrammar.expectedConflicts:
       debugEchoMsg "  Set: ", s
     return false
-  
+
+  # --- Tree-sitter style structural conflict-set resolution -----------------
+  # A repeat helper (`X_repeat1`) conflict is really a conflict between the
+  # *visible* rules that contain the repeat, not between the helpers.  Tree-
+  # sitter's `get_auxiliary_node_info` maps an auxiliary symbol to the
+  # non-auxiliary rules that reference it, then whitelists a conflict when the
+  # resulting set of "parent" symbols exactly matches a declared `conflicts`
+  # entry.  We precompute that mapping here (`auxParents`) and use it instead
+  # of the name-heuristic `getOriginalSymbol`, which over-resolves helpers past
+  # their immediate owner (e.g. `parameter_list_repeat1` -> `parameter_list`
+  # -> `function_declarator`, losing the `parameter_list` the conflict is
+  # actually declared against).
+  #
+  # Each helper is unique to the rule that spawned it (grammar preparation
+  # generates a distinct `_repeatN` per repeat), so a grammar-global map of
+  # "who references this helper" yields the same parent set tree-sitter derives
+  # per-state.  When a helper is only referenced by another helper we recurse
+  # up until we reach the non-auxiliary owners.
+  var auxDirectRefs = newSeq[seq[GrammarSymbol]](augmentedGrammar.variables.len)
+  for vi in 0 ..< augmentedGrammar.variables.len:
+    for prod in augmentedGrammar.variables[vi].productions:
+      for step in prod.steps:
+        if step.symbol.kind == stNonTerminal:
+          let target = step.symbol.index.int
+          let refSym = GrammarSymbol(kind: stNonTerminal, index: vi.uint16)
+          if refSym notin auxDirectRefs[target]:
+            auxDirectRefs[target].add(refSym)
+
+  proc collectNonAuxParents(idx: int, acc: var seq[GrammarSymbol], seen: var seq[int]) =
+    if idx in seen: return
+    seen.add(idx)
+    for p in auxDirectRefs[idx]:
+      if augmentedGrammar.variables[p.index].kind == vtAuxiliary:
+        collectNonAuxParents(p.index.int, acc, seen)
+      elif p notin acc:
+        acc.add(p)
+
+  var auxParents = newSeq[seq[GrammarSymbol]](augmentedGrammar.variables.len)
+  for vi in 0 ..< augmentedGrammar.variables.len:
+    if augmentedGrammar.variables[vi].kind == vtAuxiliary:
+      var acc: seq[GrammarSymbol] = @[]
+      var seen: seq[int] = @[]
+      collectNonAuxParents(vi, acc, seen)
+      auxParents[vi] = acc
+
+  proc computeActualConflict(conflictingVars: seq[GrammarSymbol]): seq[GrammarSymbol] =
+    ## Port of tree-sitter's `actual_conflict`: replace each auxiliary
+    ## conflicting rule with its non-auxiliary parent rules; keep other rules
+    ## as-is.  The result is the set of symbols matched against declared conflicts.
+    for v in conflictingVars:
+      if v.kind == stNonTerminal and augmentedGrammar.variables[v.index].kind == vtAuxiliary:
+        for p in auxParents[v.index]:
+          if p notin result: result.add(p)
+      elif v notin result:
+        result.add(v)
+
+  proc matchesExpectedExact(actual: seq[GrammarSymbol]): bool =
+    ## Whitelist match using tree-sitter's exact set-equality semantics
+    ## (order-independent) between `actual_conflict` and a declared conflict.
+    if actual.len == 0: return false
+    for expectedSet in augmentedGrammar.expectedConflicts:
+      if expectedSet.len != actual.len: continue
+      var allIn = true
+      for e in expectedSet:
+        if e notin actual:
+          allIn = false
+          break
+      if allIn: return true
+    return false
+
   for stateId in 0..<entries.len:
     var actionsBySymbol = stdtables.initTable[GrammarSymbol, seq[BuildParseAction]]()
     
@@ -3573,21 +2466,24 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
                     warnedSymbols.add(p)
             
             debugEchoMsg "Warned symbols: ", warnedSymbols.len
-            
-            if warnedSymbols.len > 0:
-              let path = findPathToState(stateId)
-              var contextStr = ""
-              for s in path:
-                contextStr &= getSymbolName(s) & " "
-              contextStr &= " •  " & getSymbolName(sym) & "  ..."
-              
-              debugEchoMsg "[Treestand] Warning: Potentially unreachable rules due to precedence"
-              debugEchoMsg "  Context: ", contextStr
-              debugEchoMsg "  Lower-precedence alternatives discarded:"
-              for p in warnedSymbols:
-                debugEchoMsg "    - ", getSymbolName(p)
-              debugEchoMsg "  These rules may be unreachable in this parsing context."
-              debugEchoMsg ""
+
+            # The path reconstruction below is only used for debug output;
+            # skip the expensive BFS entirely in non-debug builds.
+            when defined(debug):
+              if warnedSymbols.len > 0:
+                let path = findPathToState(stateId)
+                var contextStr = ""
+                for s in path:
+                  contextStr &= getSymbolName(s) & " "
+                contextStr &= " •  " & getSymbolName(sym) & "  ..."
+
+                debugEchoMsg "[Treestand] Warning: Potentially unreachable rules due to precedence"
+                debugEchoMsg "  Context: ", contextStr
+                debugEchoMsg "  Lower-precedence alternatives discarded:"
+                for p in warnedSymbols:
+                  debugEchoMsg "    - ", getSymbolName(p)
+                debugEchoMsg "  These rules may be unreachable in this parsing context."
+                debugEchoMsg ""
           
           shiftActions = @[]
           for s in bestShiftsByState.values:
@@ -3664,13 +2560,43 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
           if keepShifts and winningReduces.len > 0 and not glrHeuristicApplied:
             debugEchoMsg "CONTRADICTION: Both shifts and reduces won - unresolved!"
             allResolved = false
-          
+
+          # Repetition guard (tree-sitter `is_repetition` intent).  A rule that
+          # conflicts with its OWN repetition helper at a shiftable terminal is
+          # the benign "keep repeating vs stop" ambiguity — e.g. Python's
+          # `union_pattern` (prec.right) vs `union_pattern_repeat1` (prec.left)
+          # on `'|'`.  Contradictory associativity between an owner and its
+          # helper cannot be resolved by precedence/associativity, but the
+          # correct action is to SHIFT (continue the repetition); tree-sitter
+          # keeps the shift and marks it a repetition.  We detect this precisely:
+          # every reduce, after mapping repeat helpers to their owning rule,
+          # collapses to a SINGLE visible rule, and at least one reduce is an
+          # auxiliary helper.  A genuine cross-rule conflict (e.g. two different
+          # rules' repeats, `conflict_in_repeat_rule`) maps to >1 owner and is
+          # left to error as before.
+          if not allResolved:
+            var mappedOwners: seq[GrammarSymbol] = @[]
+            var involvesRepeat = false
+            for r in reduces:
+              if r.reduceSymbol.kind == stNonTerminal and
+                 augmentedGrammar.variables[r.reduceSymbol.index].kind == vtAuxiliary:
+                involvesRepeat = true
+                for p in auxParents[r.reduceSymbol.index]:
+                  if p notin mappedOwners: mappedOwners.add(p)
+              elif r.reduceSymbol notin mappedOwners:
+                mappedOwners.add(r.reduceSymbol)
+            if involvesRepeat and mappedOwners.len == 1:
+              debugEchoMsg "Repetition ambiguity (rule vs own repeat): keeping SHIFT"
+              keepShifts = true
+              winningReduces = @[]
+              allResolved = true
+
           if not allResolved:
             var participants: seq[GrammarSymbol] = @[]
             for a in actions:
               for p in a.participants:
                 if p notin participants: participants.add(p)
-                        
+
             if not isConflictExpected(participants):
               # --- Path Reconstruction for Context ---
               let path = findPathToState(stateId)
@@ -3738,44 +2664,80 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
                   precedenceWinners.add(r)
 
           if precedenceWinners.len > 1:
-            # Collect winner symbols and check using isConflictExpected
-            var participants: seq[GrammarSymbol] = @[]
-            for r in precedenceWinners:
-              if r.reduceSymbol notin participants:
-                participants.add(r.reduceSymbol)
-            
-            let isExpected = isConflictExpected(participants)
+              # Collect symbols of conflicting items from the state's closure,
+              # mirroring tree-sitter's `handle_conflict`.  Instead of using
+              # pre-stored action participants (which can differ based on
+              # closure details), we recompute the closure and extract the
+              # variables of all completed items with this lookahead.
+              let checkClosure = getTransitiveClosureFast(
+                augmentedGrammar, states[stateId], closureCache, firstSetsBits, firstBetaCache,
+                fullPrecedence = false)
+              # Collect all distinct variables of completed items whose
+              # lookaheads contain the conflicting symbol.
+              var seenVars: seq[GrammarSymbol] = @[]
+              for coreItem, la in checkClosure:
+                if coreItem.position >= augmentedGrammar.variables[coreItem.variableIndex].productions[coreItem.productionIndex].steps.len.uint16:
+                  for bit in la:
+                    if ctx.bitToSymbol(bit) == sym:
+                      let s = GrammarSymbol(kind: stNonTerminal, index: coreItem.variableIndex)
+                      if s notin seenVars:
+                        seenVars.add(s)
+                      break
+              # Auto-accept reduce/reduce conflicts only when all conflicting
+              # items resolve to the same original symbol AND at least one
+              # participant is an auxiliary/repeat rule.  Named-rule-only
+              # conflicts that happen to share a resolved symbol (e.g.
+              # associativity_missing) must still be reported.
+              var allResolveSame = seenVars.len > 0
+              var hasAux = false
+              if allResolveSame:
+                let firstResolved = getOriginalSymbol(augmentedGrammar, seenVars[0])
+                for v in seenVars:
+                  if getOriginalSymbol(augmentedGrammar, v) != firstResolved:
+                    allResolveSame = false
+                    break
+                  let vr = augmentedGrammar.variables[v.index]
+                  if vr.kind == vtAuxiliary or vr.name.contains("_repeat"):
+                    hasAux = true
+              # Structural (tree-sitter faithful) check first: replace repeat
+              # helpers with their owning rules and match the declared conflict
+              # set exactly.  Falls back to the earlier heuristics so previously
+              # passing grammars are unaffected.
+              let actualConflict = computeActualConflict(seenVars)
+              let isExpected = matchesExpectedExact(actualConflict) or
+                (allResolveSame and hasAux and augmentedGrammar.expectedConflicts.len > 0) or
+                isConflictExpected(seenVars)
               
-            if not isExpected:
-              # --- Path Reconstruction for Context ---
-              let path = findPathToState(stateId)
-              var contextStr = ""
-              for s in path:
-                contextStr &= getSymbolName(s) & " "
-              contextStr &= " •  " & getSymbolName(sym) & "  ..."
+              if not isExpected:
+                # --- Path Reconstruction for Context ---
+                let path = findPathToState(stateId)
+                var contextStr = ""
+                for s in path:
+                  contextStr &= getSymbolName(s) & " "
+                contextStr &= " •  " & getSymbolName(sym) & "  ..."
 
-              var conflictMsg = "Unresolved conflict for symbol sequence:\n\n"
-              conflictMsg &= "  " & contextStr & "\n\n"
-              conflictMsg &= "Possible interpretations:\n\n"
-              for i, r in reduces:
-                conflictMsg &= "  " & $(i+1) & ":  REDUCE using rule " & getSymbolName(r.reduceSymbol) & 
-                              " (precedence: " & $r.reduceStaticPrecedence & 
-                              ", dynamic: " & $r.reducePrecedence & ")\n"
-              conflictMsg &= "\nPossible resolutions:\n\n"
-              conflictMsg &= "  1:  Specify different precedence levels for conflicting rules\n"
-              conflictMsg &= "  2:  Restructure the grammar to avoid ambiguity\n"
-              
-              # ERROR: Conflict not expected - Fail generation
-              let errorMsg = "Unresolved conflict for symbol sequence:\n\n" & conflictMsg
-              if not skipConflictDetection:
-                raise newException(ValueError, errorMsg)
-              else:
-                echo "[Treestand] Conflict not expected:\n", errorMsg
-              
-              # Treat as GLR split (add all precedence winners)
-              for r in precedenceWinners:
-                  resolvedActions.add((sym: sym, action: r))
-              processed = true
+                var conflictMsg = "Unresolved conflict for symbol sequence:\n\n"
+                conflictMsg &= "  " & contextStr & "\n\n"
+                conflictMsg &= "Possible interpretations:\n\n"
+                for i, r in reduces:
+                  conflictMsg &= "  " & $(i+1) & ":  REDUCE using rule " & getSymbolName(r.reduceSymbol) & 
+                                " (precedence: " & $r.reduceStaticPrecedence & 
+                                ", dynamic: " & $r.reducePrecedence & ")\n"
+                conflictMsg &= "\nPossible resolutions:\n\n"
+                conflictMsg &= "  1:  Specify different precedence levels for conflicting rules\n"
+                conflictMsg &= "  2:  Restructure the grammar to avoid ambiguity\n"
+                
+                # ERROR: Conflict not expected - Fail generation
+                let errorMsg = "Unresolved conflict for symbol sequence:\n\n" & conflictMsg
+                if not skipConflictDetection:
+                  raise newException(ValueError, errorMsg)
+                else:
+                  echo "[Treestand] Conflict not expected:\n", errorMsg
+                
+                # Treat as GLR split (add all precedence winners)
+                for r in precedenceWinners:
+                    resolvedActions.add((sym: sym, action: r))
+                processed = true
           else:
             # Winner found by precedence
             resolvedActions.add((sym: sym, action: precedenceWinners[0]))
@@ -3805,6 +2767,12 @@ proc buildParseTable*(grammar: SyntaxGrammar, lexicalGrammar: LexicalGrammar, sk
     productionInfos: productionInfos,
     externalSymbols: @[]
   )
-  
-  minimizeParseTable(resultTable, grammar, lexicalGrammar)
+
+  minimizeParseTable(
+    resultTable, grammar, lexicalGrammar, @[],
+    doesConflict = proc(i, j: int): bool =
+      tokenConflictMap.n > 0 and tokenConflictMap.doesConflict(i, j),
+    doesMatchSameString = proc(i, j: int): bool =
+      tokenConflictMap.n > 0 and tokenConflictMap.doesMatchSameString(i, j)
+  )
   resultTable

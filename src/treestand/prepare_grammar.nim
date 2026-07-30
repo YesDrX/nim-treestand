@@ -1232,5 +1232,21 @@ proc prepareGrammar*(input: InputGrammar): tuple[syntax: SyntaxGrammar, lexical:
         "The rule `" & ruleName & "` matches the empty string.\n\n" &
         "Tree-sitter does not support syntactic rules that match the empty string\n" &
         "unless they are used only as the grammar's start rule.")
-  
+
+  # Set originalSymbol for named rules that are direct children of other
+  # named rules. This allows getOriginalSymbol to resolve pointer_type →
+  # _simple_type etc., which is needed by expected-conflict resolution
+  # (tree-sitter's handle_conflict uses preceding_auxiliary_symbols for
+  # auxiliary rules, but for named children the declared conflicts
+  # reference the parent choice rule).
+  for parentIdx, variable in syntaxGrammar.variables:
+    for production in variable.productions:
+      for step in production.steps:
+        if step.symbol.kind == stNonTerminal and step.symbol.index.int < syntaxGrammar.variables.len:
+          let childIdx = step.symbol.index.int
+          if syntaxGrammar.variables[childIdx].originalSymbol.isNone and
+             syntaxGrammar.variables[childIdx].kind == vtNamed:
+            syntaxGrammar.variables[childIdx].originalSymbol = some(
+              GrammarSymbol(kind: stNonTerminal, index: parentIdx.uint16))
+
   result = (syntax: syntaxGrammar, lexical: lexicalGrammar)
